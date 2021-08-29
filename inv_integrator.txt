@@ -1,0 +1,4 @@
+A1 o 0 0 1
+C1 1 o 100n
+R1 i 1 1k
+Vi i 0 dc 1 ac 1

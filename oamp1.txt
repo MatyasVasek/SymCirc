@@ -1,0 +1,6 @@
+
+A1 o 0 1 2
+V1 1 0 dc 1 ac 1
+Vos 3 2 dc 1/10 ac 1
+R1 3 0 1k
+R2 3 o 9k
