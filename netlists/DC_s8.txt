@@ -2,5 +2,5 @@
 Vb b 0 dc 0.7 ac 1
 R1 c b 400k
 V1 1 0 dc 10 ac 0
-F c 0 b 0 100
+F c 0 Vb 100
 R2 1 c 5k

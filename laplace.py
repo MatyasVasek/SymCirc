@@ -1,7 +1,7 @@
 import sympy
 
 t, s = sympy.symbols('t, s', real=True, positive=True)
-R1, R2, C1, C2 = sympy.symbols('R1, R2, C1, C2', real=True)
+R1, R2, C1, C2 = sympy.symbols('R1, R2, C1, C2', real=True, positive=True)
 
 def laplace(func):
     return sympy.laplace_transform(func, t, s, noconds=True)
@@ -24,9 +24,9 @@ if __name__ == "__main__":
 
     print("--------------------")
     freq_func = (C1*R2*s)/(C1*C2*R1*R2*s**2 + C1*R1*s + C1*R2*s + C2*R2*s + 1)
-    freq_func = s / (R1* s ** 2 + R2*s + 1)
+    freq_func = 1 / (R1*s**2)
     print("F = "+str(freq_func))
-    partial_fractions = sympy.collect(freq_func, s)
+    partial_fractions = sympy.apart(freq_func, s)
     print("F = "+str(partial_fractions))
     func = inv_laplace(partial_fractions)
     print("f = "+str(func))

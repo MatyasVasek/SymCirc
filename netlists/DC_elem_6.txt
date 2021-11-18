@@ -1,4 +1,4 @@
 
-I1 0 1 dc 6m
-R1 1 0 10k
-R2 1 0 5k
+I1 0 a dc 6m
+R1 a 0 10k
+R2 a 0 5k

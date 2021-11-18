@@ -1,0 +1,4 @@
+odporovy delic
+V 1 0 1
+R1 1 2 50
+R2 2 0 100
