@@ -30,6 +30,11 @@ class AnalyseCircuit:
         self.node_voltage_symbols = self._node_voltage_symbols()
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
 
+    def simp(self, expr):
+        sympy.collect(expr, self.s)
+        sympy.expand(expr)
+        return expr
+
     def component_values(self, name):
         ret = {}
         if name == "all":
@@ -80,8 +85,8 @@ class AnalyseCircuit:
         #sympy.pprint(eqn_matrix)
         #latex_print(eqn_matrix)
         #latex_print(symbols)
-        #solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-        solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
+        solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+        #solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
 
         if self.analysis_type == "DC":
             if self.is_symbolic:
@@ -106,15 +111,23 @@ class AnalyseCircuit:
             f = sympy.symbols("f", real=True, positive=True)
             j = sympy.symbols("j")
             if self.is_symbolic:
+                i = 1
                 for sym in symbols:
                     try:
-                        solved_dict[sym] = solved_dict[sym].subs(self.s, 2*sympy.pi*f*j).simplify()
+                        solved_dict[sym] = solved_dict[sym].simplify()
+                        #solved_dict[sym] = self.simp(solved_dict[sym])
+                        if i == 1:
+                            #sympy.pprint(solved_dict)
+                            i = 0
+                        solved_dict[sym] = solved_dict[sym].subs(self.s, 2 * sympy.pi * f * j)
                     except KeyError:
                         pass
             else:
                 for sym in symbols:
                     #print(sym)
                     try:
+                        solved_dict[sym] = solved_dict[sym].simplify()
+                        solved_dict[sym] = solved_dict[sym].subs(self.s, 2 * sympy.pi * f * j)
                         for name in self.components:
                             c = self.components[name]
                             if c.type == "v":
@@ -122,8 +135,6 @@ class AnalyseCircuit:
                                 #print(c.ac_value)
                             else:
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-
-                        solved_dict[sym] = solved_dict[sym].subs(self.s, 2*sympy.pi*f*j).simplify()
                     except KeyError:
                         pass
 
@@ -131,7 +142,9 @@ class AnalyseCircuit:
             if self.is_symbolic:
                 for sym in symbols:
                     try:
+                        #print(solved_dict[sym])
                         solved_dict[sym] = solved_dict[sym].simplify()
+                        pass
                     except KeyError:
                         pass
             else:
@@ -151,7 +164,7 @@ class AnalyseCircuit:
         elif self.analysis_type == "tran":
             if self.is_symbolic:
                 #latex_print(solved_dict)
-                """for sym in symbols:
+                for sym in symbols:
                     solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
                     print(solved_dict[sym])
                     solved_dict[sym] = inv_laplace(solved_dict[sym])
@@ -163,7 +176,7 @@ class AnalyseCircuit:
                         #solved_dict[sym] = solved_dict
                         pass
                     except KeyError:
-                        pass"""
+                        pass
             else:
                 for sym in symbols:
                     # print(sym)

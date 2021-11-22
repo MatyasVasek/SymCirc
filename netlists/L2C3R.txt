@@ -1,0 +1,8 @@
+
+C1 i 1 300n
+C2 1 4 75n
+L2 4 0 150m
+C3 1 o 300n
+L1 i o 1/15
+R o 0 1k
+Vi i 0 dc 0 ac 1 0 sin 0 1 10k 0 0

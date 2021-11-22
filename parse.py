@@ -31,11 +31,11 @@ def convert_units(val):
         ret = val
 
     elif val[-3:-1] in UNITS:
-        ret = float(val[:-3]) * UNITS["meg"]
+        ret = sympy.parse_expr(val[:-3]) * UNITS["meg"]
     elif val[-1] in UNITS:
-        ret = float(val[:-1]) * UNITS[val[-1]]
+        ret = sympy.parse_expr(val[:-1]) * UNITS[val[-1]]
     else:
-        ret = float(val)
+        ret = sympy.parse_expr(val)
     return ret, symbolic
 
 
@@ -86,7 +86,7 @@ def tran_value(words):
     delay = 0
     damping = 1
     tran = sympy.Symbol("N/A")
-    """
+    '''
     for word in words:
         if word == "sin":
             break
@@ -102,7 +102,7 @@ def tran_value(words):
         pass
 
     tran = offset + amp*sympy.Heaviside(t - delay)*sympy.sin(2*sympy.pi*freq*t)*sympy.exp(delay*damping-damping*t)
-    """
+    '''
     return tran
 
 def value_enum(words, source=False):
@@ -136,6 +136,8 @@ def parse(netlist):
             break
         elif count == 0:  # first line is for title
             pass
+        elif words in [[], "\n", " "]:
+            pass
         elif words[0][0] == "*":  # check if line is commentary
             pass
         else:
@@ -149,27 +151,27 @@ def parse(netlist):
             if node2 not in nodes:
                 nodes.append(node2)
 
-            # identify type of component and assign symbolic value
+            # identify variant of component and assign symbolic value
 
             if name[0] in ["i", "I"]:
-                type = "i"
+                variant = "i"
                 sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 value, symbolic = value_enum(words, source=True)
-                c = CurrentSource(name, type, node1, node2, sym_value=sym_value, dc_value=value[0], ac_value=value[1],
+                c = CurrentSource(name, variant, node1, node2, sym_value=sym_value, dc_value=value[0], ac_value=value[1],
                                   tran_value=value[2])
                 independent_sources.append(c)
 
             elif name[0] in ["v", "V", "u", "U"]:
-                type = "v"
+                variant = "v"
                 sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 value, symbolic = value_enum(words, source=True)
-                c = VoltageSource(name, type, node1, node2, sym_value=sym_value, position=matrix_expansion_coef,
+                c = VoltageSource(name, variant, node1, node2, sym_value=sym_value, position=matrix_expansion_coef,
                                   dc_value=value[0], ac_value=value[1], tran_value=value[2])
                 matrix_expansion_coef += 1
                 independent_sources.append(c)
 
             elif name[0] in ["r", "R"]:
-                type = "r"
+                variant = "r"
                 value, symbolic = value_enum(words)
                 if symbolic:
                     sym_value = sympy.parse_expr(value)  # sympy.Symbol(value, real=True)
@@ -178,11 +180,11 @@ def parse(netlist):
                 else:
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                     #print(sym_value.atoms(sympy.Symbol))
-                c = Resistor(name, type, node1, node2, sym_value=sym_value, value=value)
+                c = Resistor(name, variant, node1, node2, sym_value=sym_value, value=value)
                 basic_components.append(c)
 
             elif name[0] in ["c", "C"]:
-                type = "c"
+                variant = "c"
                 value, symbolic = value_enum(words)
                 if symbolic:
                     sym_value = sympy.parse_expr(value)  # sympy.Symbol(value, real=True)
@@ -190,14 +192,14 @@ def parse(netlist):
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 try:
                     init_cond = words[4]
-                    c = Capacitor(name, type, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
+                    c = Capacitor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
                 except IndexError:
                     #print("No initial condition set for {}".format(name))
-                    c = Component(name, type, node1, node2, sym_value=sym_value, value=value)
+                    c = Component(name, variant, node1, node2, sym_value=sym_value, value=value)
                 basic_components.append(c)
 
             elif name[0] in ["l", "L"]:
-                type = "l"
+                variant = "l"
                 value, symbolic = value_enum(words)
                 if symbolic:
                     sym_value = sympy.parse_expr(value)  # sympy.Symbol(value, real=True)
@@ -205,14 +207,14 @@ def parse(netlist):
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 try:
                     init_cond = words[4]
-                    c = Inductor(name, type, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
+                    c = Inductor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
                 except IndexError:
                     #print("No initial condition set for {}".format(name))
-                    c = Inductor(name, type, node1, node2, sym_value=sym_value, value=value)
+                    c = Inductor(name, variant, node1, node2, sym_value=sym_value, value=value)
                 basic_components.append(c)
 
             elif name[0] in ["a", "A"]:
-                type = "a"
+                variant = "a"
                 sym_value = sympy.Symbol(name, real=True)
                 node3 = words[3]
                 node4 = words[4]
@@ -220,13 +222,13 @@ def parse(netlist):
                     nodes.append(node3)
                 if node4 not in nodes:
                     nodes.append(node4)
-                c = OperationalAmplifier(name, type, node1, node2, node3, node4, sym_value,
+                c = OperationalAmplifier(name, variant, node1, node2, node3, node4, sym_value,
                                          matrix_expansion_coef)
                 matrix_expansion_coef += 1
                 operational_amplifiers.append(c)
 
             elif name[0] in ["e", "E"]:  # VVT
-                type = "e"
+                variant = "e"
                 sym_value = sympy.Symbol(name, real=True)
                 node3 = words[3]
                 node4 = words[4]
@@ -234,13 +236,13 @@ def parse(netlist):
                     nodes.append(node3)
                 if node4 not in nodes:
                     nodes.append(node4)
-                c = VoltageControlledSource(name, type, node1, node2, node3, node4, sym_value=sym_value,
+                c = VoltageControlledSource(name, variant, node1, node2, node3, node4, sym_value=sym_value,
                               position=matrix_expansion_coef)
                 matrix_expansion_coef += 1
                 controlled_sources.append(c)
 
             elif name[0] in ["g", "G"]:  # VCT
-                type = "g"
+                variant = "g"
                 sym_value = sympy.Symbol(name, real=True)
                 node3 = words[3]
                 node4 = words[4]
@@ -248,24 +250,24 @@ def parse(netlist):
                     nodes.append(node3)
                 if node4 not in nodes:
                     nodes.append(node4)
-                c = VoltageControlledSource(name, type, node1, node2, node3, node4, sym_value=sym_value)
+                c = VoltageControlledSource(name, variant, node1, node2, node3, node4, sym_value=sym_value)
                 controlled_sources.append(c)
 
             elif name[0] in ["f", "F"]:  # CCT
-                type = "f"
+                variant = "f"
                 sym_value = sympy.Symbol(name, real=True)
                 v_c = words[3]
-                c = CurrentControlledSource(name, type, node1, node2, control_voltage=v_c, sym_value=sym_value,
+                c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, sym_value=sym_value,
                               position=matrix_expansion_coef)
                 matrix_expansion_coef += 1
                 add_short.append(v_c)
                 controlled_sources.append(c)
 
             elif name[0] in ["h", "H"]:  # CVT
-                type = "h"
+                variant = "h"
                 sym_value = sympy.Symbol(name, real=True)
                 v_c = words[3]
-                c = CurrentControlledSource(name, type, node1, node2, control_voltage=v_c, sym_value=sym_value,
+                c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, sym_value=sym_value,
                               position=matrix_expansion_coef)
                 matrix_expansion_coef += 1
                 add_short.append(v_c)

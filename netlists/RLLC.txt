@@ -1,0 +1,6 @@
+
+C o 2 100n
+L2 2 0 1m
+Vi i 0 dc 0 ac 1 0 sin 0 1 1.6k 0 0
+R i 1 500
+L1 1 o 99m

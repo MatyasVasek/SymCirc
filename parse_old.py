@@ -17,11 +17,11 @@ def convert_units(val):
         symbolic = True
         ret = val
     elif val[-3:-1] in UNITS:
-        ret = float(val[:-3]) * UNITS["meg"]
+        ret = sympy.parse_expr(val[:-3]) * UNITS["meg"]
     elif val[-1] in UNITS:
-        ret = float(val[:-1]) * UNITS[val[-1]]
+        ret = sympy.parse_expr(val[:-1]) * UNITS[val[-1]]
     else:
-        ret = float(val)
+        ret = sympy.parse_expr(val)
     return ret, symbolic
 
 
