@@ -3,7 +3,7 @@ from symcirc import *
 from laplace import *
 
 if __name__ == '__main__':
-    netlist = "netlists\L2C3R.txt"
+    netlist = "netlists\AC1.txt"
     s = sympy.symbols("s", real=True)
     circuit = AnalyseCircuit(load_file(netlist), "AC", symbolic=True)
     #print("Dictionary of solved V/C: {}".format(circuit.solved_dict))
