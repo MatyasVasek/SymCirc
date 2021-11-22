@@ -166,9 +166,9 @@ class AnalyseCircuit:
                 #latex_print(solved_dict)
                 for sym in symbols:
                     solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
-                    print(solved_dict[sym])
+                    #print(solved_dict[sym])
                     solved_dict[sym] = inv_laplace(solved_dict[sym])
-                    print(solved_dict[sym])
+                    #print(solved_dict[sym])
                     try:
                         for name in self.components:
                             c = self.components[name]
