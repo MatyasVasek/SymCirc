@@ -24,9 +24,14 @@ def check_if_symbolic(val):
             symbolic = True
     return symbolic
 
-def convert_units(val):
-    symbolic = False
-    if check_if_symbolic(val):
+
+def convert_units(val, forced_numeric=False):
+    if forced_numeric:
+        symbolic = False
+    else:
+        symbolic = check_if_symbolic(val)
+
+    if symbolic:
         symbolic = True
         ret = val
 
@@ -85,24 +90,29 @@ def tran_value(words):
     freq = 1
     delay = 0
     damping = 1
-    tran = sympy.Symbol("N/A")
-    '''
+    #tran = sympy.Symbol("N/A")
+
     for word in words:
         if word == "sin":
             break
         else:
             index += 1
     try:
-        offset = sympy.parse_expr(words[index])
-        amp = sympy.parse_expr(words[index+1])
-        freq, _ = convert_units(words[index+2])
-        delay = sympy.parse_expr(words[index+3])
-        damping = sympy.parse_expr(words[index+4])
+        offset = sympy.Rational(sympy.parse_expr(words[index]))
+        amp = sympy.Rational(sympy.parse_expr(words[index+1]))
+        freq, _ = convert_units(words[index+2], forced_numeric=True)
+        freq = sympy.Rational(freq)
+        delay = sympy.Rational(sympy.parse_expr(words[index+3]))
+        damping = sympy.Rational(sympy.parse_expr(words[index+4]))
     except IndexError:
         pass
+    #offset, amp, freq, delay, damping = sympy.symbols("off, A, f, del, damp", real=True)
+    #pi = 3.14159
+    pi = sympy.pi
+    tran = (offset/s)+amp*sympy.exp(-s*delay)*2*pi*freq/((s+damping)**2+(2*pi*freq)**2)
+    #tran = sympy.apart(tran)
+    #print(tran)
 
-    tran = offset + amp*sympy.Heaviside(t - delay)*sympy.sin(2*sympy.pi*freq*t)*sympy.exp(delay*damping-damping*t)
-    '''
     return tran
 
 def value_enum(words, source=False):

@@ -81,18 +81,13 @@ class AnalyseCircuit:
         return count
 
     def _analyse(self):
-        eqn_matrix, symbols = self._build_system_eqn()
-        #sympy.pprint(eqn_matrix)
-        #latex_print(eqn_matrix)
-        #latex_print(symbols)
-        solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-        #solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
-
         if self.analysis_type == "DC":
+            eqn_matrix, symbols = self._build_system_eqn()
+            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
             if self.is_symbolic:
                 for sym in symbols:
                     try:
-                        solved_dict[sym] = sympy.limit(solved_dict[sym], self.s, 0).simplify()
+                        solved_dict[sym] = sympy.limit(solved_dict[sym], self.s, 0)
                     except KeyError:
                         pass
             else:
@@ -108,14 +103,17 @@ class AnalyseCircuit:
                         pass
 
         elif self.analysis_type == "AC":
+            eqn_matrix, symbols = self._build_system_eqn()
+            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
             f = sympy.symbols("f", real=True, positive=True)
             j = sympy.symbols("j")
             if self.is_symbolic:
                 i = 1
                 for sym in symbols:
                     try:
-                        solved_dict[sym] = solved_dict[sym].simplify()
-                        #solved_dict[sym] = self.simp(solved_dict[sym])
+                        #print("{}: {}".format(sym, solved_dict[sym]))
+                        #solved_dict[sym] = solved_dict[sym].simplify()
+                        #print("{}: {}".format(sym, solved_dict[sym]))
                         if i == 1:
                             #sympy.pprint(solved_dict)
                             i = 0
@@ -126,7 +124,9 @@ class AnalyseCircuit:
                 for sym in symbols:
                     #print(sym)
                     try:
-                        solved_dict[sym] = solved_dict[sym].simplify()
+                        #print(solved_dict[sym])
+                        #solved_dict[sym] = solved_dict[sym].simplify()
+                        #print(solved_dict[sym])
                         solved_dict[sym] = solved_dict[sym].subs(self.s, 2 * sympy.pi * f * j)
                         for name in self.components:
                             c = self.components[name]
@@ -139,15 +139,11 @@ class AnalyseCircuit:
                         pass
 
         elif self.analysis_type == "TF":
-            if self.is_symbolic:
-                for sym in symbols:
-                    try:
-                        #print(solved_dict[sym])
-                        solved_dict[sym] = solved_dict[sym].simplify()
-                        pass
-                    except KeyError:
-                        pass
-            else:
+            eqn_matrix, symbols = self._build_system_eqn()
+            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+            #solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
+
+            if not self.is_symbolic:
                 for sym in symbols:
                     #print(sym)
                     try:
@@ -162,13 +158,27 @@ class AnalyseCircuit:
                         pass
 
         elif self.analysis_type == "tran":
+            eqn_matrix, symbols = self._build_system_eqn()
+            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
             if self.is_symbolic:
                 #latex_print(solved_dict)
                 for sym in symbols:
-                    solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
+                    try:
+                        for name in self.components:
+                            c = self.components[name]
+                            if c.type == "v":
+                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
+                                # print(c.ac_value)
+                    except KeyError:
+                        pass
+                    #solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
                     #print(solved_dict[sym])
-                    solved_dict[sym] = inv_laplace(solved_dict[sym])
-                    #print(solved_dict[sym])
+                    #print("{}: {}".format(sym, solved_dict[sym]))
+                    inv_l = iLT(solved_dict[sym])
+                    #inv_l = sympy.simplify(inv_l)
+                    solved_dict[sym] = inv_l
+                    #print("{} = {}".format(sym, inv_l))
+                    #print("{}: {}".format(sym, solved_dict[sym]))
                     try:
                         for name in self.components:
                             c = self.components[name]
@@ -179,17 +189,20 @@ class AnalyseCircuit:
                         pass
             else:
                 for sym in symbols:
-                    # print(sym)
+                    #print(sym)
                     try:
                         for name in self.components:
                             c = self.components[name]
                             if c.type == "v":
+
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
                                 # print(c.ac_value)
                             else:
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
                     except KeyError:
                         pass
+
+                    solved_dict[sym] = iLT(solved_dict[sym])
 
         return eqn_matrix, solved_dict, symbols
 
@@ -291,6 +304,7 @@ class AnalyseCircuit:
         N2 = c.node2
         y_b = 0
         z_b = 0
+
         if c.type == "r":
             y_b = 1
             z_b = -c.sym_value
@@ -300,9 +314,9 @@ class AnalyseCircuit:
         elif c.type == "c":
             y_b = self.s * c.sym_value
             z_b = -1
+
         matrix[self.c_count+index, index] += y_b
         matrix[self.c_count+index, self.c_count+index] += z_b
-        val = 0
         self._incidence_matrix_write(N1, N2, matrix, index)
 
         return matrix
