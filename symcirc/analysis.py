@@ -1,15 +1,9 @@
 import sympy
-from parse import parse
 import os
 import sys
-from laplace import *
-
-
-def load_file(netlist_addr):
-    with open(netlist_addr) as f:
-        netlist = f.read()
-    return netlist
-
+from symcirc.parse import parse
+from symcirc.laplace import *
+from symcirc.utils import *
 
 class AnalyseCircuit:
     def __init__(self, netlist, analysis_type="DC", symbolic=True):
@@ -404,17 +398,6 @@ class AnalyseCircuit:
         matrix[self.c_count + index, index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
         return matrix
-
-
-def to_latex(dictionary):
-    ret = {}
-    for key in dictionary:
-        ret.update({str(key): sympy.latex(dictionary[key])})
-    return ret
-
-
-def latex_print(data):
-    print("{}".format(sympy.latex(data)))
 
 
 if __name__ == "__main__":

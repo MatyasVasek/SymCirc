@@ -1,5 +1,5 @@
-from component import *
-from laplace import *
+from symcirc.component import *
+from symcirc.laplace import *
 
 t = sympy.Symbol("t", real=True, positive=True)
 s = sympy.Symbol("s", real=True, positive=True)

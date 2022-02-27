@@ -1,5 +1,8 @@
-import sys
+import sys, os
 import time
+
+# project root path
+sys.path.append(os.path.dirname(__file__)+"/../")
 from symcirc import *
 
 if __name__ == '__main__':
