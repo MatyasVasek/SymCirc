@@ -122,7 +122,6 @@ def table_inverse_laplace_transform(F):
             f = c*t**n
         if non_zero_c == d_size:  # exp form:  c*n!/(s+a)**(n+1) --> c*t**n*exp(-a*t)
             #print("EXP")
-            #print(F)
             try:
                 check = D_coeff[1]/(2*sqrt(D_coeff[2]))
             except IndexError:
@@ -137,16 +136,16 @@ def table_inverse_laplace_transform(F):
             else:
                 if n_size == 1: # exp*sin form: c*omega/((s+a)**2 + omega**2)  --> c*exp(-a*t)*sin(omega*t)
                     #print("exp*sin form")
-                    a = D_coeff[1] / 2
-                    omega = sqrt(D_coeff[2] - a**2)
-                    c = N_coeff[0]/omega
+                    a = D_coeff[1]/(D_coeff[0]*2)
+                    omega = sqrt(D_coeff[2]//D_coeff[0] - a**2)
+                    c = N_coeff[0]/(omega*D_coeff[0])
                     f = c*exp(-a*t)*sin(omega*t)
                 elif n_size == 2 and N_coeff[1] == 0:
                     #print("exp*cos*sin form")
-                    a = D_coeff[1] / 2
-                    omega = sqrt(D_coeff[2] - a**2)
-                    c_cos = N_coeff[0]
-                    c_sin = abs(a)*N_coeff[0]/omega
+                    a = D_coeff[1] / (D_coeff[0] * 2)
+                    omega = sqrt(D_coeff[2]/D_coeff[0] - a ** 2)
+                    c_cos = N_coeff[0]/D_coeff[0]
+                    c_sin = a*N_coeff[0]/(omega*D_coeff[0])
                     f = exp(-a*t)*(c_cos*cos(omega*t)+c_sin*sin(omega*t))
 
 
@@ -157,14 +156,25 @@ def table_inverse_laplace_transform(F):
 
 
 if __name__ == "__main__":
-    L, R1, R2, C1 = sympy.symbols('L, R1, R2, C1', real=True, positive=True)
+    L, R1, R2, C1= sympy.symbols('L, R1, R2, C1', real=True, positive=True)
     omega = sympy.Symbol('omega', real=True)
     print("--------------------")
     pi = sympy.symbols("pi", real=True, positive=True)
-    F = (32000*pi)/(s**2 + (32000*pi)**2)
-    F = -2*pi*C1*R1*s/((s - 1)**2 + 4*pi**2)
-    F = (-20*pi*(s-7))/((s - 7)**2 + 4*pi**2)
+    a = sympy.Rational(1, 5)
+    #F = (s+a)/(s*(s+a) + 1)
+    #F = -2*pi*C1*R1*s/((s - 1)**2 + 4*pi**2)
+    #F = (-20*pi*(s-7))/((s - 7)**2 + 4*pi**2)
     #F = 6 / (s - 32000*pi)**2
-    F = (36000*pi*C*R1*R2*s/(s**2 + 1296000000*pi**2) + 36000*pi*R1/(s**2 + 1296000000*pi**2))/(C*R1*R2*s + R1 + R2)
+    #F = (36000*pi*C*R1*R2*s/(s**2 + 1296000000*pi**2) + 36000*pi*R1/(s**2 + 1296000000*pi**2))/(C*R1*R2*s + R1 + R2)
+    F = (3*s)/(7*s**2+11*s+13)
+    time0 = time.time()
+    f = sympy.inverse_laplace_transform(F, s, t)
+    time1 = time.time()
+    print(time1 - time0)
+    print("f = " + str(f))
     f = iLT(F)
-    print("f = "+str(f))
+    time2 = time.time()
+    print(time2 - time1)
+    simp_f = sympy.simplify(f)
+    print("f = "+str(simp_f))
+    #print(sympy.simplify(inv_laplace(3*s/(5*s**2 + s + 5))))

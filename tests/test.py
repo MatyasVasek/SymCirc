@@ -7,12 +7,13 @@ from symcirc import *
 
 if __name__ == '__main__':
     t0 = time.time()
-    netlist = "netlists\AC5.txt"
+    netlist = "netlists\AC6.txt"
     s = sympy.symbols("s", real=True)
-    circuit = AnalyseCircuit(load_file(netlist), "tran", symbolic=True)
+    circuit = AnalyseCircuit(load_file(netlist), "tran", symbolic=False)
     #print("Dictionary of solved V/C: {}".format(circuit.solved_dict))
     #latex_print(circuit.solved_dict)
     t1 = time.time()
+    print(t1 - t0)
     all = circuit.component_values("all")
     print("---------------------------------------------------------")
     print("All components: {}".format(all))

@@ -298,15 +298,19 @@ class AnalyseCircuit:
         N2 = c.node2
         y_b = 0
         z_b = 0
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
 
         if c.type == "r":
             y_b = 1
-            z_b = -c.sym_value
+            z_b = -val
         elif c.type == "l":
             y_b = 1
-            z_b = -self.s * c.sym_value
+            z_b = -self.s * val
         elif c.type == "c":
-            y_b = self.s * c.sym_value
+            y_b = self.s * val
             z_b = -1
 
         matrix[self.c_count+index, index] += y_b
@@ -318,17 +322,35 @@ class AnalyseCircuit:
     def _add_voltage_source(self, matrix, result, c, index):
         N1 = c.node1
         N2 = c.node2
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
         matrix[self.c_count + index, index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
-        result[self.c_count + index, 0] = c.sym_value
+        result[self.c_count + index, 0] = val
         return matrix
 
     def _add_current_source(self, matrix, result, c, index):
         N1 = c.node1
         N2 = c.node2
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
         matrix[self.c_count + index, self.c_count + index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
-        result[self.c_count + index, 0] = c.sym_value
+        result[self.c_count + index, 0] = val
         return matrix
 
     def _add_VCT(self, matrix, c, index):  # voltage to current transformer
@@ -336,8 +358,12 @@ class AnalyseCircuit:
         N2 = c.node2
         N3 = c.node3
         N4 = c.node4
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
         matrix[self.c_count + index, self.c_count + index] = 1
-        matrix[self.c_count + index + 1, index] = c.sym_value
+        matrix[self.c_count + index + 1, index] = val
         matrix[self.c_count + index + 1, self.c_count + index + 1] = -1
         self._incidence_matrix_write(N3, N4, matrix, index)
         self._incidence_matrix_write(N1, N2, matrix, index + 1)
@@ -348,8 +374,12 @@ class AnalyseCircuit:
         N2 = c.node2
         N3 = c.node3
         N4 = c.node4
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
         matrix[self.c_count + index, self.c_count + index] = 1
-        matrix[self.c_count + index + 1, index] = c.sym_value
+        matrix[self.c_count + index + 1, index] = val
         matrix[self.c_count + index + 1, index + 1] = -1
         self._incidence_matrix_write(N3, N4, matrix, index)
         self._incidence_matrix_write(N1, N2, matrix, index + 1)
@@ -361,8 +391,12 @@ class AnalyseCircuit:
         c_v = self.components[c.control_voltage]
         N3 = c_v.node2
         N4 = c_v.shorted_node
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
         matrix[self.c_count + index, index] = 1
-        matrix[self.c_count + index + 1, self.c_count + index] = c.sym_value
+        matrix[self.c_count + index + 1, self.c_count + index] = val
         matrix[self.c_count + index + 1, self.c_count + index + 1] = -1
         self._incidence_matrix_write(N3, N4, matrix, index)
         self._incidence_matrix_write(N1, N2, matrix, index + 1)
@@ -374,8 +408,12 @@ class AnalyseCircuit:
         c_v = self.components[c.control_voltage]
         N3 = c_v.node2
         N4 = c_v.shorted_node
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
         matrix[self.c_count + index, index] = 1
-        matrix[self.c_count + index + 1, self.c_count + index] = c.sym_value
+        matrix[self.c_count + index + 1, self.c_count + index] = val
         matrix[self.c_count + index + 1, index + 1] = -1
         self._incidence_matrix_write(N3, N4, matrix, index)
         self._incidence_matrix_write(N1, N2, matrix, index + 1)

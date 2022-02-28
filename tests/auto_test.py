@@ -19,25 +19,29 @@ def test_analysis(analysis_type, is_symbolic=True):
 
 
 if __name__ == "__main__":
-    print("{}SYMBOLIC:".format('\033[93m'))
-    print("{} DC analysis test:".format('\033[95m'))
-    test_analysis("DC", is_symbolic=True)
-    print("{} AC analysis test:".format('\033[95m'))
-    test_analysis("AC", is_symbolic=True)
-    print("{} TF analysis test:".format('\033[95m'))
-    test_analysis("TF", is_symbolic=True)
-    print("{} tran analysis test:".format('\033[95m'))
-    test_analysis("tran", is_symbolic=True)
-
-    print("{}SEMISYMBOLIC:".format('\033[93m'))
-    print("{} DC analysis test:".format('\033[95m'))
+    print("{}DC:".format('\033[93m'))
+    print("{} Numeric test:".format('\033[95m'))
     test_analysis("DC", is_symbolic=False)
-    print("{} AC analysis test:".format('\033[95m'))
-    test_analysis("AC", is_symbolic=False)
-    print("{} TF analysis test:".format('\033[95m'))
+    print("{} Symbolic test:".format('\033[95m'))
+    test_analysis("DC", is_symbolic=True)
+
+    print("{}TF:".format('\033[93m'))
+    print("{} Numeric test:".format('\033[95m'))
     test_analysis("TF", is_symbolic=False)
-    print("{} tran analysis test:".format('\033[95m'))
+    print("{} Symbolic test:".format('\033[95m'))
+    test_analysis("TF", is_symbolic=True)
+
+    print("{}AC:".format('\033[93m'))
+    print("{} Numeric test:".format('\033[95m'))
+    test_analysis("AC", is_symbolic=False)
+    print("{} Symbolic test:".format('\033[95m'))
+    test_analysis("AC", is_symbolic=True)
+
+    print("{}tran:".format('\033[93m'))
+    print("{} Numeric test:".format('\033[95m'))
     test_analysis("tran", is_symbolic=False)
+    print("{} Symbolic test:".format('\033[95m'))
+    test_analysis("tran", is_symbolic=True)
 
 
 

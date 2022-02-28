@@ -6,11 +6,12 @@ s = sympy.Symbol("s", real=True, positive=True)
 f = sympy.symbols("f", real=True, positive=True)
 j = sympy.symbols("j")
 NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
-UNITS = {"f": 10 ** (-15), "p": 10 ** (-12), "n": 10 ** (-9), "u": 10 ** (-6), "m": 10 ** (-3),
-         "k": 10 ** 3, "meg": 10 ** 6, "g": 10 ** 9, "t": 10 ** 12}
+UNITS = {"f": sympy.Rational(1, 1000000000000), "p": sympy.Rational(1, 1000000000000),
+         "n": sympy.Rational(1, 1000000000), "u": sympy.Rational(1, 1000000), "m": sympy.Rational(1, 1000),
+         "k": sympy.Rational(1000, 1), "meg": sympy.Rational(1000000, 1), "g": sympy.Rational(1000000000, 1),
+         "t": sympy.Rational(1000000000000, 1)}
 OPERATORS = ["+", "-", "*", "/"]
 RESERVED = ["sin"]
-
 def check_if_symbolic(val):
     symbolic = False
     for c in val:
@@ -33,14 +34,14 @@ def convert_units(val, forced_numeric=False):
 
     if symbolic:
         symbolic = True
-        ret = val
+        ret = sympy.parse_expr(val)
 
     elif val[-3:-1] in UNITS:
-        ret = sympy.parse_expr(val[:-3]) * UNITS["meg"]
+        ret = sympy.Rational(sympy.parse_expr(val[:-3])) * UNITS["meg"]
     elif val[-1] in UNITS:
-        ret = sympy.parse_expr(val[:-1]) * UNITS[val[-1]]
+        ret = sympy.Rational(sympy.parse_expr(val[:-1])) * UNITS[val[-1]]
     else:
-        ret = sympy.parse_expr(val)
+        ret = sympy.Rational(sympy.parse_expr(val))
     return ret, symbolic
 
 
@@ -184,8 +185,8 @@ def parse(netlist):
                 variant = "r"
                 value, symbolic = value_enum(words)
                 if symbolic:
-                    sym_value = sympy.parse_expr(value)  # sympy.Symbol(value, real=True)
-                    symbols = sym_value.atoms(sympy.Symbol)
+                    #print(type(value))
+                    sym_value = value  # sympy.Symbol(value, real=True)
 
                 else:
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
