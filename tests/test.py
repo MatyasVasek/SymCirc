@@ -3,7 +3,7 @@ import time
 
 # project root path
 sys.path.append(os.path.dirname(__file__)+"/../")
-from symcirc import *
+from src.symcirc import *
 
 if __name__ == '__main__':
     t0 = time.time()
