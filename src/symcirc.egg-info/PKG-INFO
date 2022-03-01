@@ -1,0 +1,39 @@
+Metadata-Version: 2.1
+Name: symcirc
+Version: 0.0.1
+Summary: A python package for symbolic electronic circuit analysis
+Home-page: https://github.com/MatyasVasek/SymCirc
+Author: Matyas Vasek
+Author-email: matyas.vasek@gmail.com
+License: MIT license
+Project-URL: Bug Tracker, https://github.com/MatyasVasek/SymCirc/issues
+Description: # Something
+        
+        ## Something
+        
+        Something...
+        
+        ## Something
+        
+        * Something
+        * Something
+        
+        ## Build
+        
+        Build just source distribution (tar.gz)
+        
+        * python setup.py sdist
+        
+        or complete build (including wheel)
+        
+        * python -m build
+        
+        ## Install
+        
+        * pip install package_name.tar.gz 
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
