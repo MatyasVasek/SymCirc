@@ -1,12 +1,10 @@
-# Something
+# SymCirc
 
-## Something
+A python library for symbolic circuit analysis.
 
-Something...
+## What can it do?
 
-## Something
-
-* Something
+* 
 * Something
 
 ## Build
@@ -20,5 +18,5 @@ or complete build (including wheel)
 * python -m build
 
 ## Install
-
-* pip install package_name.tar.gz 
+* symcirc runs on sympy so you'll need to install it first
+* pip install symcirc-0.0.1.tar.gz 

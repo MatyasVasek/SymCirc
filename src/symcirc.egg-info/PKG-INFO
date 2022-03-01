@@ -7,15 +7,13 @@ Author: Matyas Vasek
 Author-email: matyas.vasek@gmail.com
 License: MIT license
 Project-URL: Bug Tracker, https://github.com/MatyasVasek/SymCirc/issues
-Description: # Something
+Description: # SymCirc
         
-        ## Something
+        A python library for symbolic circuit analysis.
         
-        Something...
+        ## What can it do?
         
-        ## Something
-        
-        * Something
+        * 
         * Something
         
         ## Build
@@ -29,8 +27,8 @@ Description: # Something
         * python -m build
         
         ## Install
-        
-        * pip install package_name.tar.gz 
+        * symcirc runs on sympy so you'll need to install it first
+        * pip install symcirc-0.0.1.tar.gz 
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License

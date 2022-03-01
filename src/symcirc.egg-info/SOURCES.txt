@@ -9,4 +9,5 @@ src/symcirc/utils.py
 src/symcirc.egg-info/PKG-INFO
 src/symcirc.egg-info/SOURCES.txt
 src/symcirc.egg-info/dependency_links.txt
+src/symcirc.egg-info/requires.txt
 src/symcirc.egg-info/top_level.txt

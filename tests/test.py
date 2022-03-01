@@ -1,9 +1,12 @@
 import sys, os
 import time
+import sympy
+from src.symcirc.utils import *
+from src.symcirc import *
+
 
 # project root path
 sys.path.append(os.path.dirname(__file__)+"/../")
-from src.symcirc import *
 
 if __name__ == '__main__':
     t0 = time.time()

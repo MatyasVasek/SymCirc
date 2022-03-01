@@ -1,6 +1,6 @@
 import sympy
 import sys
-from src.symcirc import parse
+from src.symcirc import parse, laplace, utils
 
 
 class AnalyseCircuit:
@@ -13,7 +13,7 @@ class AnalyseCircuit:
         self.s = sympy.symbols("s", real=True, positive=True)
         self.t = sympy.symbols("t", real=True, positive=True)
         self.netlist = netlist
-        data = parse(netlist)
+        data = parse.parse(netlist)
         self.components = data["components"]   # {<name> : <Component>} (see component.py)
         self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
         self.matrix_size = data["matrix_size"]
@@ -166,7 +166,7 @@ class AnalyseCircuit:
                     #solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
                     #print(solved_dict[sym])
                     #print("{}: {}".format(sym, solved_dict[sym]))
-                    inv_l = iLT(solved_dict[sym])
+                    inv_l = laplace.iLT(solved_dict[sym])
                     #inv_l = sympy.simplify(inv_l)
                     solved_dict[sym] = inv_l
                     #print("{} = {}".format(sym, inv_l))
@@ -194,7 +194,7 @@ class AnalyseCircuit:
                     except KeyError:
                         pass
 
-                    solved_dict[sym] = iLT(solved_dict[sym])
+                    solved_dict[sym] = laplace.iLT(solved_dict[sym])
 
         return eqn_matrix, solved_dict, symbols
 
@@ -438,7 +438,7 @@ class AnalyseCircuit:
 
 if __name__ == "__main__":
     netlist = "netlists\DC_elem_11.txt"
-    c = AnalyseCircuit(load_file(netlist))
+    c = AnalyseCircuit(utils.load_file(netlist))
     EM, solved_dict, symbols = c._analyse()
     print(symbols)
     sympy.pprint(EM)
