@@ -1,4 +1,6 @@
+LICENSE
 README.md
+pyproject.toml
 setup.py
 src/symcirc/__init__.py
 src/symcirc/analysis.py
