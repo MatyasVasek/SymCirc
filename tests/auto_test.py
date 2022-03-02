@@ -1,8 +1,9 @@
 import sys, os
 
 # project root path
-sys.path.append(os.path.dirname(__file__)+"/../")
-from src.symcirc import *
+sys.path.append(os.path.dirname(__file__)+"/../src/")
+
+from symcirc import *
 
 def test_analysis(analysis_type, is_symbolic=True):
     netlists = []

@@ -2,9 +2,10 @@ import sys, os
 import json
 
 # project root path
-sys.path.append(os.path.dirname(__file__)+"/../")
-#from symcirc.analysis import *
-from src.symcirc import *
+sys.path.append(os.path.dirname(__file__)+"/../src/")
+
+from symcirc import *
+
 
 netlist = """
 *circ

@@ -1,4 +1,4 @@
-from src.symcirc.component import *
+from symcirc.component import *
 
 t = sympy.Symbol("t", real=True, positive=True)
 s = sympy.Symbol("s", real=True, positive=True)
