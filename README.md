@@ -2,7 +2,7 @@
 
 A python library for symbolic circuit analysis.
 
-#Documentation
+# Documentation
 
 Documentation is available at: https://matyasvasek.github.io/SymCirc/build/html/index.html
 
