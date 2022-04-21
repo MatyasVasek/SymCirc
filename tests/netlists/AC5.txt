@@ -5,4 +5,4 @@ R1 1 2 1k
 R2 2 0 1k
 *dawdwawafawf
 * dawdawd
-C 2 0 10n
+C 2 0 C1

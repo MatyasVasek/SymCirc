@@ -1,9 +1,9 @@
 import sys, os
 
 # project root path
-sys.path.append(os.path.dirname(__file__)+"/../src/")
-
-from symcirc import *
+sys.path.append(os.path.dirname(__file__)+"/../")
+from src.symcirc import *
+from src.symcirc import utils
 
 def test_analysis(analysis_type, is_symbolic=True):
     netlists = []
@@ -12,7 +12,7 @@ def test_analysis(analysis_type, is_symbolic=True):
 
     for filename in netlists:
         try:
-            circuit = AnalyseCircuit(load_file("netlists/{}".format(filename)), analysis_type, is_symbolic)
+            circuit = AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type, is_symbolic)
             print("{}[OK]: {} analysis of {} successful".format('\033[96m', analysis_type, filename))
         except:
             print("{}[FAIL]: {} analysis of {} ended with an error".format('\033[91m', analysis_type, filename))

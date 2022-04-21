@@ -197,7 +197,7 @@ def parse(netlist):
                 variant = "c"
                 value, symbolic = value_enum(words)
                 if symbolic:
-                    sym_value = sympy.parse_expr(value)  # sympy.Symbol(value, real=True)
+                    sym_value = value  # sympy.Symbol(value, real=True)
                 else:
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 try:
@@ -212,7 +212,7 @@ def parse(netlist):
                 variant = "l"
                 value, symbolic = value_enum(words)
                 if symbolic:
-                    sym_value = sympy.parse_expr(value)  # sympy.Symbol(value, real=True)
+                    sym_value = value  # sympy.Symbol(value, real=True)
                 else:
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 try:

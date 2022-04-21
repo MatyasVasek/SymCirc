@@ -4,10 +4,24 @@ from symcirc import parse, laplace, utils
 
 
 class AnalyseCircuit:
+    """
+    Main SymCirc class.
+    When initialized it parses input netlist, and conducts the desired analysis which is then stored as a set
+    of equations in the equation_matrix variable.
+
+    :param str netlist: Loaded netlist file which contains the circuit description.
+        If you intend to load from a file, use the utils.load_file() function.
+    :param str analysis_type: Analysis type identifier: "DC", "AC", "TF", "tran".
+    :param bool symbolic: False if you want your results evaluated with numerical values from the netlist.
+
+    :raise ValueError: If the analysis_type argument is invalid.
+
+
+    """
     def __init__(self, netlist, analysis_type="DC", symbolic=True):
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
-            #print("ERROR: nonexistent analysis type")
-            sys.exit()
+            raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
+            #sys.exit()
         self.is_symbolic = symbolic
         self.analysis_type = analysis_type
         self.s = sympy.symbols("s", real=True, positive=True)
@@ -22,12 +36,15 @@ class AnalyseCircuit:
         self.node_voltage_symbols = self._node_voltage_symbols()
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
 
-    def simp(self, expr):
-        sympy.collect(expr, self.s)
-        sympy.expand(expr)
-        return expr
 
     def component_values(self, name):
+        """
+          Takes a string containing a single component name and returns a dictionary containing the voltage and current
+            of the input component.
+
+          :param str name: component id
+          :return dict ret: in format {"v(name)" : value, "i(name)" : value}
+        """
         ret = {}
         if name == "all":
             ret = self.all_component_values()
@@ -40,6 +57,11 @@ class AnalyseCircuit:
         return ret
 
     def all_component_values(self):
+        """
+          Returns a dictionary of all relevant voltages and currents in the circuit.
+
+          :return dict ret: in format {"v(id1)" : value, "i(id2)" : value, ...}
+        """
         ret = {}
         for key in self.components:
             name = self.components[key].name
@@ -48,6 +70,11 @@ class AnalyseCircuit:
         return ret
 
     def node_voltages(self):
+        """
+          Returns a dictionary of all node voltages in the circuit.
+
+          :return dict ret: in format {"v(node1)" : value, ...}
+        """
         ret = {}
         dic = self.solved_dict
         for key in dic:
@@ -56,6 +83,13 @@ class AnalyseCircuit:
         return ret
 
     def transfer_function(self, node1, node2):
+        """
+          Takes names of two nodes and returns their transfer function
+
+          :param str node1: node id
+          :param str node2: node id
+          :return sympy_object ret: resulting transfer function
+        """
         v1 = sympy.Symbol("v({})".format(node1))
         v2 = sympy.Symbol("v({})".format(node2))
         voltage1 = self.solved_dict[v1].simplify()
@@ -64,6 +98,11 @@ class AnalyseCircuit:
         return tf
 
     def count_components(self):
+        """
+          Returns the total number of components in the circuit
+
+          :return int count
+        """
         count = 0
         for c in self.components:
             if self.components[c].type in ["a", "e", "g", "f", "h"]:
@@ -73,6 +112,14 @@ class AnalyseCircuit:
         return count
 
     def _analyse(self):
+        """
+          Implementation of all types of supported analysis.
+
+            eqn_matrix, solved_dict, symbols
+          :return sympy.Matrix eqn_matrix: matrix of the system equations
+          :return dict solved_dict: dictionary of eqn_matrix solve results
+          :return list symbols: list of all used sympy.symbol objects
+        """
         if self.analysis_type == "DC":
             eqn_matrix, symbols = self._build_system_eqn()
             solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
@@ -195,7 +242,6 @@ class AnalyseCircuit:
                         pass
 
                     solved_dict[sym] = laplace.iLT(solved_dict[sym])
-
         return eqn_matrix, solved_dict, symbols
 
     def _node_voltage_symbols(self):
