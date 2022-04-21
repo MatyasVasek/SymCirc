@@ -19,4 +19,4 @@ or complete build (including wheel)
 
 ## Install
 * symcirc runs on sympy so you'll need to install it first
-* pip install symcirc-0.0.1.tar.gz 
+* pip install symcirc
