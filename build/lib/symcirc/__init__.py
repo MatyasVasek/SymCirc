@@ -1,4 +1,4 @@
 # Default public API
 
-from src.symcirc.analysis import AnalyseCircuit
-from src.symcirc import *
+from symcirc.analysis import AnalyseCircuit
+from symcirc.utils import *
