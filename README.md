@@ -2,21 +2,23 @@
 
 A python library for symbolic circuit analysis.
 
+#Documentation
+
+Documentation is available at: https://matyasvasek.github.io/SymCirc/build/html/index.html
+
 ## What can it do?
 
-* 
-* Something
+SymCirc currently supports DC, AC and transient low frequency circuit analysis.
 
 ## Build
 
-Build just source distribution (tar.gz)
+Build using
 
-* python setup.py sdist
-
-or complete build (including wheel)
-
-* python -m build
+* python setup.py sdist bdist_wheel
 
 ## Install
+
 * symcirc runs on sympy so you'll need to install it first
 * pip install symcirc
+
+If you have any feedback you can contact me at matyas.vasek@gmail.com
