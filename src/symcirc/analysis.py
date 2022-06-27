@@ -1,5 +1,4 @@
 import sympy
-import sys
 from symcirc import parse, laplace, utils
 
 
@@ -64,9 +63,12 @@ class AnalyseCircuit:
         """
         ret = {}
         for key in self.components:
-            name = self.components[key].name
-            val = self.component_values(name)
-            ret.update(val)
+            if self.components[key].type == "k":
+                pass
+            else:
+                name = self.components[key].name
+                val = self.component_values(name)
+                ret.update(val)
         return ret
 
     def node_voltages(self):
@@ -107,6 +109,8 @@ class AnalyseCircuit:
         for c in self.components:
             if self.components[c].type in ["a", "e", "g", "f", "h"]:
                 count += 2
+            elif self.components[c].type in ["k"]:
+                pass
             else:
                 count += 1
         return count
@@ -261,61 +265,71 @@ class AnalyseCircuit:
         node_symbols = self.node_voltage_symbols
         voltage_symbols = []
         current_symbols = []
+        inductor_index = {}
+        couplings = []
         for key in self.components:
-            c = self.components[key]
-            if c.type in ["r", "l", "c"]:
-                self._add_basic(M, c, index)
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
-            if c.type == "v":
-                self._add_voltage_source(M, R, c, index)
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
-            if c.type == "i":
-                self._add_current_source(M, R, c, index)
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
-            if c.type == "g":
-                self._add_VCT(M, c, index)
-                voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
-                index += 1
-            if c.type == "e":
-                self._add_VVT(M, c, index)
-                voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
-                index += 1
-            if c.type == "f":
-                self._add_CCT(M, c, index)
-                voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
-                index += 1
-            if c.type == "h":
-                self._add_CVT(M, c, index)
-                voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
-                index += 1
-            if c.type == "a":
-                self._add_A(M, c, index)
-                voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
-                index += 1
-            if c.type == "s":
-                self._add_short(M, c, index)
-                voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+            if self.components[key].type == "k":
+                couplings.append(self.components[key])
+            else:
+                c = self.components[key]
+                if c.type in ["r", "l", "c"]:
+                    self._add_basic(M, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                    if c.type == "l":
+                        inductor_index[c.name] = index
+                if c.type == "v":
+                    self._add_voltage_source(M, R, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                if c.type == "i":
+                    self._add_current_source(M, R, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                if c.type == "g":
+                    self._add_VCT(M, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                    index += 1
+                if c.type == "e":
+                    self._add_VVT(M, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                    index += 1
+                if c.type == "f":
+                    self._add_CCT(M, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                    index += 1
+                if c.type == "h":
+                    self._add_CVT(M, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                    index += 1
+                if c.type == "a":
+                    self._add_A(M, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                    index += 1
+                if c.type == "s":
+                    self._add_short(M, c, index)
+                    voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                    current_symbols.append(sympy.Symbol("i({})".format(c.name)))
 
-            index += 1
+                index += 1
+        for coupling in couplings:
+            self._add_K(M, coupling, inductor_index)
+
         equation_matrix = M.col_insert(self.c_count*2 + self.node_count, R)
         symbols = voltage_symbols + current_symbols + node_symbols
         return equation_matrix, symbols
@@ -473,6 +487,23 @@ class AnalyseCircuit:
         self._incidence_matrix_write(N3, N4, matrix, index)
         self._incidence_matrix_write(N1, N2, matrix, index + 1)
         return matrix
+
+    def _add_K(self, matrix, c, inductor_index):  # coupled inductors
+        c_L1 = self.components[c.L1]
+        c_L2 = self.components[c.L2]
+        L1_index = inductor_index[c_L1.name]
+        L2_index = inductor_index[c_L2.name]
+        N1 = c_L1.node1
+        N2 = c_L1.node2
+        N3 = c_L2.node1
+        N4 = c_L2.node2
+        if self.is_symbolic:
+            M = c.sym_value
+        else:
+            M = c.value
+
+        matrix[self.c_count + L2_index, self.c_count + L1_index] += -self.s*M
+        matrix[self.c_count + L1_index, self.c_count + L2_index] += -self.s*M
 
     def _add_short(self, matrix, c, index):
         N1 = c.node1
