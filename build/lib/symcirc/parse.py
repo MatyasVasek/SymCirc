@@ -129,6 +129,15 @@ def value_enum(words, source=False):
 
 
 def parse(netlist):
+    """
+
+    :param str netlist: netlist in a string format
+    :return: list data: data contains four items: \n
+    * :node_dict: dictionary of circuit nodes
+    * :code_count: amount of nodes
+    * :matrix_size: matrix size needed to fit all components in
+    * :components: list of components
+    """
     data = {}
     parsed_netlist = netlist.splitlines() #[x.strip() for x in netlist]
     components = {}
