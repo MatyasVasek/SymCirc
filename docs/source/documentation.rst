@@ -18,6 +18,9 @@ component.py
 .. autoclass:: symcirc.component.OperationalAmplifier
 .. autoclass:: symcirc.component.VoltageControlledSource
 .. autoclass:: symcirc.component.CurrentControlledSource
+.. autoclass:: symcirc.component.Coupling
+.. autoclass:: symcirc.component.Subcircuit
+.. autoclass:: symcirc.component.SubcktModel
 
 utils.py
 ^^^^^^^^
@@ -30,6 +33,7 @@ parse.py
 ^^^^^^^^
 
 .. autofunction:: symcirc.parse.parse
+.. autofunction:: symcirc.parse.unpack_subcircuits
 
 
 

@@ -177,7 +177,7 @@ class VoltageControlledSource(Component):
         self.position = position
 
 
-class CoupledInductors(Component):
+class Coupling(Component):
     def __init__(self, name, type, L1, L2, sym_value, value):
         super().__init__(name, type, sym_value, value)
         self.L1 = L1

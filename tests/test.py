@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(__file__)+"/../src/")
 from symcirc import *
 
 if __name__ == '__main__':
-    netlist = "netlists\AC1.txt"
+    netlist = "netlists\subcirc_AC1.txt"
     """n = utils.load_file(netlist)
     circuit = parse.unpack_subcircuit(n)"""
 

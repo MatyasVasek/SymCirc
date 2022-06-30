@@ -1,4 +1,4 @@
-
+Circuit AC6
 V1 a 0 dc 0 ac 1 0 sin 0 1 14k 0 0
 R1 a b R1
 L b 0 L1

@@ -117,6 +117,8 @@ def tran_value(words):
 
     return tran
 
+
+
 def value_enum(words, source=False):
     symbolic = False
     if source:
@@ -138,6 +140,12 @@ def nodes_per_element(type):
         return 0
 
 def unpack_subcircuits(parsed_netlist):
+    """
+    Identifies all subcircuits, unpacks them and returns a unpacked netlist
+    Elements inside a subcircuit inherit it's name in the following format: ElementName_SubcircuitName
+    :param list parsed_netlist: each cell contains one netlist line in string format
+    :return: list unpacked_netlist: each cell contains one netlist line in string format
+    """
     unpacked_netlist = [parsed_netlist[0]]
     subckt_instances = []
     subckt_models = {}
@@ -236,13 +244,20 @@ def unpack_subcircuits(parsed_netlist):
 
 def parse(netlist):
     """
-
+    Translates
     :param str netlist: netlist in a string format
     :return: list data: data contains four items: \n
     * :node_dict: dictionary of circuit nodes
     * :code_count: amount of nodes
     * :matrix_size: matrix size needed to fit all components in
     * :components: list of components
+    \n
+    Input example: \n
+    Circuit AC6
+    V1 a 0 dc 0 ac 1 0 sin 0 1 14k 0 0
+    R1 a b R1
+    L b 0 L1
+    R2 b 0 1k
     """
     data = {}
     parsed_netlist = netlist.splitlines() #[x.strip() for x in netlist]
@@ -409,7 +424,7 @@ def parse(netlist):
                 sym_value = sympy.Symbol(name, real=True)
                 L1 = words[1]
                 L2 = words[2]
-                c = CoupledInductors(name, variant, L1, L2, sym_value, value)
+                c = Coupling(name, variant, L1, L2, sym_value, value)
                 controlled_sources.append(c)
             components[c.name] = c
         count += 1
