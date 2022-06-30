@@ -11,6 +11,8 @@ UNITS = {"f": sympy.Rational(1, 1000000000000), "p": sympy.Rational(1, 100000000
          "t": sympy.Rational(1000000000000, 1)}
 OPERATORS = ["+", "-", "*", "/"]
 RESERVED = ["sin"]
+
+
 def check_if_symbolic(val):
     symbolic = False
     for c in val:
@@ -115,6 +117,8 @@ def tran_value(words):
 
     return tran
 
+
+
 def value_enum(words, source=False):
     symbolic = False
     if source:
@@ -127,16 +131,133 @@ def value_enum(words, source=False):
         value, symbolic = convert_units(words[3])
         return value, symbolic
 
+def nodes_per_element(type):
+    if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H"]:
+        return 2
+    elif type in ["a", "A", "e", "E", "g", "G"]:
+        return 4
+    elif type in ["k", "K"]:
+        return 0
+
+def unpack_subcircuits(parsed_netlist):
+    """
+    Identifies all subcircuits, unpacks them and returns a unpacked netlist
+    Elements inside a subcircuit inherit it's name in the following format: ElementName_SubcircuitName
+    :param list parsed_netlist: each cell contains one netlist line in string format
+    :return: list unpacked_netlist: each cell contains one netlist line in string format
+    """
+    unpacked_netlist = [parsed_netlist[0]]
+    subckt_instances = []
+    subckt_models = {}
+    in_subckt = False
+    model = ""
+    for line in parsed_netlist[1:]:
+        words = line.split()
+        if line == ".end":
+            break
+        elif words in [[], "\n", " "]:
+            pass
+        elif words[0][0] == "*":  # check if line is commentary
+            pass
+
+        elif words[0][0] in ["x", "X"]:
+            nodes_and_model_id = []
+            param_dict = {}
+            loading_nodes = True
+            for w in words[1:]:
+                if w == "PARAMS:":
+                    loading_nodes = False
+                elif loading_nodes:
+                    nodes_and_model_id.append(w)
+                else:
+                    key, val = w.split("=")
+                    param_dict[key] = val
+
+            node_list = nodes_and_model_id[0:-1]
+            model_id = nodes_and_model_id[-1]
+
+            c = Subcircuit(words[0], model_id, node_list, param_dict)
+            subckt_instances.append(c)
+
+        elif words[0] in [".subckt", ".SUBCKT"]:  # subcircuit model
+            in_subckt = True
+            loading_nodes = True
+            node_list = []
+            param_dict = {}
+            model_id = words[1]
+            for w in words[2:]:
+                if w == "PARAMS:":
+                    loading_nodes = False
+                elif loading_nodes:
+                    node_list.append(w)
+                else:
+                    key, val = w.split("=")
+                    param_dict[key] = val
+                    model = SubcktModel(model_id, node_list, param_dict)
+
+        elif words[0] in [".ends", ".ENDS"]:
+            in_subckt = False
+
+        elif in_subckt:
+            line = ""
+            for instance in subckt_instances:
+                if instance.model_id == model.model_id:
+                    node_count = nodes_per_element(words[0][0])
+                    node_dict = {}
+                    n = 0
+                    for node in instance.node_list:
+                        node_dict[model.node_list[n]] = node
+                        n+=1
+                    name = words[0]+"_"+instance.name
+                    line += name
+
+                    i = 0
+                    for w in words[1:]:
+                        if i < node_count:
+                            if w in model.node_list:
+                                line = line + " " + node_dict[w]
+                            else:
+                                line = line + " " + w + "_" + instance.name
+                        elif w[0] == "{":
+                            param = w[1:-1]
+                            try:
+                                line = line + " " + instance.param_dict[param]
+                            except IndexError:
+                                try:
+                                    line = line + " " + model.param_dict[param]
+                                except IndexError:
+                                    exit("Subcircuit syntax error")
+                        elif w[0] in NUMS:
+                            line = line + " " + w
+                        elif w in ["dc", "ac", "tran", "sin"]:
+                            line = line + " " + w
+                        else:
+                            line = line + " " + w+"_"+instance.name
+                        i+=1
+
+
+            unpacked_netlist.append(line)
+        else:
+            unpacked_netlist.append(line)
+    return unpacked_netlist
+
 
 def parse(netlist):
     """
-
+    Translates
     :param str netlist: netlist in a string format
     :return: list data: data contains four items: \n
     * :node_dict: dictionary of circuit nodes
     * :code_count: amount of nodes
     * :matrix_size: matrix size needed to fit all components in
     * :components: list of components
+    \n
+    Input example: \n
+    Circuit AC6
+    V1 a 0 dc 0 ac 1 0 sin 0 1 14k 0 0
+    R1 a b R1
+    L b 0 L1
+    R2 b 0 1k
     """
     data = {}
     parsed_netlist = netlist.splitlines() #[x.strip() for x in netlist]
@@ -149,6 +270,8 @@ def parse(netlist):
     operational_amplifiers = []
     add_short = []
     matrix_expansion_coef = 0
+    parsed_netlist = unpack_subcircuits(parsed_netlist)
+
     for line in parsed_netlist:
         words = line.split()
         if line == ".end":
@@ -160,15 +283,18 @@ def parse(netlist):
         elif words[0][0] == "*":  # check if line is commentary
             pass
         else:
+
+
             # count number of nodes
             name = words[0]
-            node1 = words[1]
-            node2 = words[2]
-            symbolic = False
-            if node1 not in nodes:
-                nodes.append(node1)
-            if node2 not in nodes:
-                nodes.append(node2)
+            if name[0] not in ['k', 'K']:
+                node1 = words[1]
+                node2 = words[2]
+                symbolic = False
+                if node1 not in nodes:
+                    nodes.append(node1)
+                if node2 not in nodes:
+                    nodes.append(node2)
 
             # identify variant of component and assign symbolic value
 
@@ -292,6 +418,14 @@ def parse(netlist):
                 add_short.append(v_c)
                 controlled_sources.append(c)
 
+            elif name[0] in ["k", "K"]:  # coupled inductors
+                variant = "k"
+                value, symbolic = value_enum(words)
+                sym_value = sympy.Symbol(name, real=True)
+                L1 = words[1]
+                L2 = words[2]
+                c = Coupling(name, variant, L1, L2, sym_value, value)
+                controlled_sources.append(c)
             components[c.name] = c
         count += 1
     shorts = []
@@ -314,7 +448,6 @@ def parse(netlist):
         if node != "0":
             node_dict[node] = i
             i += 1
-    #print(i+matrix_expansion_coef)
 
     data["node_dict"] = node_dict
     data["node_count"] = i
@@ -322,17 +455,3 @@ def parse(netlist):
     data["components"] = components
 
     return data
-
-
-if __name__ == '__main__':
-    circuit = parse("oamp.txt")
-    #print(circuit)
-    for i in circuit:
-        try:
-            if i.type == "a":
-                print("{}; type:{}; nodes: {} {} {} {}; symbol:{}".format(i.name, i.type, i.node1, i.node2, i.node3,
-                                                                          i.node4, i.sym_value))
-            else:
-                print("{}; type:{}; nodes: {} {}; symbol:{}".format(i.name, i.type, i.node1, i.node2, i.sym_value))
-        except:
-            pass

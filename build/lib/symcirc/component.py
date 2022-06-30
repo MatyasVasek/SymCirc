@@ -177,5 +177,26 @@ class VoltageControlledSource(Component):
         self.position = position
 
 
+class Coupling(Component):
+    def __init__(self, name, type, L1, L2, sym_value, value):
+        super().__init__(name, type, sym_value, value)
+        self.L1 = L1
+        self.L2 = L2
+        self.sym_value = sym_value
+        self.value = value
+
+class Subcircuit():
+    def __init__(self, name, model_id, node_list, param_dict):
+        self.name = name
+        self.model_id = model_id
+        self.node_list = node_list
+        self.param_dict = param_dict
+
+class SubcktModel():
+    def __init__(self, model_id, node_list, param_dict):
+        self.model_id = model_id
+        self.node_list = node_list
+        self.param_dict = param_dict
+
 class Short(Component):
     pass
