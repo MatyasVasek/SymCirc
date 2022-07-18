@@ -85,7 +85,8 @@ def ac_value(words):
         #print("WARNING: ({}) has no ac value".format(words))
     return ac_value
 
-def tran_value(words):
+def tran_value(words, dc):
+    use_DC_val = True
     index = 1
     offset = 0
     amp = 1
@@ -96,24 +97,27 @@ def tran_value(words):
 
     for word in words:
         if word == "sin":
+            use_DC_val = False
             break
         else:
             index += 1
-    try:
-        offset = sympy.Rational(sympy.parse_expr(words[index]))
-        amp = sympy.Rational(sympy.parse_expr(words[index+1]))
-        freq, _ = convert_units(words[index+2], forced_numeric=True)
-        freq = sympy.Rational(freq)
-        delay = sympy.Rational(sympy.parse_expr(words[index+3]))
-        damping = sympy.Rational(sympy.parse_expr(words[index+4]))
-    except IndexError:
-        pass
-    #offset, amp, freq, delay, damping = sympy.symbols("off, A, f, del, damp", real=True)
-    #pi = 3.14159
-    pi = sympy.pi
-    tran = (offset/s)+amp*sympy.exp(-s*delay)*2*pi*freq/((s+damping)**2+(2*pi*freq)**2)
-    #tran = sympy.apart(tran)
-    #print(tran)
+    if use_DC_val:
+        tran = dc
+    else:
+        try:
+            offset = sympy.Rational(sympy.parse_expr(words[index]))
+            amp = sympy.Rational(sympy.parse_expr(words[index+1]))
+            freq, _ = convert_units(words[index+2], forced_numeric=True)
+            freq = sympy.Rational(freq)
+            delay = sympy.Rational(sympy.parse_expr(words[index+3]))
+            damping = sympy.Rational(sympy.parse_expr(words[index+4]))
+        except IndexError:
+            pass
+        #offset, amp, freq, delay, damping = sympy.symbols("off, A, f, del, damp", real=True)
+        #pi = 3.14159
+        pi = sympy.pi
+        tran = (offset/s)+amp*sympy.exp(-s*delay)*2*pi*freq/((s+damping)**2+(2*pi*freq)**2)
+        #tran = sympy.apart(tran)
 
     return tran
 
@@ -124,7 +128,7 @@ def value_enum(words, source=False):
     if source:
         dc = dc_value(words)
         ac = ac_value(words)
-        tran = tran_value(words)
+        tran = tran_value(words, dc)
         return [dc, ac, tran], symbolic
     else:
         # recalculate units
@@ -201,6 +205,7 @@ def unpack_subcircuits(parsed_netlist):
         elif in_subckt:
             line = ""
             for instance in subckt_instances:
+                print(instance.model_id)
                 if instance.model_id == model.model_id:
                     node_count = nodes_per_element(words[0][0])
                     node_dict = {}

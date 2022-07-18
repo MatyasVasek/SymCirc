@@ -1,0 +1,15 @@
+SUBCIRCUIT TEST
+x1 1 0 3 0 TR_c PARAMS: L1_c=100m R1_c=1 L2_c=100m R2_c=1 K_c=1
+.subckt TR_c i1 i2 o1 o2 PARAMS: L1_c=1 R1_c=1m L2_c=1 R2_c=1m K_c=1
+L1 i1 1 {L1_c}
+R1 1 i2 {R1_c}
+L2 o1 2 {L2_c}
+R2 2 o2 {R2_c}
+K L1 L2 {K_c}
+.ends TR_c
+R1 3 0 1k
+V1 1 0 dc 0 ac 1 0 sin 0 1 10k 0 0
+
+
+All components: {'v(V1)': 1, 'i(V1)': -s/(1000*s + 100000000), 'v(R_x1)': s/(s + 100000), 'i(R_x1)': s/(1000*s + 100000000), 'v(C_x1)': 100000/(s + 100000), 'i(C_x1)': s/(1000*s + 100000000)}
+{v(1): 1, v(2): 100000/(s + 100000)}

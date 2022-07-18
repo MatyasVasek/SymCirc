@@ -136,6 +136,7 @@ class AnalyseCircuit:
             else:
                 for sym in symbols:
                     try:
+                        solved_dict[sym] = sympy.limit(solved_dict[sym], self.s, 0)
                         for name in self.components:
                             c = self.components[name]
                             if c.type == "v":
