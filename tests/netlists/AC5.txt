@@ -1,8 +1,5 @@
-
+AC5
 V1 1 0 dc 0 ac 1 0 sin 0 1 18k 0 0
-R1 1 2 1k
-
+R1 1 2 9k
 R2 2 0 1k
-*dawdwawafawf
-* dawdawd
-C 2 0 C1
+C 2 0 10n

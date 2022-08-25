@@ -19,7 +19,27 @@ def test_analysis(analysis_type, is_symbolic=True):
     return 1
 
 
+def numeric_test(analysis_type, time=1):
+    netlists = []
+    for filename in os.listdir("{}/netlists".format(os.getcwd())):
+        netlists.append(filename)
+
+    for filename in netlists:
+        circuit = AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type, symbolic=False)
+        node_voltages = circuit.node_voltages()
+        print(filename)
+        for i in node_voltages:
+            try:
+                value = node_voltages[i].subs(laplace.t, time)
+            except:
+                pass
+            value = value.evalf( )
+            print("{}: {}".format(i, value))
+    return 1
+
+
 if __name__ == "__main__":
+    numeric_test("tran")
     print("{}DC:".format('\033[93m'))
     print("{} Numeric test:".format('\033[95m'))
     test_analysis("DC", is_symbolic=False)

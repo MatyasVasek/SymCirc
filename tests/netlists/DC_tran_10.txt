@@ -1,0 +1,8 @@
+
+I1 0 1 dc 5m ac 0
+R1 1 0 1k
+C 1 2 100n IC=5
+R2 2 0 3k
+X1 0 1 SUstate1
+.subckt SUstate1 1 2
+.ends SUstate1

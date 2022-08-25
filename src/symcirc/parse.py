@@ -102,7 +102,7 @@ def tran_value(words, dc):
         else:
             index += 1
     if use_DC_val:
-        tran = dc
+        tran = dc/s
     else:
         try:
             offset = sympy.Rational(sympy.parse_expr(words[index]))
@@ -197,7 +197,7 @@ def unpack_subcircuits(parsed_netlist):
                 else:
                     key, val = w.split("=")
                     param_dict[key] = val
-                    model = SubcktModel(model_id, node_list, param_dict)
+            model = SubcktModel(model_id, node_list, param_dict)
 
         elif words[0] in [".ends", ".ENDS"]:
             in_subckt = False
@@ -205,7 +205,6 @@ def unpack_subcircuits(parsed_netlist):
         elif in_subckt:
             line = ""
             for instance in subckt_instances:
-                print(instance.model_id)
                 if instance.model_id == model.model_id:
                     node_count = nodes_per_element(words[0][0])
                     node_dict = {}
@@ -247,7 +246,7 @@ def unpack_subcircuits(parsed_netlist):
     return unpacked_netlist
 
 
-def parse(netlist):
+def parse(netlist, tran=False):
     """
     Translates
     :param str netlist: netlist in a string format
@@ -341,12 +340,18 @@ def parse(netlist):
                 else:
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 try:
-                    init_cond = words[4]
+                    init_cond, _ = convert_units(words[4][3:])
                     c = Capacitor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
                 except IndexError:
                     #print("No initial condition set for {}".format(name))
-                    c = Component(name, variant, node1, node2, sym_value=sym_value, value=value)
+                    init_cond = 0
+                    c = Capacitor(name, variant, node1, node2, sym_value=sym_value, value=value)
+                if tran:
+                    ic = CurrentSource(name + "_IC", "i", node2, node1, sym_value=init_cond*sym_value, dc_value=init_cond*value)
+                    independent_sources.append(ic)
+                    components[ic.name] = ic
                 basic_components.append(c)
+
 
             elif name[0] in ["l", "L"]:
                 variant = "l"
@@ -356,11 +361,15 @@ def parse(netlist):
                 else:
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 try:
-                    init_cond = words[4]
+                    init_cond = convert_units(words[4][3:])
                     c = Inductor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
                 except IndexError:
                     #print("No initial condition set for {}".format(name))
                     c = Inductor(name, variant, node1, node2, sym_value=sym_value, value=value)
+                if tran:
+                    ic = CurrentSource(name + "_IC", "i", node1, node2, sym_value=init_cond*sym_value, dc_value=init_cond*value)
+                    independent_sources.append(ic)
+                    components[ic.name] = ic
                 basic_components.append(c)
 
             elif name[0] in ["a", "A"]:

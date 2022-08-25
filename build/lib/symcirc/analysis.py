@@ -26,7 +26,10 @@ class AnalyseCircuit:
         self.s = sympy.symbols("s", real=True, positive=True)
         self.t = sympy.symbols("t", real=True, positive=True)
         self.netlist = netlist
-        data = parse.parse(netlist)
+        if analysis_type == "tran":
+            data = parse.parse(netlist, tran=True)
+        else:
+            data = parse.parse(netlist)
         self.components = data["components"]   # {<name> : <Component>} (see component.py)
         self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
         self.matrix_size = data["matrix_size"]
@@ -210,9 +213,10 @@ class AnalyseCircuit:
                     try:
                         for name in self.components:
                             c = self.components[name]
-                            if c.type == "v":
+                            if c.type in ["i", "v"]:
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
                                 # print(c.ac_value)
+
                     except KeyError:
                         pass
                     #solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
@@ -279,6 +283,7 @@ class AnalyseCircuit:
                     current_symbols.append(sympy.Symbol("i({})".format(c.name)))
                     if c.type == "l":
                         inductor_index[c.name] = index
+
                 if c.type == "v":
                     self._add_voltage_source(M, R, c, index)
                     voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))

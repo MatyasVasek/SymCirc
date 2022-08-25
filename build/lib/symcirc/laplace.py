@@ -1,11 +1,12 @@
 import sympy
 import time
-from sympy import exp, sin, cos, sqrt, factorial
+from sympy import exp, sin, cos, sqrt, factorial, DiracDelta
 
 def latex_print(data):
     print("{}".format(sympy.latex(data)))
 
-t, s, a = sympy.symbols('t, s, a', positive=True)
+s, a = sympy.symbols('s, a', positive=True)
+t = sympy.symbols('t', real=True)
 R, R2, C, C2 = sympy.symbols('R, R2, C, C2', positive=True)
 
 def laplace(func):
@@ -92,11 +93,14 @@ def table_inverse_laplace_transform(F):
     d_size = len(D_coeff)
     n_size = len(N_coeff)
 
-
+    #print("F:{}".format(F))
     if F == 0:
         f = 0
     elif s not in F.atoms():
-        f = F
+        f = DiracDelta(t, 0)*F
+    elif d_size == 1 and n_size == 1 and N_coeff[1] == 0:
+        f = DiracDelta(t, 1)*N_coeff[0]
+        #print(f)
     elif d_size == 3 and D_coeff[1] == 0 and D_coeff[2] != 0:  # second order polynomial of type: (s**2 + a)
         if n_size == 1:  # sin form:  c*a/(s**2+a**2) --> c*sin(a*t)
             #print("sin form")
@@ -118,7 +122,7 @@ def table_inverse_laplace_transform(F):
         if non_zero_c == 1:  # t form:  n!/s**(n+1) --> t**n
             #print("t form")
             n = d_size-2
-            c = N_coeff[0]/factorial(n)
+            c = N_coeff[0]/(factorial(n)*D_coeff[0])
             f = c*t**n
         if non_zero_c == d_size:  # exp form:  c*n!/(s+a)**(n+1) --> c*t**n*exp(-a*t)
             #print("EXP")
@@ -151,7 +155,7 @@ def table_inverse_laplace_transform(F):
 
 
 
-    #print(f)
+    #print("result: {}".format(f))
     return f
 
 

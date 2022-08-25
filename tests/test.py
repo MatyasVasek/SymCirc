@@ -8,17 +8,18 @@ sys.path.append(os.path.dirname(__file__)+"/../src/")
 from symcirc import *
 
 if __name__ == '__main__':
-    netlist = "netlists\\AC5.txt"
+    netlist = "netlists\\AC1.txt"
     """n = utils.load_file(netlist)
     circuit = parse.unpack_subcircuit(n)"""
 
     t0 = time.time()
     s = sympy.symbols("s", real=True)
-    circuit = AnalyseCircuit(load_file(netlist), "TF", symbolic=False)
+    circuit = AnalyseCircuit(load_file(netlist), "tran", symbolic=True)
+    sympy.pprint(circuit.eqn_matrix)
     #print("Dictionary of solved V/C: {}".format(circuit.solved_dict))
     #latex_print(circuit.solved_dict)
     t1 = time.time()
-    print(t1 - t0)
+    print("run time: {}".format(t1 - t0))
     all = circuit.component_values("all")
     print("---------------------------------------------------------")
     print("All components: {}".format(all))
