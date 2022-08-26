@@ -8,13 +8,13 @@ sys.path.append(os.path.dirname(__file__)+"/../src/")
 from symcirc import *
 
 if __name__ == '__main__':
-    netlist = "netlists\\AC1.txt"
+    netlist = "netlists\\AC14.txt"
     """n = utils.load_file(netlist)
     circuit = parse.unpack_subcircuit(n)"""
 
     t0 = time.time()
     s = sympy.symbols("s", real=True)
-    circuit = AnalyseCircuit(load_file(netlist), "tran", symbolic=True)
+    circuit = AnalyseCircuit(load_file(netlist), "tran", symbolic=False)
     sympy.pprint(circuit.eqn_matrix)
     #print("Dictionary of solved V/C: {}".format(circuit.solved_dict))
     #latex_print(circuit.solved_dict)
