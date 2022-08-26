@@ -17,12 +17,13 @@ class AnalyseCircuit:
 
 
     """
-    def __init__(self, netlist, analysis_type="DC", symbolic=True):
+    def __init__(self, netlist, analysis_type="DC", symbolic=True, numeric_accuracy=6):
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
             raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
             #sys.exit()
         self.is_symbolic = symbolic
         self.analysis_type = analysis_type
+        self.numeric_accuracy = numeric_accuracy
         self.s = sympy.symbols("s", real=True, positive=True)
         self.t = sympy.symbols("t", real=True, positive=True)
         self.netlist = netlist
@@ -182,6 +183,7 @@ class AnalyseCircuit:
                                 #print(c.ac_value)
                             else:
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.numeric_accuracy)
                     except KeyError:
                         pass
 

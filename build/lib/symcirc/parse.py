@@ -361,10 +361,11 @@ def parse(netlist, tran=False):
                 else:
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
                 try:
-                    init_cond = convert_units(words[4][3:])
+                    init_cond, _ = convert_units(words[4][3:])
                     c = Inductor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
                 except IndexError:
                     #print("No initial condition set for {}".format(name))
+                    init_cond = 0
                     c = Inductor(name, variant, node1, node2, sym_value=sym_value, value=value)
                 if tran:
                     ic = CurrentSource(name + "_IC", "i", node1, node2, sym_value=init_cond*sym_value, dc_value=init_cond*value)
