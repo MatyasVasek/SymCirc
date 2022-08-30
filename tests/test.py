@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(__file__)+"/../src/")
 from symcirc import *
 
 if __name__ == '__main__':
-    netlist = "netlists\\AC14.txt"
+    netlist = "netlists\\DC_tran_1.txt"
     """n = utils.load_file(netlist)
     circuit = parse.unpack_subcircuit(n)"""
 

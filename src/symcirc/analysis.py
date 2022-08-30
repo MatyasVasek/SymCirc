@@ -69,6 +69,8 @@ class AnalyseCircuit:
         for key in self.components:
             if self.components[key].type == "k":
                 pass
+            elif self.components[key].name[-3:] == "_IC":
+                pass
             else:
                 name = self.components[key].name
                 val = self.component_values(name)
