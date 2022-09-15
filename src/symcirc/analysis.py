@@ -218,11 +218,11 @@ class AnalyseCircuit:
                         for name in self.components:
                             c = self.components[name]
                             if c.type in ["i", "v"] and c.name[-3:] != "_IC":
-                                print(c.name)
-                                print(c.sym_value)
-                                print("Before: {}".format(solved_dict[sym]))
+                                #print(c.name)
+                                #print(c.sym_value)
+                                #print("Before: {}".format(solved_dict[sym]))
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
-                                print("After: {}".format(solved_dict[sym]))
+                                #print("After: {}".format(solved_dict[sym]))
                                 # print(c.ac_value)
 
                     except KeyError:
@@ -374,7 +374,7 @@ class AnalyseCircuit:
             val = c.sym_value
         else:
             val = c.value
-        print("{}: {}".format(c.name, val))
+        #print("{}: {}".format(c.name, val))
 
         if c.type == "r":
             y_b = 1
@@ -414,7 +414,7 @@ class AnalyseCircuit:
         N2 = c.node2
         if self.is_symbolic:
             val = c.sym_value
-            print("symbolic: {}".format(val))
+            #print("symbolic: {}".format(val))
         else:
             if self.analysis_type == "DC":
                 val = c.dc_value

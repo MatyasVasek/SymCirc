@@ -14,8 +14,10 @@ if __name__ == '__main__':
 
     t0 = time.time()
     s = sympy.symbols("s", real=True)
-    circuit = AnalyseCircuit(load_file(netlist), "TF", symbolic=True)
+    circuit = AnalyseCircuit(load_file(netlist), "tran", symbolic=False)
+    print("TEST -- print matrix: start")
     sympy.pprint(circuit.eqn_matrix)
+    print("TEST -- print matrix: end")
     #print("Dictionary of solved V/C: {}".format(circuit.solved_dict))
     #latex_print(circuit.solved_dict)
     t1 = time.time()
