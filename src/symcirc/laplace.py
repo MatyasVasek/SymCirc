@@ -1,13 +1,44 @@
 import sympy
 import time
 from sympy import exp, sin, cos, sqrt, factorial, DiracDelta
+from symcirc.utils import s, t
+
+def poles(F):
+    #print("poles F: {}".format(F))
+    N, D = F.as_numer_denom()
+    roots = sympy.roots(D, s)
+    return roots
+
+
+def residue(F, pole, order):
+    #print(F)
+    if order == 1:
+        tmp = (s - pole) * F * sympy.exp(s*t)
+        #print(tmp)
+        func = sympy.limit(tmp, s, pole, "+")
+        #print(func)
+        #print("hit 1-order")
+    elif order == 2:
+        func = sympy.limit(sympy.simplify(sympy.diff(sympy.simplify((s - pole)**2 * F * sympy.exp(s*t)), s)), s, pole)
+        #print("hit 2-order")
+    else:
+        #print("hit n-order")
+        func = (1 / sympy.factorial(order - 1)) * sympy.limit(sympy.diff(((s - pole)**order) * F * sympy.exp(s*t), s, order-1), s, pole)
+    return func
+
+def residue_laplace(F):
+    f = 0
+    pole_dict = poles(F)
+    #print(pole_dict)
+    for p in pole_dict:
+        order = pole_dict[p]
+        f += residue(F, p, order)
+    return f
+
 
 def latex_print(data):
     print("{}".format(sympy.latex(data)))
 
-s, a = sympy.symbols('s, a', positive=True)
-t = sympy.symbols('t', real=True)
-R, R2, C, C2 = sympy.symbols('R, R2, C, C2', positive=True)
 
 def laplace(func):
     return sympy.laplace_transform(func, t, s, noconds=True)
@@ -62,12 +93,18 @@ def separate_s(f):
 
 def iLT(F):
     f = 0
-    #print("F = {}".format(F))
-    #F = sympy.apart(F, s)
+    F = sympy.apart(F, s)
     part_list = split_parts(F)
     #print(part_list)
     for Func in part_list:
+        #print("Func: {}".format(Func))
         func = table_inverse_laplace_transform(Func)
+        #print("TABLE LAPLACE: {}".format(func))
+        #func = residue_laplace(F)
+        #print("func: {}".format(func))
+        if func is None:
+            func = residue_laplace(F)
+            #print("RESIDUE LAPLACE: {}".format(func))
         f += func
     return f
 
@@ -76,7 +113,6 @@ def table_inverse_laplace_transform(F):
     This function performs the inverse laplace transform via comparison of factors and known table values, if possible.
     If this method fails, the ILT is computed by definition using sympy library.
     """
-
     f = None
     #print("F = {}".format(F))
     N, D = F.as_numer_denom()
@@ -103,12 +139,9 @@ def table_inverse_laplace_transform(F):
         #print(f)
     elif d_size == 3 and D_coeff[1] == 0 and D_coeff[2] != 0:  # second order polynomial of type: (s**2 + a)
         if n_size == 1:  # sin form:  c*a/(s**2+a**2) --> c*sin(a*t)
-            #print("sin form")
             a = sqrt(sympy.cancel(D_coeff[2]/D_coeff[0]))
-            #print("a: {}".format(a))
             c = sympy.cancel(N_coeff[0]/(a*D_coeff[0]))
             f = c * sin(a * t)
-            #print("f : {}".format(f))
         elif n_size == 2 and N_coeff[1] == 0:  # cos form:  c*s/(s**2+a**2) --> c*cos(a*t)
             #print("cos form")
             a = sqrt(sympy.cancel(D_coeff[2]/D_coeff[0]))
@@ -151,10 +184,8 @@ def table_inverse_laplace_transform(F):
                     c_cos = N_coeff[0]/D_coeff[0]
                     c_sin = a*N_coeff[0]/(omega*D_coeff[0])
                     f = exp(-a*t)*(c_cos*cos(omega*t)+c_sin*sin(omega*t))
-
-
-
-
+        else:
+            pass
     #print("result: {}".format(f))
     return f
 

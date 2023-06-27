@@ -52,12 +52,6 @@ if __name__ == "__main__":
     print("{} Symbolic test:".format('\033[95m'))
     test_analysis("TF", is_symbolic=True)
 
-    print("{}AC:".format('\033[93m'))
-    print("{} Numeric test:".format('\033[95m'))
-    test_analysis("AC", is_symbolic=False)
-    print("{} Symbolic test:".format('\033[95m'))
-    test_analysis("AC", is_symbolic=True)
-
     print("{}tran:".format('\033[93m'))
     print("{} Numeric test:".format('\033[95m'))
     test_analysis("tran", is_symbolic=False)

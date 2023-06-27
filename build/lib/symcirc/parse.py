@@ -347,8 +347,8 @@ def parse(netlist, tran=False):
                     init_cond = 0
                     c = Capacitor(name, variant, node1, node2, sym_value=sym_value, value=value)
                 if tran:
-                    print(sym_value)
-                    print(init_cond)
+                    #print(sym_value)
+                    #print(init_cond)
                     ic = CurrentSource(name + "_IC", "i", node2, node1, sym_value=init_cond*sym_value, dc_value=init_cond*value, ac_value=0, tran_value=init_cond*value)
                     independent_sources.append(ic)
                     components[ic.name] = ic

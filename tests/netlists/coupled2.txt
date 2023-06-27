@@ -1,0 +1,12 @@
+
+V1 1 0 dc 1 ac 1
+R1 1 4 1k
+R2 0 3 1k
+x1 0 4 0 3 TRc PARAMS: L1c=100m R1c=1m L2c=100m R2c=1m Kc=1
+.subckt TRc i1 i2 o1 o2 PARAMS: L1c=1 R1c=1m L2c=1 R2c=1m Kc=1
+L1 i1 1 {L1c}
+R1 1 i2 {R1c}
+L2 o1 2 {L2c}
+R2 2 o2 {R2c}
+K L1 L2 {Kc}
+.ends TRc

@@ -2,8 +2,8 @@
 V1 1 0 dc 0 ac 1 0 sin 0 1 1600 0 0
 R1 2 3 10k
 R2 3 o 1k
-X1 o 0 3 idealAmpliferWithGroud
-.subckt idealAmpliferWithGroud 1 2 3
+X1 o 0 0 3 idealAmpliferWithGroud
+.subckt idealAmpliferWithGroud 1 0 2 3
 A1 1 0 2 3
 .ends idealAmpliferWithGroud
 C 1 2 10n

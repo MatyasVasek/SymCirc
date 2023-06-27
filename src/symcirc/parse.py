@@ -1,15 +1,15 @@
 from symcirc.component import *
+from symcirc import utils
+from symcirc import laplace
+from symcirc.utils import t, s, f, j
 
-t = sympy.Symbol("t", real=True, positive=True)
-s = sympy.Symbol("s", real=True, positive=True)
-f = sympy.symbols("f", real=True, positive=True)
-j = sympy.symbols("j")
+
 NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
 UNITS = {"f": sympy.Rational(1, 1000000000000), "p": sympy.Rational(1, 1000000000000),
          "n": sympy.Rational(1, 1000000000), "u": sympy.Rational(1, 1000000), "m": sympy.Rational(1, 1000),
-         "k": sympy.Rational(1000, 1), "meg": sympy.Rational(1000000, 1), "g": sympy.Rational(1000000000, 1),
-         "t": sympy.Rational(1000000000000, 1)}
-OPERATORS = ["+", "-", "*", "/"]
+         "k": 1000, "meg": 1000000, "G": 1000000000,
+         "T": 1000000000000}
+OPERATORS = ["+", "-", "*", "/", "."]
 RESERVED = ["sin"]
 
 
@@ -32,17 +32,21 @@ def convert_units(val, forced_numeric=False):
         symbolic = False
     else:
         symbolic = check_if_symbolic(val)
-
     if symbolic:
         symbolic = True
-        ret = sympy.parse_expr(val)
-
+        ret = sympy.parse_expr(val, UNITS)
     elif val[-3:-1] in UNITS:
-        ret = sympy.Rational(sympy.parse_expr(val[:-3])) * UNITS["meg"]
+        ret = sympy.Rational(sympy.parse_expr(val[:-3]) * UNITS["meg"])
+    elif val[-1] in ["k", "g", "t"]:
+        ret = sympy.Rational(sympy.parse_expr(val[:-1]) * UNITS[val[-1]])
     elif val[-1] in UNITS:
         ret = sympy.Rational(sympy.parse_expr(val[:-1])) * UNITS[val[-1]]
     else:
-        ret = sympy.Rational(sympy.parse_expr(val))
+        #ret = sympy.parse_expr(val)
+        try:
+            ret = sympy.Rational(sympy.parse_expr(val))
+        except TypeError:
+            ret = sympy.parse_expr(val)
     return ret, symbolic
 
 
@@ -71,18 +75,20 @@ def ac_value(words):
             except IndexError:
                 offset = 0
         else:
-            symbolic = True
-            offset = 0
-            ac_value = sympy.Symbol(words[0], real=True)
-        #print(ac_value)
-        #print(offset)
-        ac_value = ac_value * sympy.exp(j*offset)
-        #print(ac_value)
+            ac_value = 0
+            """    symbolic = True
+                offset = 0
+                ac_value = sympy.Symbol(words[0], real=True)
+            #print(ac_value)
+            #print(offset)
+            ac_value = ac_value * sympy.exp(j*offset)
+            #print(ac_value)"""
     except IndexError:
-        symbolic = True
+        ac_value = 0
+        """symbolic = True
         offset = 0
         ac_value = sympy.Symbol(words[0], real=True)
-        #print("WARNING: ({}) has no ac value".format(words))
+        #print("WARNING: ({}) has no ac value".format(words))"""
     return ac_value
 
 def tran_value(words, dc):
@@ -105,20 +111,17 @@ def tran_value(words, dc):
         tran = dc/s
     else:
         try:
-            offset = sympy.Rational(sympy.parse_expr(words[index]))
-            amp = sympy.Rational(sympy.parse_expr(words[index+1]))
+            offset, _ = convert_units(words[index])
+            amp, _ = convert_units(words[index+1])
             freq, _ = convert_units(words[index+2], forced_numeric=True)
-            freq = sympy.Rational(freq)
-            delay = sympy.Rational(sympy.parse_expr(words[index+3]))
-            damping = sympy.Rational(sympy.parse_expr(words[index+4]))
+            delay, _ = convert_units(words[index+3])
+            damping, _ = convert_units(words[index+4])
         except IndexError:
             pass
         #offset, amp, freq, delay, damping = sympy.symbols("off, A, f, del, damp", real=True)
         #pi = 3.14159
         pi = sympy.pi
         tran = (offset/s)+amp*sympy.exp(-s*delay)*2*pi*freq/((s+damping)**2+(2*pi*freq)**2)
-        #tran = sympy.apart(tran)
-
     return tran
 
 
@@ -323,12 +326,10 @@ def parse(netlist, tran=False):
                 variant = "r"
                 value, symbolic = value_enum(words)
                 if symbolic:
-                    #print(type(value))
                     sym_value = value  # sympy.Symbol(value, real=True)
 
                 else:
                     sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
-                    #print(sym_value.atoms(sympy.Symbol))
                 c = Resistor(name, variant, node1, node2, sym_value=sym_value, value=value)
                 basic_components.append(c)
 
@@ -343,12 +344,9 @@ def parse(netlist, tran=False):
                     init_cond, _ = convert_units(words[4][3:])
                     c = Capacitor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
                 except IndexError:
-                    #print("No initial condition set for {}".format(name))
                     init_cond = 0
                     c = Capacitor(name, variant, node1, node2, sym_value=sym_value, value=value)
                 if tran:
-                    #print(sym_value)
-                    #print(init_cond)
                     ic = CurrentSource(name + "_IC", "i", node2, node1, sym_value=init_cond*sym_value, dc_value=init_cond*value, ac_value=0, tran_value=init_cond*value)
                     independent_sources.append(ic)
                     components[ic.name] = ic
@@ -366,7 +364,6 @@ def parse(netlist, tran=False):
                     init_cond, _ = convert_units(words[4][3:])
                     c = Inductor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
                 except IndexError:
-                    #print("No initial condition set for {}".format(name))
                     init_cond = 0
                     c = Inductor(name, variant, node1, node2, sym_value=sym_value, value=value)
                 if tran:
@@ -384,6 +381,12 @@ def parse(netlist, tran=False):
                     nodes.append(node3)
                 if node4 not in nodes:
                     nodes.append(node4)
+                #print(words)
+                value, symbolic = None, None #convert_units(words[5])
+                if symbolic:
+                    sym_value = value  # sympy.Symbol(value, real=True)
+                else:
+                    sym_value = sympy.Symbol(name, real=True)
                 c = OperationalAmplifier(name, variant, node1, node2, node3, node4, sym_value,
                                          matrix_expansion_coef)
                 matrix_expansion_coef += 1
@@ -398,28 +401,43 @@ def parse(netlist, tran=False):
                     nodes.append(node3)
                 if node4 not in nodes:
                     nodes.append(node4)
-                c = VoltageControlledSource(name, variant, node1, node2, node3, node4, sym_value=sym_value,
+                value, symbolic = convert_units(words[5])
+                if symbolic:
+                    sym_value = value  # sympy.Symbol(value, real=True)
+                else:
+                    sym_value = sympy.Symbol(name, real=True)
+
+                c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value,
                               position=matrix_expansion_coef)
                 matrix_expansion_coef += 1
                 controlled_sources.append(c)
 
             elif name[0] in ["g", "G"]:  # VCT
                 variant = "g"
-                sym_value = sympy.Symbol(name, real=True)
                 node3 = words[3]
                 node4 = words[4]
                 if node3 not in nodes:
                     nodes.append(node3)
                 if node4 not in nodes:
                     nodes.append(node4)
-                c = VoltageControlledSource(name, variant, node1, node2, node3, node4, sym_value=sym_value)
+                value, symbolic = convert_units(words[5])
+                if symbolic:
+                    sym_value = value  # sympy.Symbol(value, real=True)
+                else:
+                    sym_value = sympy.Symbol(name, real=True)
+                c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
                 controlled_sources.append(c)
 
             elif name[0] in ["f", "F"]:  # CCT
                 variant = "f"
                 sym_value = sympy.Symbol(name, real=True)
                 v_c = words[3]
-                c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, sym_value=sym_value,
+                value, symbolic = convert_units(words[4])
+                if symbolic:
+                    sym_value = value  # sympy.Symbol(value, real=True)
+                else:
+                    sym_value = sympy.Symbol(name, real=True)
+                c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, value=value, sym_value=sym_value,
                               position=matrix_expansion_coef)
                 matrix_expansion_coef += 1
                 add_short.append(v_c)
@@ -429,7 +447,12 @@ def parse(netlist, tran=False):
                 variant = "h"
                 sym_value = sympy.Symbol(name, real=True)
                 v_c = words[3]
-                c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, sym_value=sym_value,
+                value, symbolic = convert_units(words[4])
+                if symbolic:
+                    sym_value = value  # sympy.Symbol(value, real=True)
+                else:
+                    sym_value = sympy.Symbol(name, real=True)
+                c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, value=value, sym_value=sym_value,
                               position=matrix_expansion_coef)
                 matrix_expansion_coef += 1
                 add_short.append(v_c)
@@ -461,10 +484,15 @@ def parse(netlist, tran=False):
 
     node_dict = {}
     i = 0
+    grounded = False
     for node in nodes:
         if node != "0":
             node_dict[node] = i
             i += 1
+        if node == "0":
+            grounded = True
+    if not grounded:
+        exit("Circuit not grounded")
 
     data["node_dict"] = node_dict
     data["node_count"] = i

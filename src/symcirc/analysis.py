@@ -1,5 +1,7 @@
 import sympy
 from symcirc import parse, laplace, utils
+from symcirc.utils import j,s,t
+from symcirc.pole_zero import *
 
 
 class AnalyseCircuit:
@@ -17,15 +19,13 @@ class AnalyseCircuit:
 
 
     """
-    def __init__(self, netlist, analysis_type="DC", symbolic=True, numeric_accuracy=6):
+    def __init__(self, netlist, analysis_type="DC", symbolic=True, precision=6):
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
             raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
             #sys.exit()
         self.is_symbolic = symbolic
         self.analysis_type = analysis_type
-        self.numeric_accuracy = numeric_accuracy
-        self.s = sympy.symbols("s", real=True, positive=True)
-        self.t = sympy.symbols("t", real=True, positive=True)
+        self.precision = precision
         self.netlist = netlist
         if analysis_type == "tran":
             data = parse.parse(netlist, tran=True)
@@ -39,8 +39,19 @@ class AnalyseCircuit:
         self.node_voltage_symbols = self._node_voltage_symbols()
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
 
+    def component_voltage(self, name):
+        ret = None
+        v = "v({})".format(name)
+        ret = self.solved_dict[sympy.symbols(v)]
+        return ret
 
-    def component_values(self, name):
+    def component_current(self, name):
+        ret = None
+        i = "i({})".format(name)
+        ret = self.solved_dict[sympy.symbols(i)]
+        return ret
+
+    def component_values(self, name="all", default_python_datatypes=False):
         """
           Takes a string containing a single component name and returns a dictionary containing the voltage and current
             of the input component.
@@ -50,7 +61,7 @@ class AnalyseCircuit:
         """
         ret = {}
         if name == "all":
-            ret = self.all_component_values()
+            ret = self.all_component_values(default_python_datatypes)
             return ret
         else:
             v = "v({})".format(name)
@@ -59,7 +70,7 @@ class AnalyseCircuit:
             ret[i] = self.solved_dict[sympy.symbols(i)]
         return ret
 
-    def all_component_values(self):
+    def all_component_values(self, default_python_datatypes=False):
         """
           Returns a dictionary of all relevant voltages and currents in the circuit.
 
@@ -72,9 +83,19 @@ class AnalyseCircuit:
             elif self.components[key].name[-3:] == "_IC":
                 pass
             else:
-                name = self.components[key].name
-                val = self.component_values(name)
-                ret.update(val)
+                if default_python_datatypes:
+                    name = self.components[key].name
+                    elem_dict = self.component_values(name)
+                    try:
+                        for key in elem_dict:
+                            #print(sympy.Abs(elem_dict[key]))
+                            ret[key] = float(elem_dict[key])
+                    except TypeError:
+                        ret.update(elem_dict)
+                else:
+                    name = self.components[key].name
+                    elem_dict = self.component_values(name)
+                    ret.update(elem_dict)
         return ret
 
     def node_voltages(self):
@@ -98,10 +119,25 @@ class AnalyseCircuit:
           :param str node2: node id
           :return sympy_object ret: resulting transfer function
         """
-        v1 = sympy.Symbol("v({})".format(node1))
-        v2 = sympy.Symbol("v({})".format(node2))
-        voltage1 = self.solved_dict[v1].simplify()
-        voltage2 = self.solved_dict[v2].simplify()
+        try:
+            if node1 in [0, "0"]:
+                voltage1 = 0
+            else:
+                v1 = sympy.Symbol("v({})".format(node1))
+                voltage1 = self.solved_dict[v1].simplify()
+        except KeyError:
+            print("Node {} doesn't exist.".format(v1))
+            exit(101)
+
+        try:
+            if node2 in [0, "0"]:
+                voltage2 = 0
+            else:
+                v2 = sympy.Symbol("v({})".format(node2))
+                voltage2 = self.solved_dict[v2].simplify()
+        except KeyError:
+            print("Node {} doesn't exist.".format(v2))
+            exit(101)
         tf = (voltage2/voltage1)
         return tf
 
@@ -132,23 +168,29 @@ class AnalyseCircuit:
         """
         if self.analysis_type == "DC":
             eqn_matrix, symbols = self._build_system_eqn()
+            #print(symbols)
             solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+            #print(solved_dict)
             if self.is_symbolic:
                 for sym in symbols:
                     try:
-                        solved_dict[sym] = sympy.limit(solved_dict[sym], self.s, 0)
+                        solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
                     except KeyError:
                         pass
+                    except TypeError:
+                        pass
+                        #print(solved_dict)
             else:
                 for sym in symbols:
                     try:
-                        solved_dict[sym] = sympy.limit(solved_dict[sym], self.s, 0)
+                        solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
                         for name in self.components:
                             c = self.components[name]
                             if c.type == "v":
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.dc_value)
                             else:
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
@@ -156,7 +198,6 @@ class AnalyseCircuit:
             eqn_matrix, symbols = self._build_system_eqn()
             solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
             f = sympy.symbols("f", real=True, positive=True)
-            j = sympy.symbols("j")
             if self.is_symbolic:
                 i = 1
                 for sym in symbols:
@@ -167,7 +208,7 @@ class AnalyseCircuit:
                         if i == 1:
                             #sympy.pprint(solved_dict)
                             i = 0
-                        solved_dict[sym] = solved_dict[sym].subs(self.s, 2 * sympy.pi * f * j)
+                        solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
                     except KeyError:
                         pass
             else:
@@ -177,7 +218,7 @@ class AnalyseCircuit:
                         #print(solved_dict[sym])
                         #solved_dict[sym] = solved_dict[sym].simplify()
                         #print(solved_dict[sym])
-                        solved_dict[sym] = solved_dict[sym].subs(self.s, 2 * sympy.pi * f * j)
+                        solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
                         for name in self.components:
                             c = self.components[name]
                             if c.type == "v":
@@ -185,7 +226,7 @@ class AnalyseCircuit:
                                 #print(c.ac_value)
                             else:
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            solved_dict[sym] = solved_dict[sym].evalf(self.numeric_accuracy)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
@@ -200,20 +241,25 @@ class AnalyseCircuit:
                     try:
                         for name in self.components:
                             c = self.components[name]
-                            if c.type == "v":
+                            if c.type in ["v", "i"]:
+                                #print(c.ac_value)
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
                                 #print(c.ac_value)
                             else:
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
         elif self.analysis_type == "tran":
             eqn_matrix, symbols = self._build_system_eqn()
             solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+            #print(solved_dict)
+            #print(symbols)
             if self.is_symbolic:
                 #latex_print(solved_dict)
                 for sym in symbols:
+                    #print(sym)
                     try:
                         for name in self.components:
                             c = self.components[name]
@@ -230,7 +276,10 @@ class AnalyseCircuit:
                     #solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
                     #print(solved_dict[sym])
                     #print("{}: {}".format(sym, solved_dict[sym]))
+
                     inv_l = laplace.iLT(solved_dict[sym])
+                    #inv_l = laplace.residue_laplace(solved_dict[sym])
+
                     #inv_l = sympy.simplify(inv_l)
                     solved_dict[sym] = inv_l
                     #print("{} = {}".format(sym, inv_l))
@@ -245,7 +294,6 @@ class AnalyseCircuit:
                         pass
             else:
                 for sym in symbols:
-                    #print(sym)
                     try:
                         for name in self.components:
                             c = self.components[name]
@@ -255,10 +303,11 @@ class AnalyseCircuit:
                                 # print(c.ac_value)
                             else:
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                            #solved_dict[sym] = utils.evaluate(solved_dict[sym], self.precision)
                     except KeyError:
                         pass
-
-                    solved_dict[sym] = laplace.iLT(solved_dict[sym])
+                    f = laplace.iLT(solved_dict[sym])
+                    solved_dict[sym] = utils.evaluate(f, self.precision)
         return eqn_matrix, solved_dict, symbols
 
     def _node_voltage_symbols(self):
@@ -374,6 +423,7 @@ class AnalyseCircuit:
             val = c.sym_value
         else:
             val = c.value
+            #print(val)
         #print("{}: {}".format(c.name, val))
 
         if c.type == "r":
@@ -381,15 +431,14 @@ class AnalyseCircuit:
             z_b = -val
         elif c.type == "l":
             y_b = 1
-            z_b = -self.s * val
+            z_b = -s * val
         elif c.type == "c":
-            y_b = self.s * val
+            y_b = s * val
             z_b = -1
 
         matrix[self.c_count+index, index] += y_b
         matrix[self.c_count+index, self.c_count+index] += z_b
         self._incidence_matrix_write(N1, N2, matrix, index)
-
         return matrix
 
     def _add_voltage_source(self, matrix, result, c, index):
@@ -522,8 +571,8 @@ class AnalyseCircuit:
             L2 = c_L2.value
             M = c.value
 
-        matrix[self.c_count + L2_index, self.c_count + L1_index] += -self.s*M*sympy.sqrt(L1*L2)
-        matrix[self.c_count + L1_index, self.c_count + L2_index] += -self.s*M*sympy.sqrt(L1*L2)
+        matrix[self.c_count + L2_index, self.c_count + L1_index] += -s*M*sympy.sqrt(L1*L2)
+        matrix[self.c_count + L1_index, self.c_count + L2_index] += -s*M*sympy.sqrt(L1*L2)
 
     def _add_short(self, matrix, c, index):
         N1 = c.node1
@@ -533,13 +582,5 @@ class AnalyseCircuit:
         return matrix
 
 
-if __name__ == "__main__":
-    netlist = "netlists\DC_elem_11.txt"
-    c = AnalyseCircuit(utils.load_file(netlist))
-    EM, solved_dict, symbols = c._analyse()
-    print(symbols)
-    sympy.pprint(EM)
-    print(solved_dict)
-    sympy.pprint(solved_dict)
 
 
