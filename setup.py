@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="symcirc",
-    version="0.0.12",
+    version="0.0.13",
     author="Matyas Vasek",
     author_email="matyas.vasek@gmail.com",
     description="A python package for symbolic electronic circuit analysis",
@@ -24,5 +24,5 @@ setuptools.setup(
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.6",
-    install_requires=['sympy', ],
+    install_requires=['sympy'],
 )

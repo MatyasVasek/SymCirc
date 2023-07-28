@@ -1,6 +1,4 @@
 import sympy
-import numpy
-import matplotlib.pyplot as plt
 
 t = sympy.Symbol("t", real=True, positive=True)
 s = sympy.Symbol("s", real=True, positive=True)
@@ -69,10 +67,3 @@ def evaluate(func, precision=6):
         func = func.func(*arg_list)
     return func
 
-
-def plot(func, var, start, stop, points, title=""):
-    x = xpoints(start, stop, points)
-    y = ypoints(func, x, var)
-    plt.plot(numpy.array(x), numpy.array(y))
-    plt.title(title)
-    plt.show()

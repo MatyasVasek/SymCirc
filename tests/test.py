@@ -5,11 +5,10 @@ import sympy
 sys.path.append(os.path.dirname(__file__)+"/../src/")
 import symcirc
 from symcirc import utils
-import matplotlib.pyplot as plt
-import numpy as np
+import test_utils
 
 if __name__ == '__main__':
-    netlist = "netlists\\netlist3.txt"
+    netlist = "netlists\\AC6.txt"
     """n = utils.load_file(netlist)
     circuit = parse.unpack_subcircuit(n)"""
     analysis = "tran"
@@ -54,9 +53,9 @@ if __name__ == '__main__':
 
         #print(str(node)+": "+str(voltage))
         if analysis == "tran":
-            utils.plot(voltage, utils.t, 0, 0.001, 10000)
+            test_utils.plot(voltage, utils.t, 0, 0.001, 10000)
         else:
-            utils.plot(voltage, utils.s, 0, 0.001, 10000)
+            test_utils.plot(voltage, utils.s, 0, 0.001, 10000)
     #print(all["i(V1)"].subs(t, 1))
     #print("RunTime: {}".format(t1 - t0))
 
