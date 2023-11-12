@@ -57,13 +57,16 @@ def ypoints(func, xpoints, var):
 
 
 def evaluate(func, precision=6):
-    func = sympy.N(func, precision)
-    arg_list = []
-    for arg in func.args:
-        #print(arg)
-        arg_list.append(evaluate(arg))
-    #print(arg_list)
-    if len(arg_list) > 0:
-        func = func.func(*arg_list)
+    try:
+        func = sympy.N(func, precision)
+        arg_list = []
+        for arg in func.args:
+            #print(arg)
+            arg_list.append(evaluate(arg))
+        #print(arg_list)
+        if len(arg_list) > 0:
+            func = func.func(*arg_list)
+    except RecursionError:
+        pass
     return func
 
