@@ -15,3 +15,4 @@ src/symcirc.egg-info/dependency_links.txt
 src/symcirc.egg-info/requires.txt
 src/symcirc.egg-info/top_level.txt
 tests/test.py
+tests/test_utils.py

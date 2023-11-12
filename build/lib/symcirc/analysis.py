@@ -1,7 +1,6 @@
 import sympy
 from symcirc import parse, laplace, utils
 
-
 class AnalyseCircuit:
     """
     Main SymCirc class.
