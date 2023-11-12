@@ -88,7 +88,6 @@ class AnalyseCircuit:
                     elem_dict = self.component_values(name)
                     try:
                         for key in elem_dict:
-                            #print(sympy.Abs(elem_dict[key]))
                             ret[key] = float(elem_dict[key])
                     except TypeError:
                         ret.update(elem_dict)
@@ -108,7 +107,7 @@ class AnalyseCircuit:
         dic = self.solved_dict
         for key in dic:
             if key in self.node_voltage_symbols and key.name[2] != "*":
-                ret[key] = dic[key]
+                ret[key.name] = dic[key]
         return ret
 
     def transfer_function(self, node1, node2):
