@@ -34,6 +34,7 @@ class Resistor(Component):
     """
     def __init__(self, name, type, node1, node2, sym_value, value):
         super().__init__(name, type, node1, node2, sym_value, value)
+        self.netlist_keywords = ["R", "r"]
 
 
 class Capacitor(Component):
@@ -51,6 +52,7 @@ class Capacitor(Component):
     def __init__(self, name, type, node1, node2, sym_value, value, init_cond=None):
         super().__init__(name, type, node1, node2, sym_value, value)
         self.init_cond = init_cond
+        self.netlist_keywords = ["C", "c"]
 
 
 class Inductor(Component):
@@ -68,6 +70,7 @@ class Inductor(Component):
     def __init__(self, name, type, node1, node2, sym_value, value, init_cond=None):
         super().__init__(name, type, node1, node2, sym_value, value)
         self.init_cond = init_cond
+        self.netlist_keywords = ["L", "l"]
 
 
 class VoltageSource(Component):
@@ -92,6 +95,7 @@ class VoltageSource(Component):
         self.tran_value = tran_value
         self.position = position
         self.shorted_node = shorted_node
+        self.netlist_keywords = ["V", "v", "U", "u"]
 
 
 class CurrentSource(Component):
@@ -113,6 +117,7 @@ class CurrentSource(Component):
         self.dc_value = dc_value
         self.ac_value = ac_value
         self.tran_value = tran_value
+        self.netlist_keywords = ["I", "i"]
 
 
 class OperationalAmplifier(Component):
@@ -133,6 +138,7 @@ class OperationalAmplifier(Component):
         self.node3 = node3
         self.node4 = node4
         self.position = position
+        self.netlist_keywords = ["A", "a"]
 
 
 class CurrentControlledSource(Component):
@@ -153,6 +159,7 @@ class CurrentControlledSource(Component):
         super().__init__(name, type, node1, node2, sym_value, value)
         self.control_voltage = control_voltage
         self.position = position
+        self.netlist_keywords = ["F", "f", "H", "h"]
 
 
 class VoltageControlledSource(Component):
@@ -175,6 +182,7 @@ class VoltageControlledSource(Component):
         self.node3 = node3
         self.node4 = node4
         self.position = position
+        self.netlist_keywords = ["G", "g", "E", "e"]
 
 
 class Coupling(Component):
@@ -184,6 +192,7 @@ class Coupling(Component):
         self.L2 = L2
         self.sym_value = sym_value
         self.value = value
+        self.netlist_keywords = ["K", "k"]
 
 class Subcircuit():
     def __init__(self, name, model_id, node_list, param_dict):
@@ -191,12 +200,14 @@ class Subcircuit():
         self.model_id = model_id
         self.node_list = node_list
         self.param_dict = param_dict
+        self.netlist_keywords = ["X", "x"]
 
 class SubcktModel():
     def __init__(self, model_id, node_list, param_dict):
         self.model_id = model_id
         self.node_list = node_list
         self.param_dict = param_dict
+        self.elements = []
 
 class Short(Component):
     pass
