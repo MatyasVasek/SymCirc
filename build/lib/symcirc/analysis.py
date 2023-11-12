@@ -1,6 +1,5 @@
 import sympy
 from symcirc import parse, laplace, utils
-# Fishecko was here
 
 class AnalyseCircuit:
     """
