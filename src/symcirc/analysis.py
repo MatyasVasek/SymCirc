@@ -22,7 +22,6 @@ class AnalyseCircuit:
     def __init__(self, netlist, analysis_type="DC", symbolic=True, precision=6):
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
             raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
-            #sys.exit()
         self.is_symbolic = symbolic
         self.analysis_type = analysis_type
         self.precision = precision
@@ -185,10 +184,12 @@ class AnalyseCircuit:
                         solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
                         for name in self.components:
                             c = self.components[name]
-                            if c.type == "v":
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.dc_value)
+                            if c.type in ["v", "i"]:
+                                if c.dc_value:
+                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.dc_value)
                             else:
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                if c.value:
+                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
                             solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
@@ -220,11 +221,13 @@ class AnalyseCircuit:
                         solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
                         for name in self.components:
                             c = self.components[name]
-                            if c.type == "v":
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
+                            if c.type in ["v", "i"]:
+                                if c.ac_value:
+                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
                                 #print(c.ac_value)
                             else:
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                if c.value:
+                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
                             solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
@@ -242,10 +245,12 @@ class AnalyseCircuit:
                             c = self.components[name]
                             if c.type in ["v", "i"]:
                                 #print(c.ac_value)
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
+                                if c.ac_value:
+                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
                                 #print(c.ac_value)
                             else:
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                if c.value:
+                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
                             solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
@@ -296,12 +301,13 @@ class AnalyseCircuit:
                     try:
                         for name in self.components:
                             c = self.components[name]
-                            if c.type == "v":
-
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
+                            if c.type in ["v", "i"]:
+                                if c.tran_value:
+                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
                                 # print(c.ac_value)
                             else:
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                if c.value:
+                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
                             #solved_dict[sym] = utils.evaluate(solved_dict[sym], self.precision)
                     except KeyError:
                         pass
