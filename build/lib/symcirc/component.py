@@ -200,8 +200,3 @@ class SubcktModel():
 
 class Short(Component):
     pass
-
-class SwitchedCapacitorsSwitch(Component):
-    def __init__(self, name, type, node1, node2, phase):
-        super().__init__(name, type, node1, node2)
-        self.phase = phase
