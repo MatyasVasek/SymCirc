@@ -3,6 +3,7 @@ import time
 from sympy import exp, sin, cos, sqrt, factorial, DiracDelta
 from symcirc.utils import s, t
 
+
 def poles(F):
     #print("poles F: {}".format(F))
     N, D = F.as_numer_denom()
@@ -25,6 +26,7 @@ def residue(F, pole, order):
         #print("hit n-order")
         func = (1 / sympy.factorial(order - 1)) * sympy.limit(sympy.diff(((s - pole)**order) * F * sympy.exp(s*t), s, order-1), s, pole)
     return func
+
 
 def residue_laplace(F):
     f = 0
@@ -107,6 +109,7 @@ def iLT(F):
             #print("RESIDUE LAPLACE: {}".format(func))
         f += func
     return f
+
 
 def table_inverse_laplace_transform(F):
     """
