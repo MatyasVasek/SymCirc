@@ -36,9 +36,9 @@ class AnalyseCircuit:
             phase_definition = []
             phase_def_syntax_error = ("Invalid phase definition syntax, use 'P=integer' or 'P=[...]' "
                                       "where the list contains lengths of phases written a fraction (the fractions must add up to 1)")
-            if "P=" in phases:
+            if phases.startswith("P="):
                 phases = phases.replace("P=", "")
-                if "[" in phases and "]" in phases:
+                if phases.startswith("[") and phases.endswith("]"):
                     phases = phases.replace("[", "")
                     phases = phases.replace("]", "")
                     phase_definition = sympy.sympify(phases.split(','))
@@ -59,8 +59,8 @@ class AnalyseCircuit:
 
             else:
                 raise SyntaxError(phase_def_syntax_error)
-            #print(phase_definition)
-        #print(phases)
+            print(phase_definition)
+        print(phases)
 
 
         self.components = data["components"]   # {<name> : <Component>} (see component.py)
