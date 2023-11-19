@@ -314,8 +314,8 @@ def parse(netlist, tran=False):
 
     for line in parsed_netlist:
         words = line.split()
-
         name = words[0]
+
         if name[0] not in ['k', 'K']:
             node1 = words[1]
             node2 = words[2]
