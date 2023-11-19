@@ -14,7 +14,7 @@ OPERATORS = ["+", "-", "*", "/", "."]
 RESERVED = ["sin"]
 
 NETLIST_KEYCHARS = ["R", "r", "C", "c", "L", "l", "V", "v", "U", "u", "I", "i", "A", "a", "F", "f", "H", "h", "G", "g",
-                    "E", "e", "K", "k", "X", "x", ".", "*"]
+                    "E", "e", "K", "k", "S", "s", "X", "x", ".", "*"]
 
 
 def check_if_symbolic(val):
@@ -140,7 +140,7 @@ def value_enum(words, source=False):
         return value, symbolic
 
 def nodes_per_element(type):
-    if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H"]:
+    if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "s", "S"]:
         return 2
     elif type in ["a", "A", "e", "E", "g", "G"]:
         return 4
@@ -307,6 +307,7 @@ def parse(netlist, tran=False):
     basic_components = []
     controlled_sources = []
     operational_amplifiers = []
+    SCSI_components = []
     add_short = []
     matrix_expansion_coef = 0
     parsed_netlist = parse_subcircuits(parsed_netlist)
@@ -485,6 +486,12 @@ def parse(netlist, tran=False):
             L2 = words[2]
             c = Coupling(name, variant, L1, L2, sym_value, value)
             controlled_sources.append(c)
+
+        elif name[0] in ["s", "S"]:  # periodic switch used for SC/SI analysis
+            variant = "s"
+            phase = words[3]
+            c = PeriodicSwitch(name, variant, node1, node2, phase=phase)
+            SCSI_components.append(c)
 
         components[c.name] = c
         count += 1
