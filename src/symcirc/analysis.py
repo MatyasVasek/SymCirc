@@ -31,7 +31,17 @@ class AnalyseCircuit:
         else:
             data = parse.parse(netlist)
 
-        self.phases = phases
+        self.phases = self.parse_phases(phases)
+
+        self.components = data["components"]   # {<name> : <Component>} (see component.py)
+        self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
+        self.matrix_size = data["matrix_size"]
+        self.node_count = data["node_count"]
+        self.c_count = self.count_components()
+        self.node_voltage_symbols = self._node_voltage_symbols()
+        self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
+
+    def parse_phases(self, phases):
         if phases != "undefined":
             phase_definition = []
             phase_def_syntax_error = ("Invalid phase definition syntax, use 'P=integer' or 'P=[...]' "
@@ -59,17 +69,7 @@ class AnalyseCircuit:
 
             else:
                 raise SyntaxError(phase_def_syntax_error)
-            print(phase_definition)
-        print(phases)
-
-
-        self.components = data["components"]   # {<name> : <Component>} (see component.py)
-        self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
-        self.matrix_size = data["matrix_size"]
-        self.node_count = data["node_count"]
-        self.c_count = self.count_components()
-        self.node_voltage_symbols = self._node_voltage_symbols()
-        self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
+        return phases
 
     def component_voltage(self, name):
         ret = None
