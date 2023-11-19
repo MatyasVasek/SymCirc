@@ -19,7 +19,7 @@ class AnalyseCircuit:
 
 
     """
-    def __init__(self, netlist, phases, analysis_type="DC", symbolic=True, precision=6):
+    def __init__(self, netlist, analysis_type="DC", phases="undefined", symbolic=True, precision=6):
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
             raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
         self.is_symbolic = symbolic
@@ -31,35 +31,37 @@ class AnalyseCircuit:
         else:
             data = parse.parse(netlist)
 
-        self.phase_definition = phases
-        phase_definition = []
-        phase_def_syntax_error = ("Invalid phase definition syntax, use 'P=integer' or 'P=[...]' "
-                                  "where the list contains lengths of phases written a fraction (the fractions must add up to 1)")
-        if "P=" in phases:
-            phases = phases.replace("P=", "")
-            if "[" in phases and "]" in phases:
-                phases = phases.replace("[", "")
-                phases = phases.replace("]", "")
-                phase_definition = sympy.sympify(phases.split(','))
-                phase_sum = sum(phase_definition)
-                if phase_sum != 1:
-                    raise ValueError("The sum of phase lengths must be 1")
+        self.phases = phases
+        if phases != "undefined":
+            phase_definition = []
+            phase_def_syntax_error = ("Invalid phase definition syntax, use 'P=integer' or 'P=[...]' "
+                                      "where the list contains lengths of phases written a fraction (the fractions must add up to 1)")
+            if "P=" in phases:
+                phases = phases.replace("P=", "")
+                if "[" in phases and "]" in phases:
+                    phases = phases.replace("[", "")
+                    phases = phases.replace("]", "")
+                    phase_definition = sympy.sympify(phases.split(','))
+                    phase_sum = sum(phase_definition)
+                    if phase_sum != 1:
+                        raise ValueError("The sum of phase lengths must be 1")
+                    else:
+                        phase_definition.insert(0, len(phase_definition))
+                elif type(int(phases)) == int:
+                    if int(phases) < 2:
+                        raise ValueError("The number of phases can't be less than 2")
+                    else:
+                        phase_definition.append(int(phases[0]))
+                        for i in range(phase_definition[0]):
+                            phase_definition.append(sympy.sympify("1/" + str(phase_definition[0])))
                 else:
-                    phase_definition.insert(0, len(phase_definition))
-            elif type(int(phases)) == int:
-                if int(phases) < 2:
-                    raise ValueError("The number of phases can't be less than 2")
-                else:
-                    phase_definition.append(int(phases[0]))
-                    for i in range(phase_definition[0]):
-                        phase_definition.append(sympy.sympify("1/" + str(phase_definition[0])))
+                    raise SyntaxError(phase_def_syntax_error)
+
             else:
                 raise SyntaxError(phase_def_syntax_error)
-
-        else:
-            raise SyntaxError(phase_def_syntax_error)
+            #print(phase_definition)
         #print(phases)
-        #print(phase_definition)
+
 
         self.components = data["components"]   # {<name> : <Component>} (see component.py)
         self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
