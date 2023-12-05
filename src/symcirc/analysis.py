@@ -74,13 +74,32 @@ class AnalyseCircuit:
     def component_voltage(self, name):
         ret = None
         v = "v({})".format(name)
-        ret = self.solved_dict[sympy.symbols(v)]
+
+        if self.method == "tableau":
+            ret = self.solved_dict[sympy.symbols(v)]
+
+        if self.method == "eliminated_tableau":
+            if name[0] in ["r", "R", "c", "C", "l", "L"]:
+                i = "i({})".format(name)
+                c = self.components[name]
+                if self.is_symbolic:
+                    if name[0] in ["c", "C"]:
+                        impedance = s/c.sym_value
+                    else:
+                        impedance = c.sym_value
+                else:
+                    if name[0] in ["c", "C"]:
+                        impedance = s/c.value
+                    else:
+                        impedance = c.value
+                ret = self.solved_dict[sympy.symbols(i)]*impedance
         return ret
 
     def component_current(self, name):
         ret = None
         i = "i({})".format(name)
-        ret = self.solved_dict[sympy.symbols(i)]
+        if self.method in ["tableau", "eliminated_tableau"]:
+            ret = self.solved_dict[sympy.symbols(i)]
         return ret
 
     def component_values(self, name="all", default_python_datatypes=False):
@@ -98,8 +117,8 @@ class AnalyseCircuit:
         else:
             v = "v({})".format(name)
             i = "i({})".format(name)
-            ret[v] = self.solved_dict[sympy.symbols(v)]
-            ret[i] = self.solved_dict[sympy.symbols(i)]
+            ret[v] = self.component_voltage(name)
+            ret[i] = self.component_current(name)
         return ret
 
     def all_component_values(self, default_python_datatypes=False):
@@ -435,7 +454,7 @@ class AnalyseCircuit:
             equation_matrix = M.col_insert(self.c_count*2 + self.node_count, R)
             symbols = voltage_symbols + current_symbols + node_symbols
 
-        if self.method == "two_graph_node":
+        elif self.method == "two_graph_node":
             symbols = []
             v_graph_collapses = {'0': []}
             i_graph_collapses = {'0': []}
@@ -536,6 +555,40 @@ class AnalyseCircuit:
 
             #print(symbols)
 
+        elif self.method == "eliminated_tableau":
+            size = self.c_count
+            M = sympy.Matrix(sympy.zeros(size + self.node_count))
+            R = sympy.Matrix(sympy.zeros(size + self.node_count, 1))
+            index = 0
+            node_symbols = self.node_voltage_symbols
+            voltage_symbols = []
+            current_symbols = []
+            inductor_index = {}
+            couplings = []
+
+            for key in self.components:
+                if self.components[key].type == "k":
+                    pass
+                else:
+                    c = self.components[key]
+                    if c.type in ["r", "l", "c"]:
+                        self._add_basic(M, c, index)
+                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        if c.type == "l":
+                            inductor_index[c.name] = index
+
+                    if c.type == "v":
+                        self._add_voltage_source(M, R, c, index)
+                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
+                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                index += 1
+            #sympy.pprint(M)
+
+            equation_matrix = M.col_insert(self.c_count + self.node_count, R)
+            symbols = node_symbols + current_symbols
+            #print(symbols)
+
         return equation_matrix, symbols
 
     def _add_V_tgn(self, M, S, v_nodes, i_nodes, c, index):
@@ -609,21 +662,28 @@ class AnalyseCircuit:
             graph.append(node)
         return graph
 
-    def _incidence_matrix_write(self, N1, N2, matrix, index):
+    def _incidence_matrix_write(self, N1, N2, matrix, index, y_b=None):
         if N1 == "0":
             pass
         else:
-            val = 1
             node_pos = self.node_dict[N1]
-            matrix[self.c_count*2 + node_pos, self.c_count + index] += val
-            matrix[index, self.c_count*2 + node_pos] -= val
+            if self.method == "tableau":
+                matrix[self.c_count*2 + node_pos, self.c_count + index] += 1
+                matrix[index, self.c_count*2 + node_pos] -= 1
+            elif self.method == "eliminated_tableau":
+                matrix[self.c_count + node_pos, self.node_count + index] += 1
+                matrix[index, node_pos] += y_b
         if N2 == "0":
             pass
         else:
-            val = -1
             node_pos = self.node_dict[N2]
-            matrix[self.c_count*2 + node_pos, self.c_count + index] += val
-            matrix[index, self.c_count*2 + node_pos] -= val
+            if self.method == "tableau":
+                matrix[self.c_count*2 + node_pos, self.c_count + index] += -1
+                matrix[index, self.c_count*2 + node_pos] -= -1
+            elif self.method == "eliminated_tableau":
+                matrix[self.c_count + node_pos, self.node_count + index] += -1
+                matrix[index, node_pos] += -y_b
+
         return matrix
 
     def _add_basic(self, matrix, c, index):
@@ -648,9 +708,19 @@ class AnalyseCircuit:
             y_b = s * val
             z_b = -1
 
-        matrix[self.c_count+index, index] += y_b
-        matrix[self.c_count+index, self.c_count+index] += z_b
-        self._incidence_matrix_write(N1, N2, matrix, index)
+        if self.method == "tableau":
+            matrix[self.c_count+index, index] += y_b
+            matrix[self.c_count+index, self.c_count+index] += z_b
+            self._incidence_matrix_write(N1, N2, matrix, index)
+        elif self.method == "eliminated_tableau":
+            matrix[index, self.node_count + index] += z_b
+            self._incidence_matrix_write(N1, N2, matrix, index, y_b=y_b)
+            #for i in range
+            #matrix[index, node_pos] += val
+            # matrix[]
+            # matrix[]
+            #matrix[self.c_count + index, index] += y_b
+
         return matrix
 
     def _add_voltage_source(self, matrix, result, c, index):
@@ -665,9 +735,14 @@ class AnalyseCircuit:
                 val = c.tran_value
             else:
                 val = c.ac_value
-        matrix[self.c_count + index, index] = 1
-        self._incidence_matrix_write(N1, N2, matrix, index)
-        result[self.c_count + index, 0] = val
+        if self.method == "tableau":
+            matrix[self.c_count + index, index] = 1
+            self._incidence_matrix_write(N1, N2, matrix, index)
+            result[self.c_count + index, 0] = val
+        elif self.method == "eliminated_tableau":
+            self._incidence_matrix_write(N1, N2, matrix, index, y_b=1)
+            result[index, 0] = val
+
         return matrix
 
     def _add_current_source(self, matrix, result, c, index):
