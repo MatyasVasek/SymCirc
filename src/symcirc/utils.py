@@ -1,7 +1,5 @@
 import sympy
-
-t = sympy.Symbol("t", real=True, positive=True)
-s = sympy.Symbol("s", real=True, positive=True)
+from sympy.abc import s, t
 f = sympy.symbols("f", real=True, positive=True)
 j = sympy.symbols("j", real=False)
 
