@@ -32,8 +32,12 @@ class AnalyseCircuit:
             data = parse.parse(netlist)
 
         self.phases = self.parse_phases(phases)
+        if self.phases != "undefined" and analysis_type not in ["AC", "TF", "tran"]:
+            raise ValueError("This type of analysis is not allowed in Switched Capacitors/Currents circuits")
+        if self.phases != "undefined" and method != "modified_node":
+            raise ValueError('The only valid method for Switched Capacitor circuits is "modified_node"')
 
-        self.components = data["components"]   # {<name> : <Component>} (see component.py)
+        self.components = data["components"] # {<name> : <Component>} (see component.py)
         self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
         self.matrix_size = data["matrix_size"]
         self.node_count = data["node_count"]
@@ -61,7 +65,7 @@ class AnalyseCircuit:
                     if int(phases) < 2:
                         raise ValueError("The number of phases can't be less than 2")
                     else:
-                        phase_definition.append(int(phases[0]))
+                        phase_definition.append(int(phases))
                         for i in range(phase_definition[0]):
                             phase_definition.append(sympy.sympify("1/" + str(phase_definition[0])))
                 else:
@@ -69,6 +73,7 @@ class AnalyseCircuit:
 
             else:
                 raise SyntaxError(phase_def_syntax_error)
+            phases = phase_definition
         return phases
 
     def component_voltage(self, name):
@@ -197,155 +202,176 @@ class AnalyseCircuit:
           :return dict solved_dict: dictionary of eqn_matrix solve results
           :return list symbols: list of all used sympy.symbol objects
         """
-        if self.analysis_type == "DC":
-            eqn_matrix, symbols = self._build_system_eqn()
-            #print(symbols)
-            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-            #print(solved_dict)
-            if self.is_symbolic:
-                for sym in symbols:
-                    try:
-                        solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
-                    except KeyError:
-                        pass
-                    except TypeError:
-                        pass
-                        #print(solved_dict)
-            else:
-                for sym in symbols:
-                    try:
-                        solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
-                        for name in self.components:
-                            c = self.components[name]
-                            if c.type in ["v", "i"]:
-                                if c.dc_value:
-                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.dc_value)
-                            else:
-                                if c.value:
-                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
-                    except KeyError:
-                        pass
+        if self.phases == "undefined":
+            if self.analysis_type == "DC":
+                eqn_matrix, symbols = self._build_system_eqn()
+                #print(symbols)
+                solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+                #print(solved_dict)
+                if self.is_symbolic:
+                    for sym in symbols:
+                        try:
+                            solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
+                        except KeyError:
+                            pass
+                        except TypeError:
+                            pass
+                            #print(solved_dict)
+                else:
+                    for sym in symbols:
+                        try:
+                            solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
+                            for name in self.components:
+                                c = self.components[name]
+                                if c.type in ["v", "i"]:
+                                    if c.dc_value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.dc_value)
+                                else:
+                                    if c.value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                        except KeyError:
+                            pass
 
-        elif self.analysis_type == "AC":
-            eqn_matrix, symbols = self._build_system_eqn()
-            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-            f = sympy.symbols("f", real=True, positive=True)
-            if self.is_symbolic:
-                i = 1
-                for sym in symbols:
-                    try:
-                        #print("{}: {}".format(sym, solved_dict[sym]))
-                        #solved_dict[sym] = solved_dict[sym].simplify()
-                        #print("{}: {}".format(sym, solved_dict[sym]))
-                        if i == 1:
-                            #sympy.pprint(solved_dict)
-                            i = 0
-                        solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
-                    except KeyError:
-                        pass
-            else:
-                for sym in symbols:
-                    #print(sym)
-                    try:
-                        #print(solved_dict[sym])
-                        #solved_dict[sym] = solved_dict[sym].simplify()
-                        #print(solved_dict[sym])
-                        solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
-                        for name in self.components:
-                            c = self.components[name]
-                            if c.type in ["v", "i"]:
-                                if c.ac_value:
-                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
-                                #print(c.ac_value)
-                            else:
-                                if c.value:
-                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
-                    except KeyError:
-                        pass
+            elif self.analysis_type == "AC":
+                eqn_matrix, symbols = self._build_system_eqn()
+                solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+                f = sympy.symbols("f", real=True, positive=True)
+                if self.is_symbolic:
+                    i = 1
+                    for sym in symbols:
+                        try:
+                            #print("{}: {}".format(sym, solved_dict[sym]))
+                            #solved_dict[sym] = solved_dict[sym].simplify()
+                            #print("{}: {}".format(sym, solved_dict[sym]))
+                            if i == 1:
+                                #sympy.pprint(solved_dict)
+                                i = 0
+                            solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
+                        except KeyError:
+                            pass
+                else:
+                    for sym in symbols:
+                        #print(sym)
+                        try:
+                            #print(solved_dict[sym])
+                            #solved_dict[sym] = solved_dict[sym].simplify()
+                            #print(solved_dict[sym])
+                            solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
+                            for name in self.components:
+                                c = self.components[name]
+                                if c.type in ["v", "i"]:
+                                    if c.ac_value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
+                                    #print(c.ac_value)
+                                else:
+                                    if c.value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                        except KeyError:
+                            pass
 
-        elif self.analysis_type == "TF":
-            eqn_matrix, symbols = self._build_system_eqn()
-            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-            #solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
+            elif self.analysis_type == "TF":
+                eqn_matrix, symbols = self._build_system_eqn()
+                solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+                #solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
 
-            if not self.is_symbolic:
-                for sym in symbols:
-                    #print(sym)
-                    try:
-                        for name in self.components:
-                            c = self.components[name]
-                            if c.type in ["v", "i"]:
-                                #print(c.ac_value)
-                                if c.ac_value:
-                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
-                                #print(c.ac_value)
-                            else:
-                                if c.value:
-                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
-                    except KeyError:
-                        pass
+                if not self.is_symbolic:
+                    for sym in symbols:
+                        #print(sym)
+                        try:
+                            for name in self.components:
+                                c = self.components[name]
+                                if c.type in ["v", "i"]:
+                                    #print(c.ac_value)
+                                    if c.ac_value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
+                                    #print(c.ac_value)
+                                else:
+                                    if c.value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                        except KeyError:
+                            pass
 
-        elif self.analysis_type == "tran":
-            eqn_matrix, symbols = self._build_system_eqn()
-            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-            #print(solved_dict)
-            #print(symbols)
-            if self.is_symbolic:
-                #latex_print(solved_dict)
-                for sym in symbols:
-                    #print(sym)
-                    try:
-                        for name in self.components:
-                            c = self.components[name]
-                            if c.type in ["i", "v"] and c.name[-3:] != "_IC":
-                                #print(c.name)
-                                #print(c.sym_value)
-                                #print("Before: {}".format(solved_dict[sym]))
-                                solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
-                                #print("After: {}".format(solved_dict[sym]))
-                                # print(c.ac_value)
-
-                    except KeyError:
-                        pass
-                    #solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
-                    #print(solved_dict[sym])
-                    #print("{}: {}".format(sym, solved_dict[sym]))
-
-                    inv_l = laplace.iLT(solved_dict[sym])
-                    #inv_l = laplace.residue_laplace(solved_dict[sym])
-
-                    #inv_l = sympy.simplify(inv_l)
-                    solved_dict[sym] = inv_l
-                    #print("{} = {}".format(sym, inv_l))
-                    #print("{}: {}".format(sym, solved_dict[sym]))
-                    try:
-                        for name in self.components:
-                            c = self.components[name]
-
-                        #solved_dict[sym] = solved_dict
-                        pass
-                    except KeyError:
-                        pass
-            else:
-                for sym in symbols:
-                    try:
-                        for name in self.components:
-                            c = self.components[name]
-                            if c.type in ["v", "i"]:
-                                if c.tran_value:
+            elif self.analysis_type == "tran":
+                eqn_matrix, symbols = self._build_system_eqn()
+                solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+                #print(solved_dict)
+                #print(symbols)
+                if self.is_symbolic:
+                    #latex_print(solved_dict)
+                    for sym in symbols:
+                        #print(sym)
+                        try:
+                            for name in self.components:
+                                c = self.components[name]
+                                if c.type in ["i", "v"] and c.name[-3:] != "_IC":
+                                    #print(c.name)
+                                    #print(c.sym_value)
+                                    #print("Before: {}".format(solved_dict[sym]))
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
-                                # print(c.ac_value)
-                            else:
-                                if c.value:
-                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            #solved_dict[sym] = utils.evaluate(solved_dict[sym], self.precision)
-                    except KeyError:
-                        pass
-                    f = laplace.iLT(solved_dict[sym])
-                    solved_dict[sym] = utils.evaluate(f, self.precision)
+                                    #print("After: {}".format(solved_dict[sym]))
+                                    # print(c.ac_value)
+
+                        except KeyError:
+                            pass
+                        #solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
+                        #print(solved_dict[sym])
+                        #print("{}: {}".format(sym, solved_dict[sym]))
+
+                        inv_l = laplace.iLT(solved_dict[sym])
+                        #inv_l = laplace.residue_laplace(solved_dict[sym])
+
+                        #inv_l = sympy.simplify(inv_l)
+                        solved_dict[sym] = inv_l
+                        #print("{} = {}".format(sym, inv_l))
+                        #print("{}: {}".format(sym, solved_dict[sym]))
+                        try:
+                            for name in self.components:
+                                c = self.components[name]
+
+                            #solved_dict[sym] = solved_dict
+                            pass
+                        except KeyError:
+                            pass
+                else:
+                    for sym in symbols:
+                        try:
+                            for name in self.components:
+                                c = self.components[name]
+                                if c.type in ["v", "i"]:
+                                    if c.tran_value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
+                                    # print(c.ac_value)
+                                else:
+                                    if c.value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                #solved_dict[sym] = utils.evaluate(solved_dict[sym], self.precision)
+                        except KeyError:
+                            pass
+                        f = laplace.iLT(solved_dict[sym])
+                        solved_dict[sym] = utils.evaluate(f, self.precision)
+        else:
+            if self.analysis_type == "TF":
+                eqn_matrix, symbols = self._build_system_eqn()
+                solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+                self.SCSI_symbol_z_factor(solved_dict)
+                if not self.is_symbolic:
+                    for sym in symbols:
+                        try:
+                            for name in self.components:
+                                c = self.components[name]
+                                if c.type in ["v", "i"]:
+                                    if c.ac_value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
+                                else:
+                                    if c.value:
+                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                        except KeyError:
+                            pass
+                self.SCSI_solved_dict_modifier(solved_dict)
         return eqn_matrix, solved_dict, symbols
 
     def _node_voltage_symbols(self):
@@ -355,8 +381,72 @@ class AnalyseCircuit:
                 voltage_symbol_list.append(sympy.Symbol("v({})".format(node)))
         return voltage_symbol_list
 
+    def SCSI_node_voltage_symbols(self):
+        num_of_phases = self.phases[0]
+        voltage_symbol_list = []
+        for phases in range(num_of_phases):
+            for node in self.node_dict:
+                if node != "0":
+                    voltage_symbol_list.append(sympy.Symbol("v({node})_{phases}".format(node=node, phases=phases + 1)))
+        return voltage_symbol_list
+
+    def SCSI_symbol_list_order(self, node_symbols, charge_symbols):
+        charge_length = len(charge_symbols)
+        node_length = len(node_symbols)
+        num_of_phases = self.phases[0]
+        symbols = []
+        for phase in range(num_of_phases):
+            for component in range(int(phase * node_length / num_of_phases), int((phase + 1) * node_length / num_of_phases)):
+                symbols.append(node_symbols[component])
+            for component in range(phase, charge_length, num_of_phases):
+                symbols.append(charge_symbols[component])
+        return symbols
+
+    def SCSI_symbol_z_factor(self, symbols):
+        num_of_phases = self.phases[0]
+        phase_helper_array = []
+        z = sympy.Symbol("z")
+        for phase in range(num_of_phases):
+            phase_helper_array.append(self.phases[phase + 1])
+        for symbol in symbols:
+            symbol_phase = int(str(symbol)[-1])
+            temp = 0
+            for phase in range(symbol_phase - 1):
+                temp += phase_helper_array[phase]
+            if symbol_phase != num_of_phases:
+                symbols[symbol] *= z ** (- temp)
+            else:
+                symbols[symbol] *= z ** phase_helper_array[-1]
+        return symbols
+
+    def SCSI_solved_dict_modifier(self, solved_dict):
+        num_of_phases = self.phases[0]
+        phase_helper_array = []
+        z = sympy.Symbol("z")
+        node = "undefined"
+        temp = 0
+        for phase in range(num_of_phases):
+            phase_helper_array.append(self.phases[phase + 1])
+        for key in self.components:
+            c = self.components[key]
+            if c.type == "v":
+                node = c.node1
+                break
+        for key in solved_dict:
+            node_index = str(key).find(str(node))
+            if node_index != -1 and str(key)[node_index - 1] == "(" and str(key)[node_index + len(str(node))] == ")":
+                symbol_phase = int(str(key)[-1])
+                for phase in range(symbol_phase - 1):
+                    temp += phase_helper_array[phase]
+                solved_dict[key] *= z ** temp
+                temp = 0
+        return solved_dict
+
+
+
+
     def _build_system_eqn(self):
-        if self.method == "tableau":
+        if self.method == "tableau" and self.phases == "undefined":
             size = self.c_count
             M = sympy.Matrix(sympy.zeros(2 * size + self.node_count))
             R = sympy.Matrix(sympy.zeros(size*2 + self.node_count, 1))
@@ -423,19 +513,58 @@ class AnalyseCircuit:
                         voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
                         current_symbols.append(sympy.Symbol("i({})".format(c.name)))
                         index += 1
-                    if c.type == "s":
-                        self._add_short(M, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
 
                     index += 1
             for coupling in couplings:
                 self._add_K(M, coupling, inductor_index)
-
             equation_matrix = M.col_insert(self.c_count*2 + self.node_count, R)
             symbols = voltage_symbols + current_symbols + node_symbols
 
-        if self.method == "two_graph_node":
+        elif self.method == "modified_node" and self.phases != "undefined":
+            num_of_phases = self.phases[0]
+            component_size = self.c_count * num_of_phases
+            node_size = self.node_count * num_of_phases
+            M = sympy.Matrix(sympy.zeros(component_size + node_size))
+            R = sympy.Matrix(sympy.zeros(component_size + node_size, 1))
+
+            component_index = 0
+            node_symbols = self.SCSI_node_voltage_symbols()
+            charge_symbols = []
+
+            for key in self.components:
+                c = self.components[key]
+                if c.type == "v":
+                    for phase in range(num_of_phases):
+                        self.SCSI_add_voltage_source(M, R, c, component_index, phase)
+                        charge_symbols.append(sympy.Symbol("q({name})_{phase}".format(name=c.name, phase=phase + 1)))
+                    component_index += 1
+                elif c.type == "c":
+                    for phase_y in range(num_of_phases):
+                        for phase_x in range(num_of_phases):
+                            self.SCSI_add_capacitor(M, c, component_index, phase_y, phase_x)
+                        charge_symbols.append(sympy.Symbol("q({name})_{phase}".format(name=c.name, phase=phase_y + 1)))
+                    component_index += 1
+                elif c.type == "s":
+                    self.SCSI_add_switch(M, c, component_index)
+                    for phase in range(num_of_phases):
+                        charge_symbols.append(sympy.Symbol("q({name})_{phase}".format(name=c.name, phase=phase + 1)))
+                    component_index += 1
+                elif c.type == "a":
+                    for phase in range(num_of_phases):
+                        self.SCSI_add_OpAmp(M, c, component_index, phase)
+                        charge_symbols.append(sympy.Symbol("q({name})_in{phase}".format(name=c.name, phase=phase + 1)))
+                        charge_symbols.append(sympy.Symbol("q({name})_out{phase}".format(name=c.name, phase=phase + 1)))
+                    component_index += 2
+
+            self.SCSI_matrix_z_symbol(M)
+            equation_matrix = M.col_insert(component_size + node_size, R)
+            symbols = self.SCSI_symbol_list_order(node_symbols, charge_symbols)
+            # print(sympy.shape(equation_matrix))
+            # print(len(symbols))
+            sympy.pprint(equation_matrix)
+            sympy.pprint(symbols)
+
+        elif self.method == "two_graph_node" and self.phases == "undefined":
             symbols = []
             v_graph_collapses = {'0': []}
             i_graph_collapses = {'0': []}
@@ -477,7 +606,7 @@ class AnalyseCircuit:
                 if c.type == "s":
                     pass
 
-            """Collapse nodes based on collapse dictioanaries"""
+            """Collapse nodes based on collapse dictionaries"""
             for main_node in i_graph_collapses:
                 collapse_list = i_graph_collapses[main_node]
                 i = 0
@@ -491,14 +620,14 @@ class AnalyseCircuit:
 
             v_graph_nodes = list(set(v_graph_nodes))
             i_graph_nodes = list(set(i_graph_nodes))
-            #print(f"V-Graph: {v_graph_nodes}")
-            #print(f"I-Graph: {i_graph_nodes}")
+            # print(f"V-Graph: {v_graph_nodes}")
+            # print(f"I-Graph: {i_graph_nodes}")
 
             M = sympy.Matrix(sympy.zeros(len(v_graph_nodes)))
             S = sympy.Matrix(sympy.zeros(len(v_graph_nodes), 1))
 
-            #sympy.pprint(M)
-            #sympy.pprint(S)
+            # sympy.pprint(M)
+            # sympy.pprint(S)
             index = 0
             for key in self.components:
                 c = self.components[key]
@@ -524,8 +653,8 @@ class AnalyseCircuit:
                     raise TypeError("OpAmp not supported in 'two_graph_node' analysis")
                 if c.type == "s":
                     raise TypeError("Switch not supported in 'two_graph_node' analysis")
-            #sympy.pprint(M)
-            #sympy.pprint(S)
+            # sympy.pprint(M)
+            # sympy.pprint(S)
             #print(v_graph_nodes)
 
             equation_matrix = M.col_insert(len(v_graph_nodes), S)
@@ -533,10 +662,139 @@ class AnalyseCircuit:
 
             for node in v_graph_nodes:
                 symbols.append(sympy.Symbol(f"v({node})"))
+            # print(symbols)
+            sympy.pprint(equation_matrix)
 
-            #print(symbols)
+        elif self.method == "two_graph_node" and self.phases != "undefined":  # switched capacitor analysis
+            pass
 
         return equation_matrix, symbols
+
+    def SCSI_submatrix_write(self, matrix, submatrix, start_y, start_x, phase_y, phase_x):
+        y_dimension = sympy.shape(submatrix)[0]
+        x_dimension = sympy.shape(submatrix)[1]
+        phase_y_offset = (self.c_count + self.node_count) * phase_y
+        phase_x_offset = (self.c_count + self.node_count) * phase_x
+        for y in range(y_dimension):
+            for x in range(x_dimension):
+                matrix[phase_y_offset + start_y + y, phase_x_offset + start_x + x] += submatrix[y, x]
+        return matrix
+
+    def SCSI_incidence_matrix_generate(self, incidence_matrix, N1, N2, component_index):
+        if N1 == "0":
+            pass
+        else:
+            node_pos = self.node_dict[N1]
+            incidence_matrix[node_pos, component_index] = 1
+        if N2 == "0":
+            pass
+        else:
+            node_pos = self.node_dict[N2]
+            incidence_matrix[node_pos, component_index] = -1
+        return incidence_matrix
+
+    def SCSI_matrix_z_symbol(self, matrix):
+        num_of_phases = self.phases[0]
+        submatrix_dimension = self.node_count + self.c_count
+        phase_offset = submatrix_dimension * (num_of_phases - 1)
+        for y in range(submatrix_dimension):
+            for x in range(submatrix_dimension):
+                matrix[phase_offset + y, phase_offset + x] *= sympy.Symbol("z")
+        return matrix
+
+    def SCSI_add_capacitor(self, matrix, c, component_index, phase_y, phase_x):
+        num_of_phases = self.phases[0]
+        N1 = c.node1
+        N2 = c.node2
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
+        y_b = val
+        z_b = -1
+
+        Y_2 = sympy.Matrix(sympy.zeros(self.c_count))
+        Z_2 = sympy.Matrix(sympy.zeros(self.c_count))
+        A_2 = sympy.Matrix(sympy.zeros(self.node_count, self.c_count))
+        if phase_y == phase_x:
+            Y_2[component_index, component_index] = y_b
+            Z_2[component_index, component_index] = z_b
+            self.SCSI_incidence_matrix_generate(A_2, N1, N2, component_index)
+        else:
+            if (abs(phase_y - phase_x) == 1 and phase_y > phase_x) or (phase_y == 0 and phase_x + 1 == num_of_phases):
+                Y_2[component_index, component_index] = - y_b
+                Z_2[component_index, component_index] = - z_b
+                self.SCSI_incidence_matrix_generate(A_2, N1, N2, component_index)
+        if phase_y == phase_x:
+            self.SCSI_submatrix_write(matrix, A_2, 0, self.node_count, phase_y, phase_x)
+        else:
+            self.SCSI_submatrix_write(matrix, - A_2, 0, self.node_count, phase_y, phase_x)
+        self.SCSI_submatrix_write(matrix, Z_2, self.node_count, self.node_count, phase_y, phase_x)
+        self.SCSI_submatrix_write(matrix, Y_2 * A_2.T, self.node_count,0 , phase_y, phase_x)
+        return matrix
+
+    def SCSI_add_voltage_source(self, matrix, result, c, component_index, phase):
+        phase_offset = self.c_count * phase
+        node_offset = self.node_count * (phase + 1)
+        N1 = c.node1
+        N2 = c.node2
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
+        Y_2 = sympy.Matrix(sympy.zeros(self.c_count))
+        A_2 = sympy.Matrix(sympy.zeros(self.node_count, self.c_count))
+        Y_2[component_index, component_index] = 1
+        self.SCSI_incidence_matrix_generate(A_2, N1, N2, component_index)
+        self.SCSI_submatrix_write(matrix, A_2, 0, self.node_count, phase, phase)
+        self.SCSI_submatrix_write(matrix, Y_2 * A_2.T, self.node_count, 0, phase, phase)
+        result[phase_offset + node_offset + component_index, 0] = val
+        return matrix
+
+    def SCSI_add_switch(self, matrix, c, component_index):
+        num_of_phases = self.phases[0]
+        N1 = c.node1
+        N2 = c.node2
+        switch_phase = (int(c.phase)) - 1
+        for phase in range(num_of_phases):
+            A_2 = sympy.Matrix(sympy.zeros(self.node_count, self.c_count))
+            self.SCSI_incidence_matrix_generate(A_2, N1, N2, component_index)
+            self.SCSI_submatrix_write(matrix, A_2, 0, self.node_count, phase, phase)
+            if phase == switch_phase:
+                Y_2 = sympy.Matrix(sympy.zeros(self.c_count))
+                Y_2[component_index, component_index] = 1
+                self.SCSI_submatrix_write(matrix, Y_2 * A_2.T, self.node_count, 0, phase, phase)
+            else:
+                Z_2 = sympy.Matrix(sympy.zeros(self.c_count))
+                Z_2[component_index, component_index] = -1  # ??? why not 1
+                self.SCSI_submatrix_write(matrix, Z_2, self.node_count, self.node_count, phase, phase)
+        return matrix
+
+    def SCSI_add_OpAmp(self, matrix, c, component_index, phase):
+        N1 = c.node1
+        N2 = c.node2
+        N3 = c.node3
+        N4 = c.node4
+
+        A_2 = sympy.Matrix(sympy.zeros(self.node_count, self.c_count))
+        self.SCSI_incidence_matrix_generate(A_2, N3, N4, component_index)
+        self.SCSI_submatrix_write(matrix, A_2, 0, self.node_count, phase, phase)
+        Y_2 = sympy.Matrix(sympy.zeros(self.c_count))
+        Y_2[component_index, component_index] = 1
+        self.SCSI_submatrix_write(matrix, Y_2 * A_2.T, self.node_count, 0, phase, phase)
+
+        A_2 = sympy.Matrix(sympy.zeros(self.node_count, self.c_count))
+        self.SCSI_incidence_matrix_generate(A_2, N1, N2, component_index + 1)
+        self.SCSI_submatrix_write(matrix, A_2, 0, self.node_count, phase, phase)
+        Z_2 = sympy.Matrix(sympy.zeros(self.c_count))
+        Z_2[component_index + 1, component_index] = 1
+        self.SCSI_submatrix_write(matrix, Z_2, self.node_count, self.node_count, phase, phase)
+        return matrix
 
     def _add_V_tgn(self, M, S, v_nodes, i_nodes, c, index):
         node1 = c.node1
@@ -562,7 +820,6 @@ class AnalyseCircuit:
         if n2v is not None:
             M[row, n2v] += -1
         S[row, 0] = val
-
 
     def _add_basic_tgn(self, M, v_nodes, i_nodes, c):
         node1 = c.node1
@@ -792,7 +1049,3 @@ class AnalyseCircuit:
         matrix[self.c_count + index, index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
         return matrix
-
-
-
-
