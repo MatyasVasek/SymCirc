@@ -561,8 +561,8 @@ class AnalyseCircuit:
             symbols = self.SCSI_symbol_list_order(node_symbols, charge_symbols)
             # print(sympy.shape(equation_matrix))
             # print(len(symbols))
-            sympy.pprint(equation_matrix)
-            sympy.pprint(symbols)
+            #sympy.pprint(equation_matrix)
+            #sympy.pprint(symbols)
 
         elif self.method == "two_graph_node" and self.phases == "undefined":
             symbols = []
