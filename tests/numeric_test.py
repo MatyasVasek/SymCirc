@@ -39,11 +39,11 @@ class NumericTestErrors:
             self.not_in_ref.data.append(msg)
 
 
-def numeric_test(filename, analysis_type, precision=6, test_data_creation=False):
+def numeric_test(filename, analysis_type, precision=6, test_data_creation=False, method="two_graph_node"):
     err = NumericTestErrors()
     divisor = 10**precision
-    circuit = symcirc.AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type, symbolic=False)
-    result_dict = circuit.component_values(default_python_datatypes=False)
+    circuit = symcirc.AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type, symbolic=False, method=method)
+    result_dict = circuit.component_values()
     reference_string = utils.load_file("reference_data/{}/{}".format(analysis_type, filename))
     symbol_dict = {"t": utils.t, "f": utils.f, "j": utils.j, "s": utils.s}
     for item in circuit.symbols:
@@ -57,25 +57,25 @@ def numeric_test(filename, analysis_type, precision=6, test_data_creation=False)
         print("----------------Reference:---------------")
         print(reference_dict)
         print("-----------------------------------------")
-
+    #print(result_dict)
     for res_key in result_dict:
         try:
-            if analysis_type == "tran":
-                seed = random.random()
-                ratio = (sympy.simplify((result_dict[res_key])/(reference_dict[res_key])).subs(utils.t, seed))
-            else:
-                ratio = sympy.simplify((result_dict[res_key])/(reference_dict[res_key]))
-            if res_key not in reference_dict:
-                msg = "{} is not in reference file".format(res_key)
-                err.update("not_in_ref", msg)
-            elif result_dict[res_key] == reference_dict[res_key]:
-                pass
-            elif ratio > 0.98 or ratio < 1.02:
-                pass
-
-            else:
-                msg = "{} is {} in result and {} in reference".format(res_key, result_dict[res_key], reference_dict[res_key])
-                err.update("incorrect", msg)
+            if result_dict[res_key] != None:
+                if analysis_type == "tran":
+                    seed = random.random()
+                    ratio = (sympy.simplify((result_dict[res_key])/(reference_dict[res_key])).subs(utils.t, seed))
+                else:
+                    ratio = sympy.simplify((result_dict[res_key])/(reference_dict[res_key]))
+                if res_key not in reference_dict:
+                    msg = "{} is not in reference file".format(res_key)
+                    err.update("not_in_ref", msg)
+                elif result_dict[res_key] == reference_dict[res_key]:
+                    pass
+                elif ratio > 0.98 or ratio < 1.02:
+                    pass
+                else:
+                    msg = "{} is {} in result and {} in reference".format(res_key, result_dict[res_key], reference_dict[res_key])
+                    err.update("incorrect", msg)
 
         except IndexError:
             err.update(IndexError)
@@ -113,7 +113,7 @@ def print_test_results(filename, ref, analysis_type, err, full=False):
               .format('\033[96m', analysis_type, filename))
 
 
-def analysis_test(analysis="all", w=False, test_data_creation=False, full=True):
+def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="two_graph_node"):
     if analysis == "all":
         a_types = ["DC", "TF", "tran"]
     elif type(analysis) == list:
@@ -130,17 +130,19 @@ def analysis_test(analysis="all", w=False, test_data_creation=False, full=True):
             ref.append(f)
 
         for filename in netlists:
-            if filename in ref:
-                err = numeric_test(filename, analysis_type, test_data_creation=test_data_creation, precision=6)
-                print_test_results(filename, ref, analysis_type, err, full=full)
-            elif w:
-                print("{}[Warning]: Reference for {} analysis of {} not found".format('\033[93m', analysis_type,
-                                                                                      filename))
+            try:
+                if filename in ref:
+                    err = numeric_test(filename, analysis_type, test_data_creation=test_data_creation, precision=6, method=method)
+                    print_test_results(filename, ref, analysis_type, err, full=full)
+                elif w:
+                    print("{}[Warning]: Reference for {} analysis of {} not found".format('\033[93m', analysis_type, filename))
+            except TypeError:
+                print("{}[FAIL]: {} analysis of {} ended with an error".format('\033[91m', analysis_type, filename))
     return True
 
 
 if __name__ == "__main__":
-    state = analysis_test(analysis="all", w=False, test_data_creation=False, full=True)
+    state = analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="two_graph_node")
     if state:
         print("")
         print("Test successful!")

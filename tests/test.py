@@ -8,16 +8,15 @@ from symcirc import utils
 import test_utils
 
 if __name__ == '__main__':
-    plots = True
+    plots = False
     test_prints = True
     parser_test = False
     analysis_test = True
-    netlist = symcirc.utils.load_file("netlists\\RLLC.txt")
+    netlist = symcirc.utils.load_file("netlists\\AC9.txt")
 
-    #method = "two_graph_node"
-    method = "tableau"
+    method = "two_graph_node"
+    #method = "tableau"
     #method = "eliminated_tableau"
-
 
     if parser_test:
         data = symcirc.parse.parse(netlist)
@@ -29,11 +28,8 @@ if __name__ == '__main__':
 
         analysis = "TF"
         t0 = time.time()
-        #s = sympy.symbols("s", real=True)
-        t0 = time.time()
         circuit = symcirc.analysis.AnalyseCircuit(netlist, analysis, symbolic=False, precision=6, method=method)
         t1 = time.time()
-        print(t1-t0)
         """
         c = circuit.components["I1"]
         F = circuit.component_voltage("C").subs(c.sym_value, c.tran_value)
@@ -50,19 +46,13 @@ if __name__ == '__main__':
         sympy.pprint(circuit.eqn_matrix)
         print("TEST -- print matrix: end")
 
-        #print("Dictionary of solved V/C: {}".format(circuit.solved_dict))
-        #latex_print(circuit.solved_dict)
         print("run time: {}".format(t1 - t0))
-        #all = circuit.solved_dict
+        print(circuit.node_voltage_symbols)
+        print(f"Node voltages: {circuit.node_voltages()}")
         all = circuit.component_values()
         print("---------------------------------------------------------")
         print("All components: {}".format(all))
-        #print(f"Node voltages: {circuit.node_voltages()['v(2)']}")
-        #latex_print(all)
-        #vR = circuit.component_voltage("R")
-        #print(vR)
-        #vRt = sympy.integrals.transforms.inverse_laplace_transform(vR, symcirc.s, symcirc.t, plane=None)
-        #print(vRt)
+        print(f"Node voltages: {circuit.node_voltages()}")
 
 
     if plots:
