@@ -16,7 +16,6 @@ RESERVED = ["sin"]
 NETLIST_KEYCHARS = ["R", "r", "C", "c", "L", "l", "V", "v", "U", "u", "I", "i", "A", "a", "F", "f", "H", "h", "G", "g",
                     "E", "e", "K", "k", "S", "s", "X", "x", ".", "*"]
 
-
 def check_if_symbolic(val):
     symbolic = False
     for c in val:
@@ -79,19 +78,8 @@ def ac_value(words):
                 offset = 0
         else:
             ac_value = 0
-            """    symbolic = True
-                offset = 0
-                ac_value = sympy.Symbol(words[0], real=True)
-            #print(ac_value)
-            #print(offset)
-            ac_value = ac_value * sympy.exp(j*offset)
-            #print(ac_value)"""
     except IndexError:
         ac_value = 0
-        """symbolic = True
-        offset = 0
-        ac_value = sympy.Symbol(words[0], real=True)
-        #print("WARNING: ({}) has no ac value".format(words))"""
     return ac_value
 
 def tran_value(words, dc):
@@ -307,6 +295,7 @@ def parse(netlist, tran=False):
     basic_components = []
     controlled_sources = []
     operational_amplifiers = []
+    couplings = []
     SCSI_components = []
     add_short = []
     matrix_expansion_coef = 0
@@ -485,7 +474,7 @@ def parse(netlist, tran=False):
             L1 = words[1]
             L2 = words[2]
             c = Coupling(name, variant, L1, L2, sym_value, value)
-            controlled_sources.append(c)
+            couplings.append(c)
 
         elif name[0] in ["s", "S"]:  # periodic switch used for SC/SI analysis
             variant = "s"
@@ -504,8 +493,6 @@ def parse(netlist, tran=False):
         new_node = "*short{}".format(c.name)
         nodes.append(new_node)
         c.shorted_node = c.node2
-        #short = Short("S{}".format(c.name), "s", new_node, c.node2)
-        #components[short.name] = short
         c.node2 = new_node
 
     node_dict = {}
@@ -520,9 +507,20 @@ def parse(netlist, tran=False):
     if not grounded:
         exit("Circuit not grounded")
 
+    for couple in couplings:
+        L1 = components[couple.L1]
+        L2 = components[couple.L2]
+        L1.coupling = couple
+        L2.coupling = couple
+
     data["node_dict"] = node_dict
     data["node_count"] = i
-    data["matrix_size"] = i + matrix_expansion_coef
     data["components"] = components
+    data["basic_components"] = basic_components
+    data["independent_sources"] = independent_sources
+    data["controlled_sources"] = controlled_sources
+    data["oamps"] = operational_amplifiers
+    data["couplings"] = couplings
+    data["SCSI_components"] = SCSI_components
 
     return data
