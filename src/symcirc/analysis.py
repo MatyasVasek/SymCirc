@@ -1,3 +1,5 @@
+import copy
+
 import sympy
 from symcirc import parse, laplace, utils
 from symcirc.utils import j,s,t
@@ -18,7 +20,7 @@ class AnalyseCircuit:
 
 
     """
-    def __init__(self, netlist, analysis_type="DC", method="tableau", phases="undefined", symbolic=True, precision=6):
+    def __init__(self, netlist, analysis_type="DC", method="two_graph_node", phases="undefined", symbolic=True, precision=6):
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
             raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
         self.is_symbolic = symbolic
@@ -26,6 +28,7 @@ class AnalyseCircuit:
         self.precision = precision
         self.method = method
         self.netlist = netlist
+        self.node_voltage_identities = []
         if analysis_type == "tran":
             data = parse.parse(netlist, tran=True)
         else:
@@ -35,8 +38,9 @@ class AnalyseCircuit:
 
         self.components = data["components"]   # {<name> : <Component>} (see component.py)
         self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
-        self.matrix_size = data["matrix_size"]
         self.node_count = data["node_count"]
+        self.couplings = data["couplings"]
+
         self.c_count = self.count_components()
         self.node_voltage_symbols = self._node_voltage_symbols()
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
@@ -93,14 +97,92 @@ class AnalyseCircuit:
                     else:
                         impedance = c.value
                 ret = self.solved_dict[sympy.symbols(i)]*impedance
-        return ret
+
+        if self.method == "two_graph_node":
+            c = self.components[name]
+            n1 = c.node1
+            n2 = c.node2
+            if n1 == "0":
+                vn1 = 0
+            else:
+                vn1 = self.get_node_voltage(n1, force_s_domain=True)
+            if n2 == "0":
+                vn2 = 0
+            else:
+                vn2 = self.get_node_voltage(n2, force_s_domain=True)
+            ret = sympy.cancel((vn1 - vn2))
+        if self.analysis_type == "tran":
+            if ret is None:
+                return ret
+            else:
+                return laplace.iLT(ret)
+        else:
+            return ret
+    def get_node_voltage_symbol(self, node):
+        return self.node_voltage_symbols[self.node_dict[node]]
+    def get_node_voltage(self, node, force_s_domain=False):
+        F = None
+        try:
+            F = self.solved_dict[self.node_voltage_symbols[self.node_dict[node]]]
+        except KeyError:
+            for identity in self.node_voltage_identities:
+                if node in identity:
+                    if "0" in identity:
+                        return 0
+                    else:
+                        for n in identity:
+                            try:
+                                F = self.solved_dict[self.node_voltage_symbols[self.node_dict[n]]]
+                            except:
+                                pass
+        if force_s_domain:
+            return F
+        elif self.analysis_type == "tran":
+            if F is None:
+                return F
+            else:
+                return laplace.iLT(F)
+        else:
+            return F
 
     def component_current(self, name):
         ret = None
         i = "i({})".format(name)
         if self.method in ["tableau", "eliminated_tableau"]:
             ret = self.solved_dict[sympy.symbols(i)]
-        return ret
+        if self.method == "two_graph_node":
+            c = self.components[name]
+            if c.type in ["r", "l", "c"]:
+                n1 = c.node1
+                n2 = c.node2
+                if n1 == "0":
+                    vn1 = 0
+                else:
+                    vn1 = self.get_node_voltage(n1, force_s_domain=True)
+                if n2 == "0":
+                    vn2 = 0
+                else:
+                    vn2 = self.get_node_voltage(n2, force_s_domain=True)
+
+                if self.is_symbolic:
+                    val = c.sym_value
+                else:
+                    val = c.value
+
+                if c.type == "r":
+                    ret = sympy.cancel((vn1 - vn2) / val)
+                if c.type == "l":
+                    ret = sympy.cancel((vn1 - vn2) / (val * s))
+                if c.type == "c":
+                    ret = sympy.cancel((vn1 - vn2) * val*s)
+
+        if self.analysis_type == "tran":
+            if ret is None:
+                return ret
+            else:
+                return laplace.iLT(ret)
+        else:
+            return ret
 
     def component_values(self, name="all", default_python_datatypes=False):
         """
@@ -155,11 +237,10 @@ class AnalyseCircuit:
           :return dict ret: in format {"v(node1)" : value, ...}
         """
         ret = {}
-        dic = self.solved_dict
-        for key in dic:
-            if key in self.node_voltage_symbols and key.name[2] != "*":
-                ret[key.name] = dic[key]
+        for node in self.node_dict:
+            ret[f"v({node})"] = self.get_node_voltage(node)
         return ret
+
 
     def transfer_function(self, node1, node2):
         """
@@ -216,11 +297,10 @@ class AnalyseCircuit:
           :return dict solved_dict: dictionary of eqn_matrix solve results
           :return list symbols: list of all used sympy.symbol objects
         """
+        eqn_matrix, symbols = self._build_system_eqn()
+        solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+
         if self.analysis_type == "DC":
-            eqn_matrix, symbols = self._build_system_eqn()
-            #print(symbols)
-            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-            #print(solved_dict)
             if self.is_symbolic:
                 for sym in symbols:
                     try:
@@ -229,7 +309,6 @@ class AnalyseCircuit:
                         pass
                     except TypeError:
                         pass
-                        #print(solved_dict)
             else:
                 for sym in symbols:
                     try:
@@ -242,109 +321,68 @@ class AnalyseCircuit:
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            if self.method != "two_graph_node":
+                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
         elif self.analysis_type == "AC":
-            eqn_matrix, symbols = self._build_system_eqn()
-            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
             f = sympy.symbols("f", real=True, positive=True)
             if self.is_symbolic:
                 i = 1
                 for sym in symbols:
                     try:
-                        #print("{}: {}".format(sym, solved_dict[sym]))
-                        #solved_dict[sym] = solved_dict[sym].simplify()
-                        #print("{}: {}".format(sym, solved_dict[sym]))
-                        if i == 1:
-                            #sympy.pprint(solved_dict)
-                            i = 0
                         solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
                     except KeyError:
                         pass
             else:
                 for sym in symbols:
-                    #print(sym)
                     try:
-                        #print(solved_dict[sym])
-                        #solved_dict[sym] = solved_dict[sym].simplify()
-                        #print(solved_dict[sym])
                         solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
                         for name in self.components:
                             c = self.components[name]
                             if c.type in ["v", "i"]:
                                 if c.ac_value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
-                                #print(c.ac_value)
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            if self.method != "two_graph_node":
+                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
         elif self.analysis_type == "TF":
-            eqn_matrix, symbols = self._build_system_eqn()
-            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-            #solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
-
             if not self.is_symbolic:
                 for sym in symbols:
-                    #print(sym)
                     try:
                         for name in self.components:
                             c = self.components[name]
                             if c.type in ["v", "i"]:
-                                #print(c.ac_value)
                                 if c.ac_value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
-                                #print(c.ac_value)
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            if self.method != "two_graph_node":
+                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
         elif self.analysis_type == "tran":
-            eqn_matrix, symbols = self._build_system_eqn()
-            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-            #print(solved_dict)
-            #print(symbols)
             if self.is_symbolic:
-                #latex_print(solved_dict)
                 for sym in symbols:
-                    #print(sym)
                     try:
                         for name in self.components:
                             c = self.components[name]
                             if c.type in ["i", "v"] and c.name[-3:] != "_IC":
-                                #print(c.name)
-                                #print(c.sym_value)
-                                #print("Before: {}".format(solved_dict[sym]))
                                 solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
-                                #print("After: {}".format(solved_dict[sym]))
-                                # print(c.ac_value)
 
                     except KeyError:
                         pass
-                    #solved_dict[sym] = sympy.apart(solved_dict[sym], self.s)
-                    #print(solved_dict[sym])
-                    #print("{}: {}".format(sym, solved_dict[sym]))
-
-                    inv_l = laplace.iLT(solved_dict[sym])
-                    #inv_l = laplace.residue_laplace(solved_dict[sym])
-
-                    #inv_l = sympy.simplify(inv_l)
-                    solved_dict[sym] = inv_l
-                    #print("{} = {}".format(sym, inv_l))
-                    #print("{}: {}".format(sym, solved_dict[sym]))
                     try:
                         for name in self.components:
                             c = self.components[name]
-
-                        #solved_dict[sym] = solved_dict
                         pass
                     except KeyError:
                         pass
@@ -356,15 +394,12 @@ class AnalyseCircuit:
                             if c.type in ["v", "i"]:
                                 if c.tran_value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
-                                # print(c.ac_value)
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            #solved_dict[sym] = utils.evaluate(solved_dict[sym], self.precision)
                     except KeyError:
                         pass
-                    f = laplace.iLT(solved_dict[sym])
-                    solved_dict[sym] = utils.evaluate(f, self.precision)
+
         return eqn_matrix, solved_dict, symbols
 
     def _node_voltage_symbols(self):
@@ -454,107 +489,6 @@ class AnalyseCircuit:
             equation_matrix = M.col_insert(self.c_count*2 + self.node_count, R)
             symbols = voltage_symbols + current_symbols + node_symbols
 
-        elif self.method == "two_graph_node":
-            symbols = []
-            v_graph_collapses = {'0': []}
-            i_graph_collapses = {'0': []}
-            v_graph_nodes = []
-            i_graph_nodes = []
-
-            for key in self.components:
-                c = self.components[key]
-                if c.type in ["r", "l", "c"]:
-                    self.graph_append(c.node1, v_graph_nodes)
-                    self.graph_append(c.node2, v_graph_nodes)
-                    self.graph_append(c.node1, i_graph_nodes)
-                    self.graph_append(c.node2, i_graph_nodes)
-
-                if c.type == "v":
-                    self.graph_append(c.node1, v_graph_nodes)
-                    self.graph_append(c.node2, v_graph_nodes)
-                    self.graph_append(c.node1, i_graph_nodes)
-                    self.graph_append(c.node2, i_graph_nodes)
-                    if c.node1 in i_graph_collapses:
-                        i_graph_collapses[c.node1].append(c.node2)  # set node2 to be collapsed into node1 on the current graph
-                    elif c.node2 in i_graph_collapses:
-                        i_graph_collapses[c.node2].append(c.node1)    # set node1 to be collapsed into node2 on the current graph
-                    else:
-                        i_graph_collapses[c.node1] = [c.node2]  # set node2 to be collapsed into node1 on the current graph
-
-                if c.type == "i":
-                    pass
-                if c.type == "g":
-                    pass
-                if c.type == "e":
-                    pass
-                if c.type == "f":
-                    pass
-                if c.type == "h":
-                    pass
-                if c.type == "a":
-                    pass
-                if c.type == "s":
-                    pass
-
-            """Collapse nodes based on collapse dictioanaries"""
-            for main_node in i_graph_collapses:
-                collapse_list = i_graph_collapses[main_node]
-                i = 0
-                for n in i_graph_nodes:
-                    if n in collapse_list:
-                        if main_node == '0':
-                            i_graph_nodes.remove(n)
-                        else:
-                            i_graph_nodes[i] = main_node
-                    i+=1
-
-            v_graph_nodes = list(set(v_graph_nodes))
-            i_graph_nodes = list(set(i_graph_nodes))
-            #print(f"V-Graph: {v_graph_nodes}")
-            #print(f"I-Graph: {i_graph_nodes}")
-
-            M = sympy.Matrix(sympy.zeros(len(v_graph_nodes)))
-            S = sympy.Matrix(sympy.zeros(len(v_graph_nodes), 1))
-
-            #sympy.pprint(M)
-            #sympy.pprint(S)
-            index = 0
-            for key in self.components:
-                c = self.components[key]
-                if c.type in ["r", "l", "c"]:
-                    #print(c.value)
-                    self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c)
-
-                if c.type == "v":
-                    self._add_V_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index)
-                    index+=1
-
-                if c.type == "i":
-                    raise TypeError("Current source not supported in 'two_graph_node' analysis")
-                if c.type == "g":
-                    raise TypeError("Controlled sources not supported in 'two_graph_node' analysis")
-                if c.type == "e":
-                    raise TypeError("Controlled sources not supported in 'two_graph_node' analysis")
-                if c.type == "f":
-                    raise TypeError("Controlled sources not supported in 'two_graph_node' analysis")
-                if c.type == "h":
-                    raise TypeError("Controlled sources not supported in 'two_graph_node' analysis")
-                if c.type == "a":
-                    raise TypeError("OpAmp not supported in 'two_graph_node' analysis")
-                if c.type == "s":
-                    raise TypeError("Switch not supported in 'two_graph_node' analysis")
-            #sympy.pprint(M)
-            #sympy.pprint(S)
-            #print(v_graph_nodes)
-
-            equation_matrix = M.col_insert(len(v_graph_nodes), S)
-            #sympy.pprint(equation_matrix)
-
-            for node in v_graph_nodes:
-                symbols.append(sympy.Symbol(f"v({node})"))
-
-            #print(symbols)
-
         elif self.method == "eliminated_tableau":
             size = self.c_count
             M = sympy.Matrix(sympy.zeros(size + self.node_count))
@@ -583,15 +517,337 @@ class AnalyseCircuit:
                         voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
                         current_symbols.append(sympy.Symbol("i({})".format(c.name)))
                 index += 1
-            #sympy.pprint(M)
 
             equation_matrix = M.col_insert(self.c_count + self.node_count, R)
             symbols = node_symbols + current_symbols
-            #print(symbols)
+
+        elif self.method == "two_graph_node":
+            symbols = []
+            v_graph_collapses = []
+            i_graph_collapses = []
+            v_graph_nodes = []
+            i_graph_nodes = []
+            matrix_col_expand = 0
+            matrix_row_expand = 0
+            coupled_pairs = []
+            coupled_inductors = []
+
+            if len(self.couplings) > 0:
+                for coupling in self.couplings:
+                    coupled_inductors.append(coupling.L1)
+                    coupled_inductors.append(coupling.L2)
+                    coupled_pairs.append([coupling.L1, coupling.L2, coupling])
+
+            for key in self.components:
+                c = self.components[key]
+                if c.type in ["r", "l", "c"]:
+                    self.graph_append(c.node1, v_graph_nodes)
+                    self.graph_append(c.node2, v_graph_nodes)
+                    self.graph_append(c.node1, i_graph_nodes)
+                    self.graph_append(c.node2, i_graph_nodes)
+
+                    if c.type == "l" and c.coupling is not None:
+                        matrix_row_expand += 1
+                        matrix_col_expand += 1
+
+
+                if c.type == "v":
+                    node1 = c.node1
+                    node2 = c.node2
+
+                    self.graph_append(node1, v_graph_nodes)
+                    self.graph_append(node2, v_graph_nodes)
+                    self.graph_append(node1, i_graph_nodes)
+                    self.graph_append(node2, i_graph_nodes)
+                    self.collapse(i_graph_collapses, node1, node2)
+                    matrix_row_expand += 1
+
+                if c.type == "i":
+                    self.graph_append(c.node1, v_graph_nodes)
+                    self.graph_append(c.node2, v_graph_nodes)
+                    self.graph_append(c.node1, i_graph_nodes)
+                    self.graph_append(c.node2, i_graph_nodes)
+
+                if c.type == "g":   # VCT
+                    self.graph_append(c.node1, v_graph_nodes)
+                    self.graph_append(c.node2, v_graph_nodes)
+                    self.graph_append(c.node3, v_graph_nodes)
+                    self.graph_append(c.node4, v_graph_nodes)
+                    self.graph_append(c.node1, i_graph_nodes)
+                    self.graph_append(c.node2, i_graph_nodes)
+                    self.graph_append(c.node3, i_graph_nodes)
+                    self.graph_append(c.node4, i_graph_nodes)
+
+                if c.type == "e":   # VVT
+                    self.graph_append(c.node1, v_graph_nodes)
+                    self.graph_append(c.node2, v_graph_nodes)
+                    self.graph_append(c.node3, v_graph_nodes)
+                    self.graph_append(c.node4, v_graph_nodes)
+                    self.graph_append(c.node1, i_graph_nodes)
+                    self.graph_append(c.node2, i_graph_nodes)
+                    self.graph_append(c.node3, i_graph_nodes)
+                    self.graph_append(c.node4, i_graph_nodes)
+
+                    self.collapse(i_graph_collapses, c.node1, c.node2)
+                    matrix_row_expand += 1
+
+                if c.type == "f":   # CCT
+                    node1 = c.node1
+                    node2 = c.node2
+                    c_v = self.components[c.control_voltage]
+                    node3 = c_v.node2
+                    node4 = c_v.shorted_node
+                    self.graph_append(node1, v_graph_nodes)
+                    self.graph_append(node2, v_graph_nodes)
+                    self.graph_append(node3, v_graph_nodes)
+                    self.graph_append(node4, v_graph_nodes)
+                    self.graph_append(node1, i_graph_nodes)
+                    self.graph_append(node2, i_graph_nodes)
+                    self.graph_append(node3, i_graph_nodes)
+                    self.graph_append(node4, i_graph_nodes)
+
+                    self.collapse(v_graph_collapses, node3, node4)
+                    matrix_col_expand += 1
+
+                if c.type == "h":   # CVT
+                    node1 = c.node1
+                    node2 = c.node2
+                    c_v = self.components[c.control_voltage]
+                    node3 = c_v.node2
+                    node4 = c_v.shorted_node
+                    self.graph_append(node1, v_graph_nodes)
+                    self.graph_append(node2, v_graph_nodes)
+                    self.graph_append(node3, v_graph_nodes)
+                    self.graph_append(node4, v_graph_nodes)
+                    self.graph_append(node1, i_graph_nodes)
+                    self.graph_append(node2, i_graph_nodes)
+                    self.graph_append(node3, i_graph_nodes)
+                    self.graph_append(node4, i_graph_nodes)
+
+                    self.collapse(v_graph_collapses, node1, node2)
+                    matrix_col_expand += 1
+                    self.collapse(i_graph_collapses, node3, node4)
+                    matrix_row_expand += 1
+
+                if c.type == "a":
+                    self.graph_append(c.node1, v_graph_nodes)
+                    self.graph_append(c.node2, v_graph_nodes)
+                    self.graph_append(c.node3, v_graph_nodes)
+                    self.graph_append(c.node4, v_graph_nodes)
+                    self.graph_append(c.node1, i_graph_nodes)
+                    self.graph_append(c.node2, i_graph_nodes)
+                    self.graph_append(c.node3, i_graph_nodes)
+                    self.graph_append(c.node4, i_graph_nodes)
+
+                    self.collapse(i_graph_collapses, c.node1, c.node2)
+                    self.collapse(v_graph_collapses, c.node3, c.node4)
+
+            if c.type == "s":
+                    pass
+
+            """Collapse nodes based on collapse dictioanaries"""
+            for collapse_list in i_graph_collapses:
+                i = 0
+                tmp_i_graph_nodes = copy.copy(i_graph_nodes)
+                for n in tmp_i_graph_nodes:
+                    if n in collapse_list:
+                        if "0" in collapse_list:
+                            i_graph_nodes.remove(n)
+                        else:
+                            i_graph_nodes[i] = min(collapse_list)
+                    i+=1
+
+            for collapse_list in v_graph_collapses:
+                i = 0
+                tmp_v_graph_nodes = copy.copy(v_graph_nodes)
+                for n in tmp_v_graph_nodes:
+                    if n in collapse_list:
+                        if "0" in collapse_list:
+                            v_graph_nodes.remove(n)
+                        else:
+                            v_graph_nodes[i] = min(collapse_list)
+                    i+=1
+            self.node_voltage_identities = v_graph_collapses
+            v_graph_nodes = list(set(v_graph_nodes))
+            i_graph_nodes = list(set(i_graph_nodes))
+
+            rows = len(i_graph_nodes)
+            cols = len(v_graph_nodes)
+            m_size = 0
+            if rows == cols:
+                m_size = rows + max(matrix_row_expand, matrix_col_expand)
+            elif rows > cols:
+                m_size = max(cols + matrix_col_expand, cols + matrix_row_expand)
+            elif rows < cols:
+                m_size = max(rows + matrix_col_expand, rows + matrix_row_expand)
+            m_size = len(v_graph_nodes) + matrix_col_expand
+            M = sympy.Matrix(sympy.zeros(m_size))
+            S = sympy.Matrix(sympy.zeros(m_size, 1))
+            index_row = 0
+            index_col = 0
+            symbols_to_append = []
+            for key in self.components:
+                c = self.components[key]
+                if c.type == "l":
+                    if c.coupling is not None:
+                        raise NotImplementedError("Coupled inductors not implemented for this method. Use tableau method for coupled inductors.")
+                    else:
+                        self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
+
+                if c.type in ["r", "c"]:
+                    self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
+
+                if c.type == "v":
+                    self._add_V_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index_row, i_graph_collapses, v_graph_collapses)
+                    index_row += 1
+
+                if c.type == "i":
+                    self._add_I_tgn(M, S, v_graph_nodes, i_graph_nodes, c, i_graph_collapses)
+                if c.type == "g":
+                    self._add_VCT_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
+                if c.type == "e":
+                    self._add_VVT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_row, i_graph_collapses, v_graph_collapses)
+                    index_row += 1
+                if c.type == "f":
+                    #raise TypeError("CCCS not supported in 'two_graph_node' analysis")
+                    self._add_CCT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_col, i_graph_collapses)
+                    symbols_to_append.append(sympy.Symbol(f"i(c.control_voltage.name)"))
+                    index_col += 1
+                if c.type == "h":
+                    self._add_CVT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_col, index_row, i_graph_collapses, v_graph_collapses)
+                    symbols_to_append.append(sympy.Symbol(f"i(c.control_voltage.name)"))
+                    index_col += 1
+                    index_row += 1
+                if c.type == "a":
+                    pass
+                if c.type == "s":
+                    raise TypeError("Switch not supported in 'two_graph_node' analysis")
+
+            equation_matrix = M.col_insert(m_size, S)
+
+            for node in v_graph_nodes:
+                symbols.append(sympy.Symbol(f"v({node})"))
+            for symb in symbols_to_append:
+                symbols.append(symb)
 
         return equation_matrix, symbols
 
-    def _add_V_tgn(self, M, S, v_nodes, i_nodes, c, index):
+    def collapse(self, graph_collapses, node1, node2):
+        collapsed = False
+        for collapse_list in graph_collapses:
+            if node1 in collapse_list:
+                collapsed = True
+                collapse_list.append(node2)  # set node2 to be collapsed into node1 on the current graph
+            elif node2 in collapse_list:
+                collapsed = True
+                collapse_list.append(node1)  # set node1 to be collapsed into node2 on the current graph
+        if not collapsed:
+            graph_collapses.append([node1, node2])  # set node2 to be collapsed into node1 on the current graph
+
+
+    def _add_CVT_tgn(self, M, v_nodes, i_nodes, c, index_col, index_row, i_graph_collapses, v_graph_collapses):
+        if self.is_symbolic:
+            r = c.sym_value
+        else:
+            r = c.value
+        node1 = c.node1
+        node2 = c.node2
+        c_v = self.components[c.control_voltage]
+        node3 = c_v.node2
+        node4 = c_v.shorted_node
+        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
+        n3v = self.index_tgn(v_nodes, node3, v_graph_collapses)
+        n4v = self.index_tgn(v_nodes, node4, v_graph_collapses)
+        col = len(v_nodes) + index_col
+        row = len(i_nodes) + index_row
+
+        if n1i is not None:
+            M[n1i, col] += 1
+        if n2i is not None:
+            M[n2i, col] += -1
+        if n3v is not None:
+            M[row, n3v] += 1
+        if n4v is not None:
+            M[row, n4v] += -1
+
+        M[row, col] += -r
+
+
+    def _add_CCT_tgn(self, M, v_nodes, i_nodes, c, index, i_graph_collapses):
+        if self.is_symbolic:
+            f = c.sym_value
+        else:
+            f = c.value
+        node1 = c.node1
+        node2 = c.node2
+        c_v = self.components[c.control_voltage]
+        node3 = c_v.node2
+        node4 = c_v.shorted_node
+        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
+        n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
+        n4i = self.index_tgn(i_nodes, node4, i_graph_collapses)
+        col = len(v_nodes) + index
+        if n1i is not None:
+            M[n1i, col] += f
+        if n2i is not None:
+            M[n2i, col] += -f
+        if n3i is not None:
+            M[n3i, col] += 1
+        if n4i is not None:
+            M[n4i, col] += -1
+
+
+    def _add_VCT_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses):
+        if self.is_symbolic:
+            g = c.sym_value
+        else:
+            g = c.value
+        node1 = c.node1
+        node2 = c.node2
+        node3 = c.node3
+        node4 = c.node4
+        n1v = self.index_tgn(v_nodes, node3, v_graph_collapses)
+        n2v = self.index_tgn(v_nodes, node4, v_graph_collapses)
+        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
+        if n1v is not None:
+            if n1i is not None:
+                M[n1i, n1v] += +g
+            if n2i is not None:
+                M[n2i, n1v] += -g
+        if n2v is not None:
+            if n1i is not None:
+                M[n1i, n2v] += -g
+            if n2i is not None:
+                M[n2i, n2v] += +g
+    def _add_VVT_tgn(self, M, v_nodes, i_nodes, c, index, i_graph_collapses, v_graph_collapses):
+        if self.is_symbolic:
+            e = c.sym_value
+        else:
+            e = c.value
+        node1 = c.node1
+        node2 = c.node2
+        node3 = c.node3
+        node4 = c.node4
+        n1v = self.index_tgn(v_nodes, node3, v_graph_collapses)
+        n2v = self.index_tgn(v_nodes, node4, v_graph_collapses)
+        n3v = self.index_tgn(v_nodes, node1, v_graph_collapses)
+        n4v = self.index_tgn(v_nodes, node2, v_graph_collapses)
+        row = len(i_nodes)+index
+        if n1v is not None:
+            M[row, n1v] += -e
+        if n2v is not None:
+            M[row, n2v] += e
+        if n3v is not None:
+            M[row, n3v] += 1
+        if n4v is not None:
+            M[row, n4v] += -1
+
+
+
+    def _add_V_tgn(self, M, S, v_nodes, i_nodes, c, index, i_graph_collapses, v_graph_collapses):
         node1 = c.node1
         node2 = c.node2
         if self.is_symbolic:
@@ -604,39 +860,54 @@ class AnalyseCircuit:
             else:
                 val = c.ac_value
 
-        n1v = self.index_tgn(v_nodes, node1)
-        n2v = self.index_tgn(v_nodes, node2)
+        n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
+        n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
         row = len(i_nodes)+index
-        #print("ok")
-        #print(n1v)
-        #print(n2v)
+
         if n1v is not None:
             M[row, n1v] += 1
         if n2v is not None:
             M[row, n2v] += -1
-        S[row, 0] = val
+        S[row, 0] += val
 
+    def _add_I_tgn(self, M, S, v_nodes, i_nodes, c, i_graph_collapses):
+        node1 = c.node1
+        node2 = c.node2
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
 
-    def _add_basic_tgn(self, M, v_nodes, i_nodes, c):
+        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
+
+        if n1i is not None:
+            S[n1i, 0] += -val
+        if n2i is not None:
+            S[n2i, 0] += val
+
+    def _add_basic_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses):
         node1 = c.node1
         node2 = c.node2
         if self.is_symbolic:
             val = c.sym_value
         else:
             val = c.value
-
         if c.type == "r":
             y = 1 / val
         if c.type == "l":
             y = 1 / (val*s)
         if c.type == "c":
             y = val*s
-
-        n1v = self.index_tgn(v_nodes, node1)
-        n2v = self.index_tgn(v_nodes, node2)
-        n1i = self.index_tgn(i_nodes, node1)
-        n2i = self.index_tgn(i_nodes, node2)
-        #print(f"{n1v}, {n2v}, {n1i}, {n2i}")
+        n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
+        n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
+        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
         if n1v is not None:
             if n1i is not None:
                 M[n1i, n1v] += +y
@@ -648,12 +919,20 @@ class AnalyseCircuit:
             if n2i is not None:
                 M[n2i, n2v] += +y
 
-    def index_tgn(self, v_nodes, node):
+    def index_tgn(self, nodes, node, collapses):
+        #i=None
         try:
-            i = v_nodes.index(node)
+            return nodes.index(node)
         except ValueError:
-            i = None
-        return i
+            for collapse_list in collapses:
+                if node in collapse_list:
+                    if "0" in collapse_list:
+                        return None
+                    else:
+                        return nodes.index(min(collapse_list))
+                elif node == "0":
+                    return None
+
 
     def graph_append(self, node, graph):
         if node == '0':
@@ -695,8 +974,6 @@ class AnalyseCircuit:
             val = c.sym_value
         else:
             val = c.value
-            #print(val)
-        #print("{}: {}".format(c.name, val))
 
         if c.type == "r":
             y_b = 1
@@ -750,7 +1027,6 @@ class AnalyseCircuit:
         N2 = c.node2
         if self.is_symbolic:
             val = c.sym_value
-            #print("symbolic: {}".format(val))
         else:
             if self.analysis_type == "DC":
                 val = c.dc_value
