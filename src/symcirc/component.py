@@ -67,9 +67,10 @@ class Inductor(Component):
         :param sympy_expression value: numeric value of the component
         :param int init_cond: initial condition
     """
-    def __init__(self, name, type, node1, node2, sym_value, value, init_cond=None):
+    def __init__(self, name, type, node1, node2, sym_value, value, init_cond=None, coupling=None):
         super().__init__(name, type, node1, node2, sym_value, value)
         self.init_cond = init_cond
+        self.coupling = coupling
         self.netlist_keywords = ["L", "l"]
 
 
@@ -133,7 +134,7 @@ class OperationalAmplifier(Component):
         :param sympy_expression sym_value: symbolic value of the component
         :param int position: this element causes equation matrix expansion and needs the row/col index saved
     """
-    def __init__(self, name, type, node1, node2, node3, node4, sym_value, position):
+    def __init__(self, name, type, node1, node2, node3, node4, sym_value, position = None):
         super().__init__(name, type, node1, node2, sym_value)
         self.node3 = node3
         self.node4 = node4
