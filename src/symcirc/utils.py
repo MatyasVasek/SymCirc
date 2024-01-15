@@ -2,7 +2,7 @@ import sympy
 from sympy.abc import s, t
 f = sympy.symbols("f", real=True, positive=True)
 j = sympy.symbols("j", real=False)
-
+z = sympy.symbols("z", real=True, positive=True)
 
 def load_file(netlist_addr):
     """

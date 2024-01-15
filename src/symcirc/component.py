@@ -211,7 +211,7 @@ class SubcktModel():
         self.elements = []
 
 class PeriodicSwitch(Component):
-    # used only for analysis of switched capacitor/current circuits
+    # periodic switch used for SC/SI analysis
     def __init__(self, name, type, node1, node2, phase):
         super().__init__(name, type, node1, node2)
         self.phase = phase
