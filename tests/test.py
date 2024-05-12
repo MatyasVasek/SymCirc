@@ -12,7 +12,9 @@ if __name__ == '__main__':
     test_prints = True
     parser_test = False
     analysis_test = True
-    netlist = symcirc.utils.load_file("netlists\\AC9.txt")
+    #netlist = symcirc.utils.load_file("netlists\\symbulator\\NR11_13_7_tran.txt")
+    netlist = symcirc.utils.load_file("netlists\\RLLC.txt")
+    #netlist = symcirc.utils.load_file("netlists\\DC_elem_10.txt")
 
     method = "two_graph_node"
     #method = "tableau"
@@ -28,7 +30,9 @@ if __name__ == '__main__':
 
         analysis = "TF"
         t0 = time.time()
-        circuit = symcirc.analysis.AnalyseCircuit(netlist, analysis, symbolic=False, precision=6, method=method)
+        circuit = symcirc.analysis.AnalyseCircuit(netlist, analysis, symbolic=True, precision=6, method=method, sympy_ilt=True)
+        print(time.time() - t0)
+        all = circuit.component_values()
         t1 = time.time()
         """
         c = circuit.components["I1"]
@@ -53,30 +57,34 @@ if __name__ == '__main__':
         print("---------------------------------------------------------")
         print("All components: {}".format(all))
         print(f"Node voltages: {circuit.node_voltages()}")
+        print(circuit.symbols)
+        #utils.latex_print(all)
+        #utils.latex_print(circuit.node_voltages())
 
 
     if plots:
         xpoints = []
         ypoints = []
+        all_values = circuit.component_values()
         all_voltages = circuit.component_values()
         node_voltages = circuit.node_voltages()
         n = 0
-        for symbol_eqn in node_voltages:
+        for symbol_eqn in all_values:
             #try:
             n += 1
-            voltage = node_voltages[symbol_eqn]
+            func = all_values[symbol_eqn]
 
             for symbol in circuit.components:
                 value = circuit.components[symbol].value
-                voltage = voltage.subs(symbol, value)
-            t_symbol = voltage.free_symbols
-            print(voltage)
+                func = func.subs(symbol, value)
+            t_symbol = func.free_symbols
+            print(func)
 
-            #print(str(node)+": "+str(voltage))
+            #print(str(node)+": "+str(func))
             if analysis == "tran":
-                test_utils.plot(voltage, utils.t, 0, 0.001, 10000, title=symbol_eqn)
+                test_utils.plot(func, utils.t, 0, 2, 10000, title=symbol_eqn)
             else:
-                test_utils.plot(voltage, utils.s, 0, 0.01, 10000, title=symbol_eqn)
+                test_utils.plot(func, utils.s, 0, 0.01, 10000, title=symbol_eqn)
             """
             except Exception as e:
             print(e)
