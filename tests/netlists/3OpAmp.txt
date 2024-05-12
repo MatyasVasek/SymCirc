@@ -1,36 +1,21 @@
+3OpAmp
+R1 1 9 R
+R2 9 7 R
+R3 3 2 R1
+R4 2 o1 R2
+R5 5 6 R1
+R6 6 o2 R2
+V1 3 5 dc 1 ac 1
+R7 7 o1 Ro
+R8 4 o2 Ro
+X1 2 0 1 linearOpamp PARAMS: A_par=A0
 
-X1 1 0 2 linearOpamp PARAMS: A_par=1
-.subckt linearOpamp inplus d out PARAMS: A_par=100k Voff_par=1m Ib_par=100n Ioff_par=10n Rout_par=100 Rd_par=1Meg Rcm_par=100Meg CMRR_par=30k ft_par=1Meg Cd_par=10p Ccm_par=2p fcmr_par=100
-
-
-
-
-
-
-
-
-
-
-
-
+.subckt linearOpamp inplus d out PARAMS: A_par=100k
 Gm 0 t inplus d {A_par}
 Rtoa t 0 1
 Ao out 0 t out
-
-
-
-
-
 .ends linearOpamp
-R3 4 1 R1
-V1 4 5 dc 1 ac 1
-R5 5 7 R1
-X2 0 7 8 linearOpamp PARAMS: A_par=1
-R1 2 3 R
-X3 0 3 6 linearOpamp PARAMS: A_par=1
-R2 3 6 R
-R7 6 9 Ro
-R8 8 11 Ro
-C1 9 11 10n
-R4 1 9 R2
-R6 7 11 R2
+
+X2 0 6 4 linearOpamp PARAMS: A_par=A0
+X3 0 9 7 linearOpamp PARAMS: A_par=A0
+C1 o1 o2 10n
