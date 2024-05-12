@@ -93,10 +93,10 @@ def separate_s(f):
     return coeff
 
 
-def iLT(F):
-    try:
+def iLT(F, sympy_ilt):
+    if sympy_ilt:
         return sympy.integrals.transforms.inverse_laplace_transform(F, s, t, plane=None)
-    except:
+    else:
         f = 0
         F = sympy.apart(F, s)
         part_list = split_parts(F)
