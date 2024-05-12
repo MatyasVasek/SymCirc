@@ -6,7 +6,7 @@ import sys
 
 
 NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
-UNITS = {"f": sympy.Rational(1, 1000000000000), "p": sympy.Rational(1, 1000000000000),
+UNITS = {"f": sympy.Rational(1, 1000000000000000), "p": sympy.Rational(1, 1000000000000),
          "n": sympy.Rational(1, 1000000000), "u": sympy.Rational(1, 1000000), "m": sympy.Rational(1, 1000),
          "k": 1000, "meg": 1000000, "G": 1000000000,
          "T": 1000000000000}
@@ -55,7 +55,7 @@ def convert_units(val, forced_numeric=False):
 
 def dc_value(words):
     try:
-        if words[3] == "dc":
+        if words[3] in ["dc", "DC"]:
             dc_value, symbolic = convert_units(words[4])
         else:
             symbolic = True
@@ -67,7 +67,7 @@ def dc_value(words):
 
 def ac_value(words):
     try:
-        if words[5] == "ac":
+        if words[5] in ["ac", "AC"]:
             ac_value, symbolic = convert_units(words[6])
             try:
                 if words[7] not in RESERVED:
@@ -93,7 +93,7 @@ def tran_value(words, dc):
     #tran = sympy.Symbol("N/A")
 
     for word in words:
-        if word == "sin":
+        if word in ["sin", "SIN"]:
             use_DC_val = False
             break
         else:
@@ -124,7 +124,11 @@ def value_enum(words, source=False):
         return [dc, ac, tran], symbolic
     else:
         # recalculate units
-        value, symbolic = convert_units(words[3])
+        try:
+            value, symbolic = convert_units(words[3])
+        except IndexError:
+            symbolic = True
+            value = sympy.parse_expr(words[0])
         return value, symbolic
 
 def nodes_per_element(type):
@@ -159,7 +163,7 @@ def parse_subcircuits(netlist):
             param_dict = {}
             model_id = words[1]
             for w in words[2:]:
-                if w == "PARAMS:":
+                if w in ["PARAMS:", "params:"]:
                     loading_nodes = False
                 elif loading_nodes:
                     node_list.append(w)
@@ -168,12 +172,11 @@ def parse_subcircuits(netlist):
                     param_dict[key] = val
             current_model = SubcktModel(model_id, node_list, param_dict)
 
-        elif line in [f".ends {model_id}", f".ENDS {model_id}"]:
-            in_model = False
-            subckt_models[model_id] = current_model
-
         elif words[0][0] == ".":
-            if words[0] in [".end", ".END"]:
+            if (words[0] in [".ends", ".ENDS"]) and (model_id in words[1]):
+                in_model = False
+                subckt_models[model_id] = current_model
+            elif words[0] in [".end", ".END"]:
                 break
             else:
                 raise SyntaxError(f"Keyword/Element '{words[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
@@ -357,10 +360,6 @@ def parse(netlist, tran=False):
             except IndexError:
                 init_cond = 0
                 c = Capacitor(name, variant, node1, node2, sym_value=sym_value, value=value)
-            if tran:
-                ic = CurrentSource(name + "_IC", "i", node2, node1, sym_value=init_cond*sym_value, dc_value=init_cond*value, ac_value=0, tran_value=init_cond*value)
-                independent_sources.append(ic)
-                components[ic.name] = ic
             basic_components.append(c)
 
         elif name[0] in ["l", "L"]:
@@ -376,10 +375,6 @@ def parse(netlist, tran=False):
             except IndexError:
                 init_cond = 0
                 c = Inductor(name, variant, node1, node2, sym_value=sym_value, value=value)
-            if tran:
-                ic = CurrentSource(name + "_IC", "i", node1, node2, sym_value=init_cond*sym_value, dc_value=init_cond*value, ac_value=0, tran_value=init_cond*value)
-                independent_sources.append(ic)
-                components[ic.name] = ic
             basic_components.append(c)
 
         elif name[0] in ["a", "A"]:
@@ -410,7 +405,12 @@ def parse(netlist, tran=False):
                 nodes.append(node3)
             if node4 not in nodes:
                 nodes.append(node4)
-            value, symbolic = convert_units(words[5])
+            try:
+                value, symbolic = convert_units(words[5])
+            except IndexError:
+                symbolic = True
+                value = sympy.parse_expr(name)
+
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
@@ -429,7 +429,11 @@ def parse(netlist, tran=False):
                 nodes.append(node3)
             if node4 not in nodes:
                 nodes.append(node4)
-            value, symbolic = convert_units(words[5])
+            try:
+                value, symbolic = convert_units(words[5])
+            except IndexError:
+                symbolic = True
+                value = sympy.parse_expr(name)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
@@ -441,7 +445,11 @@ def parse(netlist, tran=False):
             variant = "f"
             sym_value = sympy.Symbol(name, real=True)
             v_c = words[3]
-            value, symbolic = convert_units(words[4])
+            try:
+                value, symbolic = convert_units(words[4])
+            except IndexError:
+                symbolic = True
+                value = sympy.parse_expr(name)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
@@ -456,7 +464,11 @@ def parse(netlist, tran=False):
             variant = "h"
             sym_value = sympy.Symbol(name, real=True)
             v_c = words[3]
-            value, symbolic = convert_units(words[4])
+            try:
+                value, symbolic = convert_units(words[4])
+            except IndexError:
+                symbolic = True
+                value = sympy.parse_expr(name)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
