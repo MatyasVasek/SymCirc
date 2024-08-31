@@ -31,25 +31,30 @@ def check_if_symbolic(val):
 
 
 def convert_units(val, forced_numeric=False):
+
     if forced_numeric:
         symbolic = False
     else:
         symbolic = check_if_symbolic(val)
     if symbolic:
         symbolic = True
-        ret = sympy.parse_expr(val, UNITS)
+        local = {}
+        local.update(UNITS)
+        local.update(sympy.abc._clash)
+        val = val.replace("{", "").replace("}", "")
+        ret = sympy.parse_expr(val, local_dict=local)
     elif val[-3:-1] in UNITS:
-        ret = sympy.Rational(sympy.parse_expr(val[:-3]) * UNITS["meg"])
+        ret = sympy.Rational(sympy.parse_expr(val[:-3], local_dict=sympy.abc._clash) * UNITS["meg"])
     elif val[-1] in ["k", "g", "t"]:
-        ret = sympy.Rational(sympy.parse_expr(val[:-1]) * UNITS[val[-1]])
+        ret = sympy.Rational(sympy.parse_expr(val[:-1], local_dict=sympy.abc._clash) * UNITS[val[-1]])
     elif val[-1] in UNITS:
-        ret = sympy.Rational(sympy.parse_expr(val[:-1])) * UNITS[val[-1]]
+        ret = sympy.Rational(sympy.parse_expr(val[:-1], local_dict=sympy.abc._clash) * UNITS[val[-1]])
     else:
         #ret = sympy.parse_expr(val)
         try:
-            ret = sympy.Rational(sympy.parse_expr(val))
+            ret = sympy.Rational(sympy.parse_expr(val, local_dict=sympy.abc._clash))
         except TypeError:
-            ret = sympy.parse_expr(val)
+            ret = sympy.parse_expr(val, local_dict=sympy.abc._clash)
     return ret, symbolic
 
 
@@ -57,6 +62,8 @@ def dc_value(words):
     try:
         if words[3] in ["dc", "DC"]:
             dc_value, symbolic = convert_units(words[4])
+        elif len(words) == 4:
+            dc_value, symbolic = convert_units(words[3])
         else:
             symbolic = True
             dc_value = sympy.Symbol(words[0], real=True)
@@ -128,7 +135,7 @@ def value_enum(words, source=False):
             value, symbolic = convert_units(words[3])
         except IndexError:
             symbolic = True
-            value = sympy.parse_expr(words[0])
+            value = sympy.parse_expr(words[0], local_dict=sympy.abc._clash)
         return value, symbolic
 
 def nodes_per_element(type):
@@ -307,7 +314,8 @@ def parse(netlist, tran=False):
     for line in parsed_netlist:
         words = line.split()
         name = words[0]
-
+        if name[0] == "*":
+            continue
         if name[0] not in ['k', 'K']:
             node1 = words[1]
             node2 = words[2]
@@ -321,7 +329,7 @@ def parse(netlist, tran=False):
 
         if name[0] in ["i", "I"]:
             variant = "i"
-            sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
+            sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash)  # sympy.Symbol(name, real=True)
             value, symbolic = value_enum(words, source=True)
             c = CurrentSource(name, variant, node1, node2, sym_value=sym_value, dc_value=value[0], ac_value=value[1],
                               tran_value=value[2])
@@ -329,7 +337,7 @@ def parse(netlist, tran=False):
 
         elif name[0] in ["v", "V", "u", "U"]:
             variant = "v"
-            sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
+            sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash)  # sympy.Symbol(name, real=True)
             value, symbolic = value_enum(words, source=True)
             c = VoltageSource(name, variant, node1, node2, sym_value=sym_value, position=matrix_expansion_coef,
                               dc_value=value[0], ac_value=value[1], tran_value=value[2])
@@ -343,7 +351,7 @@ def parse(netlist, tran=False):
                 sym_value = value  # sympy.Symbol(value, real=True)
 
             else:
-                sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
+                sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash)  # sympy.Symbol(name, real=True)
             c = Resistor(name, variant, node1, node2, sym_value=sym_value, value=value)
             basic_components.append(c)
 
@@ -353,7 +361,7 @@ def parse(netlist, tran=False):
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
-                sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
+                sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash)  # sympy.Symbol(name, real=True)
             try:
                 init_cond, _ = convert_units(words[4][3:])
                 c = Capacitor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
@@ -368,7 +376,7 @@ def parse(netlist, tran=False):
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
-                sym_value = sympy.parse_expr(name)  # sympy.Symbol(name, real=True)
+                sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash)  # sympy.Symbol(name, real=True)
             try:
                 init_cond, _ = convert_units(words[4][3:])
                 c = Inductor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
@@ -409,7 +417,7 @@ def parse(netlist, tran=False):
                 value, symbolic = convert_units(words[5])
             except IndexError:
                 symbolic = True
-                value = sympy.parse_expr(name)
+                value = sympy.parse_expr(name, local_dict=sympy.abc._clash)
 
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
@@ -433,7 +441,7 @@ def parse(netlist, tran=False):
                 value, symbolic = convert_units(words[5])
             except IndexError:
                 symbolic = True
-                value = sympy.parse_expr(name)
+                value = sympy.parse_expr(name, local_dict=sympy.abc._clash)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
@@ -449,7 +457,7 @@ def parse(netlist, tran=False):
                 value, symbolic = convert_units(words[4])
             except IndexError:
                 symbolic = True
-                value = sympy.parse_expr(name)
+                value = sympy.parse_expr(name, local_dict=sympy.abc._clash)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
@@ -468,7 +476,7 @@ def parse(netlist, tran=False):
                 value, symbolic = convert_units(words[4])
             except IndexError:
                 symbolic = True
-                value = sympy.parse_expr(name)
+                value = sympy.parse_expr(name, local_dict=sympy.abc._clash)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
@@ -496,6 +504,7 @@ def parse(netlist, tran=False):
 
         components[c.name] = c
         count += 1
+
     shorts = []
     for key in components:
         if key in add_short:
