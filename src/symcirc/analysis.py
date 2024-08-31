@@ -4,7 +4,10 @@ import sympy
 from symcirc import parse, laplace, utils
 from symcirc.utils import j,s,t
 from symcirc.pole_zero import *
-
+from sympy.parsing.sympy_parser import T
+from sympy.parsing.sympy_parser import (_token_splittable,
+                                            standard_transformations, implicit_multiplication,
+                                            split_symbols_custom)
 
 class AnalyseCircuit:
     """
@@ -46,6 +49,46 @@ class AnalyseCircuit:
         self.c_count = self.count_components()
         self.node_voltage_symbols = self._node_voltage_symbols()
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
+        self.symbol_dict = self.generate_symbol_dict()
+
+    def parse_expr(self, expr, local=None):
+        if local is None:
+            tmp = {
+                "v": lambda x: self.symbol_dict[f"v({x})"],
+                "i": lambda x: self.symbol_dict[f"i({x})"]
+            }
+            tmp.update(sympy.abc._clash)
+            tmp.update(self.symbol_dict)
+            parsed = sympy.parse_expr(expr, local_dict=tmp)
+        else:
+            tmp = {}
+            tmp.update(sympy.abc._clash)
+            tmp.update(local)
+            tmp.update(self.symbol_dict)
+            parsed = sympy.parse_expr(expr, local_dict=tmp)
+        return parsed
+
+    def can_split(self, symbol):
+        print(symbol)
+        print(self.symbols)
+        if symbol not in self.symbols:
+            return _token_splittable(symbol)
+        print("unsplittable")
+        return False
+
+    def v(self, name):
+        symbol = self.symbol_dict[f"v({name})"]
+        return self.solved_dict[symbol]
+
+    def i(self, name):
+        symbol = self.symbol_dict[f"i({name})"]
+        return self.solved_dict[symbol]
+
+    def generate_symbol_dict(self):
+        symbol_dict = {}
+        for symbol in self.symbols:
+            symbol_dict[symbol.name] = symbol
+        return symbol_dict
 
     def parse_phases(self, phases):
         if phases != "undefined":
@@ -79,14 +122,14 @@ class AnalyseCircuit:
 
     def component_voltage(self, name):
         ret = None
-        v = "v({})".format(name)
+        v = f"v({name})"
 
         if self.method == "tableau":
             ret = self.solved_dict[sympy.symbols(v)]
 
         if self.method == "eliminated_tableau":
             if name[0] in ["r", "R", "c", "C", "l", "L"]:
-                i = "i({})".format(name)
+                i = f"i({name})"
                 c = self.components[name]
                 if self.is_symbolic:
                     if name[0] in ["c", "C"]:
@@ -115,11 +158,23 @@ class AnalyseCircuit:
             ret = sympy.cancel((vn1 - vn2))
         if self.analysis_type == "tran":
             if ret is None:
-                return ret
+                return laplace.iLT(sympy.Symbol(v), self.sympy_ilt)
             else:
                 return laplace.iLT(ret, self.sympy_ilt)
+        elif self.analysis_type == "DC":
+            if ret is None:
+                return sympy.Symbol(v)
+            else:
+                try:
+                    ret = sympy.limit(ret, s, 0)
+                    return ret
+                except KeyError:
+                    return ret
         else:
-            return ret
+            if ret is None:
+                return sympy.Symbol(v)
+            else:
+                return ret
     def get_node_voltage_symbol(self, node):
         return self.node_voltage_symbols[self.node_dict[node]]
     def get_node_voltage(self, node, force_s_domain=False):
@@ -149,7 +204,7 @@ class AnalyseCircuit:
 
     def component_current(self, name):
         ret = None
-        i = "i({})".format(name)
+        i = f"i({name})"
         if self.method in ["tableau", "eliminated_tableau"]:
             ret = self.solved_dict[sympy.symbols(i)]
         if self.method == "two_graph_node":
@@ -180,11 +235,23 @@ class AnalyseCircuit:
 
         if self.analysis_type == "tran":
             if ret is None:
-                return ret
+                return laplace.iLT(sympy.Symbol(i), self.sympy_ilt)
             else:
                 return laplace.iLT(ret, self.sympy_ilt)
+        elif self.analysis_type == "DC":
+            if ret is None:
+                return sympy.Symbol(i)
+            else:
+                try:
+                    ret = sympy.limit(ret, s, 0)
+                    return ret
+                except KeyError:
+                    return ret
         else:
-            return ret
+            if ret is None:
+                return sympy.Symbol(i)
+            else:
+                return ret
 
     def component_values(self, name="all", default_python_datatypes=False):
         """
@@ -199,8 +266,8 @@ class AnalyseCircuit:
             ret = self.all_component_values(default_python_datatypes)
             return ret
         else:
-            v = "v({})".format(name)
-            i = "i({})".format(name)
+            v = f"v({name})"
+            i = f"i({name})"
             ret[v] = self.component_voltage(name)
             ret[i] = self.component_current(name)
         return ret
@@ -256,20 +323,20 @@ class AnalyseCircuit:
             if node1 in [0, "0"]:
                 voltage1 = 0
             else:
-                v1 = sympy.Symbol("v({})".format(node1))
+                v1 = sympy.Symbol(f"v({node1})")
                 voltage1 = self.solved_dict[v1].simplify()
         except KeyError:
-            print("Node {} doesn't exist.".format(v1))
+            print("Node {} doesn't exist.".format(node1))
             exit(101)
 
         try:
             if node2 in [0, "0"]:
                 voltage2 = 0
             else:
-                v2 = sympy.Symbol("v({})".format(node2))
+                v2 = sympy.Symbol(f"v({node2})")
                 voltage2 = self.solved_dict[v2].simplify()
         except KeyError:
-            print("Node {} doesn't exist.".format(v2))
+            print("Node {} doesn't exist.".format(node2))
             exit(101)
         tf = (voltage2/voltage1)
         return tf
@@ -408,7 +475,7 @@ class AnalyseCircuit:
         voltage_symbol_list = []
         for node in self.node_dict:
             if node != "0":
-                voltage_symbol_list.append(sympy.Symbol("v({})".format(node)))
+                voltage_symbol_list.append(sympy.Symbol(f"v({node})"))
         return voltage_symbol_list
 
     def _build_system_eqn(self):
@@ -431,58 +498,58 @@ class AnalyseCircuit:
                     c = self.components[key]
                     if c.type in ["r", "l", "c"]:
                         self._add_basic(M, R, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                         if c.type == "l":
                             inductor_index[c.name] = index
 
                     if c.type == "v":
                         self._add_voltage_source(M, R, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                     if c.type == "i":
                         self._add_current_source(M, R, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                     if c.type == "g":
                         self._add_VCT(M, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})_control"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})_control"))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                         index += 1
                     if c.type == "e":
                         self._add_VVT(M, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})_control"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})_control"))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                         index += 1
                     if c.type == "f":
                         self._add_CCT(M, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})_control"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})_control"))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                         index += 1
                     if c.type == "h":
                         self._add_CVT(M, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})_control"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})_control"))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                         index += 1
                     if c.type == "a":
                         self._add_A(M, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({}_control)".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({}_control)".format(c.name)))
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})_control"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})_control"))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                         index += 1
                     if c.type == "s":
                         self._add_short(M, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
 
                     index += 1
             for coupling in couplings:
@@ -509,15 +576,15 @@ class AnalyseCircuit:
                     c = self.components[key]
                     if c.type in ["r", "l", "c"]:
                         self._add_basic(M, R, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                         if c.type == "l":
                             inductor_index[c.name] = index
 
                     if c.type == "v":
                         self._add_voltage_source(M, R, c, index)
-                        voltage_symbols.append(sympy.Symbol("v({})".format(c.name)))
-                        current_symbols.append(sympy.Symbol("i({})".format(c.name)))
+                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
+                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
                 index += 1
 
             equation_matrix = M.col_insert(self.c_count + self.node_count, R)
@@ -699,11 +766,11 @@ class AnalyseCircuit:
                 if c.type == "f":
                     #raise TypeError("CCCS not supported in 'two_graph_node' analysis")
                     self._add_CCT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_col, i_graph_collapses)
-                    symbols_to_append.append(sympy.Symbol(f"i(c.control_voltage.name)"))
+                    symbols_to_append.append(sympy.Symbol(f"i({c.control_voltage})"))
                     index_col += 1
                 if c.type == "h":
                     self._add_CVT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_col, index_row, i_graph_collapses, v_graph_collapses)
-                    symbols_to_append.append(sympy.Symbol(f"i(c.control_voltage.name)"))
+                    symbols_to_append.append(sympy.Symbol(f"i({c.control_voltage})"))
                     index_col += 1
                     index_row += 1
                 if c.type == "a":
@@ -763,28 +830,33 @@ class AnalyseCircuit:
 
 
     def _add_CCT_tgn(self, M, v_nodes, i_nodes, c, index, i_graph_collapses):
-        if self.is_symbolic:
-            f = c.sym_value
-        else:
-            f = c.value
-        node1 = c.node1
-        node2 = c.node2
-        c_v = self.components[c.control_voltage]
-        node3 = c_v.node2
-        node4 = c_v.shorted_node
-        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
-        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
-        n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
-        n4i = self.index_tgn(i_nodes, node4, i_graph_collapses)
-        col = len(v_nodes) + index
-        if n1i is not None:
-            M[n1i, col] += f
-        if n2i is not None:
-            M[n2i, col] += -f
-        if n3i is not None:
-            M[n3i, col] += 1
-        if n4i is not None:
-            M[n4i, col] += -1
+        f = None
+        try:
+            if self.is_symbolic:
+                f = c.sym_value
+            else:
+                f = c.value
+            node1 = c.node1
+            node2 = c.node2
+            c_v = self.components[c.control_voltage]
+            node3 = c_v.node2
+            node4 = c_v.shorted_node
+            n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+            n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
+            n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
+            n4i = self.index_tgn(i_nodes, node4, i_graph_collapses)
+            col = len(v_nodes) + index
+            if n1i is not None:
+                M[n1i, col] += f
+            if n2i is not None:
+                M[n2i, col] += -f
+            if n3i is not None:
+                M[n3i, col] += 1
+            if n4i is not None:
+                M[n4i, col] += -1
+        except:
+            print(f)
+            print(type(f))
 
 
     def _add_VCT_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses):
@@ -890,7 +962,7 @@ class AnalyseCircuit:
         if c.type == "l":
             y = 1 / (val*s)
         if c.type == "c":
-            y = val*s
+            y = s * val
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
         n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
