@@ -35,9 +35,8 @@ python setup.py sdist bdist_wheel
 from symcirc import *
 
 # Insert your netlist
-netlist = """
-CIRCUIT NAME - First line is always the circuit name
-# This is a comment
+netlist = """CIRCUIT NAME - First line is always the circuit name
+* This is a comment
 R1 1 0 2k
 R2 3 0 (1/G)
 V1 2 1 dc 1 ac 1
