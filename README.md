@@ -18,10 +18,19 @@ Transient simulation allows for initial conditions of capacitors and standard/co
 
 ## Install
 
-**SymCirc** runs on [SymPy](https://www.sympy.org/), which should get automatically installed with SymCirc. Use this command to install via pip
+Use this command to install via pip
 ```
 pip install symcirc
 ```
+## Hard dependencies
+### SymPy
+**SymCirc** is a light-weight package. It needs only the [SymPy](https://www.sympy.org/) package, which is used for computations. It should get automatically installed with **SymCirc** when installed using pip. 
+## Optional dependencies
+### gmpy2
+To achieve better performance install the [gmpy2](https://gmpy2.readthedocs.io/en/latest/) package. If **gmpy2** is installed, **SymPy** automatically uses it for integer operations. It significantly impacts semi-symbolic analysis performance. 
+### symengine
+[SymEngine](https://symengine.org) is an optional symbolic core for **SymPy**. To use the **SymEngine** core, run your script with the environment variable ```USE_SYMENGINE=1```, or run **AnalyseCircuit** with an optional argument ```use_symengine=True```
+Example: ```symcirc.AnalyseCircuit(netlist, use_symengine=True)```
 ## Build
 
 Or you can build with this command:
