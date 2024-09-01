@@ -24,7 +24,7 @@ class AnalyseCircuit:
 
 
     """
-    def __init__(self, netlist, analysis_type="DC", method="two_graph_node", phases="undefined", symbolic=True, precision=6, sympy_ilt=True):
+    def __init__(self, netlist, analysis_type="DC", method="tableau", phases="undefined", symbolic=True, precision=6, sympy_ilt=True):
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
             raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
         self.is_symbolic = symbolic
@@ -50,31 +50,6 @@ class AnalyseCircuit:
         self.node_voltage_symbols = self._node_voltage_symbols()
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
         self.symbol_dict = self.generate_symbol_dict()
-
-    def parse_expr(self, expr, local=None):
-        if local is None:
-            tmp = {
-                "v": lambda x: self.symbol_dict[f"v({x})"],
-                "i": lambda x: self.symbol_dict[f"i({x})"]
-            }
-            tmp.update(sympy.abc._clash)
-            tmp.update(self.symbol_dict)
-            parsed = sympy.parse_expr(expr, local_dict=tmp)
-        else:
-            tmp = {}
-            tmp.update(sympy.abc._clash)
-            tmp.update(local)
-            tmp.update(self.symbol_dict)
-            parsed = sympy.parse_expr(expr, local_dict=tmp)
-        return parsed
-
-    def can_split(self, symbol):
-        print(symbol)
-        print(self.symbols)
-        if symbol not in self.symbols:
-            return _token_splittable(symbol)
-        print("unsplittable")
-        return False
 
     def v(self, name):
         symbol = self.symbol_dict[f"v({name})"]
