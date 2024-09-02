@@ -27,7 +27,7 @@ class AnalyseCircuit:
     """
     def __init__(self, netlist, analysis_type="DC", method="tableau", phases="undefined", symbolic=True, precision=6, sympy_ilt=True, use_symengine=False):
         if use_symengine:
-            os.environ["USE_SYMENGINE"] = 1
+            os.environ["USE_SYMENGINE"] = "1"
 
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
             raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
