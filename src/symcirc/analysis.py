@@ -38,6 +38,11 @@ class AnalyseCircuit:
         self.sympy_ilt = sympy_ilt
         self.netlist = netlist
         self.node_voltage_identities = []
+            raise ValueError(f"Nonexistent analysis type: {analysis_type}")
+
+        if method not in ["tableau", "two_graph_node"]:
+            raise ValueError(f"Nonexistent analysis method: {method}")
+
         if analysis_type == "tran":
             data = parse.parse(netlist, tran=True)
         else:
