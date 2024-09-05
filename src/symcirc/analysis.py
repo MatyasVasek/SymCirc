@@ -37,13 +37,14 @@ class AnalyseCircuit:
             data = parse.parse(netlist)
 
         self.phases, self.frequency = self.parse_phases(phases)
+        self.scsi = scsi
         self.symbol_dict = {}
         if self.phases != "undefined" and analysis_type not in ["AC", "TF", "tran"]:
             raise ValueError("Valid analysis types for SCSI circuits are: 'AC', 'TF' and 'tran'")
         if self.phases != "undefined" and method not in ["modified_node", "two_graph_node"]:
             raise ValueError("Valid methods for SCSI circuits are: 'modified_node' and 'two_graph_node'")
         if self.phases != "undefined" and scsi not in ["scideal", "siideal"]:
-            raise ValueError("Please specify if circuit is in switched capacitor mode or switched current mode")
+            raise ValueError("Please specify if circuit is in switched capacitor ('scideal') mode or switched current mode ('siideal')")
 
         self.components = data["components"]   # {<name> : <Component>} (see component.py)
         self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
@@ -157,8 +158,10 @@ class AnalyseCircuit:
                 return laplace.iLT(ret)
         else:
             return ret
+
     def get_node_voltage_symbol(self, node):
         return self.node_voltage_symbols[self.node_dict[node]]
+
     def get_node_voltage(self, node, force_s_domain=False):
         F = None
         try:
@@ -1076,7 +1079,6 @@ class AnalyseCircuit:
     def SCSI_symbol_z_factor(self, symbols):
         num_of_phases = self.phases[0]
         phase_helper_array = []
-        # z = sympy.Symbol("z")
         for phase in range(num_of_phases):
             phase_helper_array.append(self.phases[phase + 1])
         for symbol in symbols:
@@ -1163,14 +1165,8 @@ class AnalyseCircuit:
     def SCSI_add_voltage_source(self, A, Y, result, c, component_index, phase, num_of_phases):
         N1 = c.node1
         N2 = c.node2
-
-        #print(c.name, c.dc_value, c.ac_value)
-
         if self.is_symbolic:
-            if c.dc_value == 0 and c.ac_value == 0:
-                val = 0
-            else:
-                val = c.sym_value
+            val = c.sym_value
         else:
             if self.analysis_type == "DC":
                 val = c.dc_value
@@ -1250,7 +1246,6 @@ class AnalyseCircuit:
             pass
         elif node not in graph:
             graph.append(node)
-        #return graph
 
     def SCSI_collapse_tgn(self, graph_collapses, node1, node2):
         collapsed = False
@@ -1282,7 +1277,6 @@ class AnalyseCircuit:
 
         return temp
 
-
     def SCSI_node_list_sort(self, nodes):
         helper = []
         i = 0
@@ -1309,12 +1303,6 @@ class AnalyseCircuit:
                         return nodes.index(min(collapse_list))
                 elif node.startswith("0"):
                     return None
-    # def SCSI_index_ref_tgn(self, nodes, node):
-    #     try:
-    #         return nodes.index(node)
-    #     except ValueError:
-    #         if node.startswith('0'):
-    #             return None
 
     def SCSI_add_capacitor_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases, matrix_col_expand):
         phase_offset = int((M.shape[0] - matrix_col_expand) / num_of_phases)
@@ -1366,7 +1354,6 @@ class AnalyseCircuit:
                     else:
                         M[n2i, n2v - phase_offset] += -val
 
-
     def SCSI_add_voltage_source_tgn(self, M, S, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
         if self.is_symbolic:
             val = c.sym_value
@@ -1399,12 +1386,8 @@ class AnalyseCircuit:
                 else:
                     M[row, n2v] += -1
             S[row, 0] += val * self.SCSI_z_power_substitution(z_symbol_array[phase - 1])
-
-            #S[row, 0] += val * z_symbol_array[phase - 1]
-
             index_row += 1
         return index_row
-
 
     def SCSI_add_switch_tgn(self, M, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
         n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(c.phase), v_graph_collapses)
@@ -1422,7 +1405,6 @@ class AnalyseCircuit:
                 M[row, n2v] += -1
         index_row += 1
         return index_row
-
 
     def SCSI_add_VVT_tgn(self, M, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
         if self.is_symbolic:
@@ -1457,7 +1439,6 @@ class AnalyseCircuit:
                     M[row, n4v] += -1
             index_row += 1
         return index_row
-
 
     def SCSI_add_QQT_tgn(self, M, v_nodes, i_nodes, c, index_col, i_graph_collapses, num_of_phases):
         if self.is_symbolic:
@@ -1506,7 +1487,6 @@ class AnalyseCircuit:
         if not collapsed:
             graph_collapses.append([node1, node2])  # set node2 to be collapsed into node1 on the current graph
 
-
     def _add_CVT_tgn(self, M, v_nodes, i_nodes, c, index_col, index_row, i_graph_collapses, v_graph_collapses):
         if self.is_symbolic:
             r = c.sym_value
@@ -1535,7 +1515,6 @@ class AnalyseCircuit:
 
         M[row, col] += -r
 
-
     def _add_CCT_tgn(self, M, v_nodes, i_nodes, c, index, i_graph_collapses):
         if self.is_symbolic:
             f = c.sym_value
@@ -1560,7 +1539,6 @@ class AnalyseCircuit:
         if n4i is not None:
             M[n4i, col] += -1
 
-
     def _add_VCT_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses):
         if self.is_symbolic:
             g = c.sym_value
@@ -1584,6 +1562,7 @@ class AnalyseCircuit:
                 M[n1i, n2v] += -g
             if n2i is not None:
                 M[n2i, n2v] += +g
+
     def _add_VVT_tgn(self, M, v_nodes, i_nodes, c, index, i_graph_collapses, v_graph_collapses):
         if self.is_symbolic:
             e = c.sym_value
@@ -1606,8 +1585,6 @@ class AnalyseCircuit:
             M[row, n3v] += 1
         if n4v is not None:
             M[row, n4v] += -1
-
-
 
     def _add_V_tgn(self, M, S, v_nodes, i_nodes, c, index, i_graph_collapses, v_graph_collapses):
         node1 = c.node1
@@ -1693,7 +1670,6 @@ class AnalyseCircuit:
                         return nodes.index(min(collapse_list))
                 elif node == "0":
                     return None
-
 
     def graph_append(self, node, graph):
         if node == '0':
