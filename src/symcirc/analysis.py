@@ -22,7 +22,7 @@ class AnalyseCircuit:
 
 
     """
-    def __init__(self, netlist, analysis_type="DC", method="two_graph_node", phases="undefined", symbolic=True, precision=6):
+    def __init__(self, netlist, analysis_type="DC", method="two_graph_node", phases="undefined", scsi="undefined", symbolic=True, precision=6):
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
             raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
         self.is_symbolic = symbolic
@@ -39,9 +39,11 @@ class AnalyseCircuit:
         self.phases, self.frequency = self.parse_phases(phases)
         self.symbol_dict = {}
         if self.phases != "undefined" and analysis_type not in ["AC", "TF", "tran"]:
-            raise ValueError("This type of analysis is not allowed in Switched Capacitors/Currents circuits")
-        # if self.phases != "undefined" and method != "modified_node":
-        #     raise ValueError('The only valid method for Switched Capacitor circuits is "modified_node"')
+            raise ValueError("Valid analysis types for SCSI circuits are: 'AC', 'TF' and 'tran'")
+        if self.phases != "undefined" and method not in ["modified_node", "two_graph_node"]:
+            raise ValueError("Valid methods for SCSI circuits are: 'modified_node' and 'two_graph_node'")
+        if self.phases != "undefined" and scsi not in ["scideal", "siideal"]:
+            raise ValueError("Please specify if circuit is in switched capacitor mode or switched current mode")
 
         self.components = data["components"]   # {<name> : <Component>} (see component.py)
         self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
@@ -277,7 +279,6 @@ class AnalyseCircuit:
         for node in self.node_dict:
             ret[f"v({node})"] = self.get_node_voltage(node)
         return ret
-
 
     def transfer_function(self, node1, node2):
         """
@@ -884,8 +885,6 @@ class AnalyseCircuit:
                                                c_v.shorted_node + '_' + str(phase))
                     matrix_col_expand += num_of_phases
 
-            # print(i_graph_collapses)
-
             i_graph_collapses = self.SCSI_collapse_list_collapser(i_graph_collapses)
             v_graph_collapses = self.SCSI_collapse_list_collapser(v_graph_collapses)
 
@@ -924,10 +923,6 @@ class AnalyseCircuit:
             index_col = 0
             symbols_to_append = []
 
-            # print(f"napětí: {v_graph_nodes} \n proud: {i_graph_nodes} \n "
-            #       f"napěťové skupiny: {v_graph_collapses} \n proudové skupiny: {i_graph_collapses}")
-
-
             for key in self.components:
                 c = self.components[key]
                 if c.type == "c":
@@ -962,29 +957,25 @@ class AnalyseCircuit:
             for symb in symbols_to_append:
                 symbols.append(symb)
 
-            sympy.pprint(equation_matrix)
-            sympy.pprint(symbols)
-            #
+            # sympy.pprint(equation_matrix)
+            # sympy.pprint(symbols)
+
             # print(equation_matrix.shape)
             # print(len(symbols))
 
-
-
-
-
-            file = open(r"C:\Users\fspim\Desktop\Test texts\matrix.txt", "w")
-            file.write(str(M))
-            file.write("\n")
-            file.write(str(S))
-            file.write("\n")
-            file.write(str(symbols))
-            file.close()
-
-
-
+            # file = open(r"C:\Users\fspim\Desktop\Test texts\matrix.txt", "w")
+            # file.write(str(M))
+            # file.write("\n")
+            # file.write(str(S))
+            # file.write("\n")
+            # file.write(str(symbols))
+            # file.close()
 
 
         elif self.method == "modified_node" and self.phases != "undefined": # used by SCSI
+            if self.scsi == "siideal":
+                raise ValueError("Use modified nodal formulation method only for switched capacitor circuits")
+
             num_of_phases = self.phases[0]
             component_size = self.c_count * num_of_phases
             node_size = self.node_count * num_of_phases
@@ -994,10 +985,6 @@ class AnalyseCircuit:
             component_index = 0
             node_symbols = self.SCSI_node_voltage_symbols()
             charge_symbols = []
-
-            # print("node_dict: ", self.node_dict)
-            # print(f"node_dict length: {len(self.node_dict)}")
-            # print(f"node count: {self.node_count}")
 
             A_matrices = []
             Y_matrices = []
@@ -1060,16 +1047,6 @@ class AnalyseCircuit:
             self.SCSI_matrix_z_symbol(M)
             equation_matrix = M.col_insert(component_size + node_size, R)
             symbols = self.SCSI_symbol_list_order(node_symbols, charge_symbols)
-
-
-            # sympy.pprint(A_matrices)
-            # sympy.pprint(Y_matrices)
-            # sympy.pprint(Z_matrices)
-
-            # print(sympy.shape(equation_matrix))
-            # print(len(symbols))
-            # sympy.pprint(equation_matrix)
-            # sympy.pprint(symbols)
 
         return equation_matrix, symbols
 
