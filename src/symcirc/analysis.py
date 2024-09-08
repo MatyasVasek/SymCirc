@@ -23,8 +23,6 @@ class AnalyseCircuit:
     :param bool symbolic: False if you want your results evaluated with numerical values from the netlist.
 
     :raise ValueError: If the analysis_type argument is invalid.
-
-
     """
     def __init__(self, netlist: str, analysis_type: str = "DC", method: str = "tableau", phases: str = "undefined",
                  symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True, use_symengine: bool = False):
@@ -400,8 +398,8 @@ class AnalyseCircuit:
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            if self.method != "two_graph_node":
-                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            #if self.method != "two_graph_node":
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
@@ -426,8 +424,8 @@ class AnalyseCircuit:
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            if self.method != "two_graph_node":
-                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            #if self.method != "two_graph_node":
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
@@ -443,8 +441,8 @@ class AnalyseCircuit:
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            if self.method != "two_graph_node":
-                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            #if self.method != "two_graph_node":
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
