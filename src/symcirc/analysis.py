@@ -368,8 +368,8 @@ class AnalyseCircuit:
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            if self.method != "two_graph_node":
-                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            #if self.method != "two_graph_node":
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
@@ -394,8 +394,8 @@ class AnalyseCircuit:
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            if self.method != "two_graph_node":
-                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            #if self.method != "two_graph_node":
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
@@ -411,8 +411,8 @@ class AnalyseCircuit:
                             else:
                                 if c.value:
                                     solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            if self.method != "two_graph_node":
-                                solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            #if self.method != "two_graph_node":
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                     except KeyError:
                         pass
 
