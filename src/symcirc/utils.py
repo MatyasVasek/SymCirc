@@ -5,9 +5,10 @@ from sympy import oo as infinity
 from sympy import log, exp, sin, cos, tan, cot
 from sympy import I as j
 
+from typing import Dict
 
 f = sympy.symbols("f", real=True, positive=True)
-j = sympy.symbols("j", real=False)
+#j = sympy.symbols("j", real=False)
 
 def numer(H):
     N, _ = sympy.fraction(H)
@@ -32,7 +33,7 @@ def load_file(netlist_addr):
     return netlist
 
 
-def to_latex(dictionary):
+def to_latex(dictionary: Dict[str, sympy.Expr], symbol_names: Dict[sympy.Symbol, str]=None) -> Dict[str, str]:
     """
     Python dict to latex converter.
 
@@ -41,17 +42,20 @@ def to_latex(dictionary):
     """
     ret = {}
     for key in dictionary:
-        ret.update({str(key): sympy.latex(dictionary[key])})
+        if symbol_names:
+            ret.update({key: sympy.latex(dictionary[key], imaginary_unit="j", symbol_names=symbol_names)})
+        else:
+            ret.update({key: sympy.latex(dictionary[key], imaginary_unit="j")})
     return ret
 
 
-def latex_print(data):
+def latex_print(data: sympy.Expr, symbol_names: Dict[sympy.Symbol, str]=None):
     """
     Print data in latex code.
 
     :param str data: arbitrary string
     """
-    print("{}".format(sympy.latex(data)))
+    print("{}".format(sympy.latex(data), imaginary_unit="j", symbol_names=symbol_names))
 
 
 def xpoints(start, stop, points):
