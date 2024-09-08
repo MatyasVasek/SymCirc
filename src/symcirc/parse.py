@@ -231,7 +231,7 @@ def unpack(parsed_netlist, subckt_models):
                     tmp = word.split("=")
                     if len(tmp) != 2:
                         raise SyntaxError(f"Parameter '{word}' is not in the correct format.")
-                    params[tmp[0]] = tmp[1]
+                    params[tmp[0]], _ = convert_units(tmp[1])
             node_index = 0
             node_dict = {}
             for node in nodes:
@@ -264,10 +264,15 @@ def unpack(parsed_netlist, subckt_models):
                     index = 0
                     for e in split_elem:
                         if e[0] == "{":
+                            local = sympy.abc._clash
                             try:
-                                split_elem[index] = params[e[1:-1]]
+                                local.update(params)
+                                split_elem[index] = str(sympy.parse_expr(e[1:-1], local_dict=local))
+                                #split_elem[index] = params[e[1:-1]]
                             except KeyError:
-                                split_elem[index] = model.param_dict[e[1:-1]]
+                                local.update(model.param_dict)
+                                split_elem[index] = str(sympy.parse_expr(e[1:-1], local_dict=local))
+                                #split_elem[index] = model.param_dict[e[1:-1]]
 
                         index += 1
                 split_elem[0] = f"{split_elem[0]}_({words[0]})"
