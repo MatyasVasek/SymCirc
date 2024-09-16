@@ -442,18 +442,8 @@ class AnalyseCircuit:
                             pass
         else: # used by SCSI
             if self.analysis_type == "TF":
-
-                t = time.time()
                 eqn_matrix, symbols = self._build_system_eqn()
-                elapsed = time.time() - t
-                print(f'Matrix generation time: {elapsed}')
-
-                t = time.time()
                 solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-                elapsed = time.time() - t
-                print(f'System solve time: {elapsed}')
-
-
                 self.SCSI_symbol_z_factor(solved_dict)
                 self.SCSI_z_pow_inv_sub(solved_dict)
                 if not self.is_symbolic:
@@ -496,6 +486,8 @@ class AnalyseCircuit:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
                         except KeyError:
                             pass
+            elif self.analysis_type == "tran":
+                raise ValueError("transient analysis not yet defined")
         return eqn_matrix, solved_dict, symbols
 
     def _node_voltage_symbols(self):
@@ -646,7 +638,6 @@ class AnalyseCircuit:
                         matrix_row_expand += 1
                         matrix_col_expand += 1
 
-
                 if c.type == "v":
                     node1 = c.node1
                     node2 = c.node2
@@ -767,7 +758,6 @@ class AnalyseCircuit:
             v_graph_nodes = list(set(v_graph_nodes))
             i_graph_nodes = list(set(i_graph_nodes))
 
-
             m_size = len(v_graph_nodes) + matrix_col_expand
             M = sympy.Matrix(sympy.zeros(m_size))
             S = sympy.Matrix(sympy.zeros(m_size, 1))
@@ -781,14 +771,11 @@ class AnalyseCircuit:
                         raise NotImplementedError("Coupled inductors not implemented for this method. Use tableau method for coupled inductors.")
                     else:
                         self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
-
                 if c.type in ["r", "c"]:
                     self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
-
                 if c.type == "v":
                     self._add_V_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index_row, i_graph_collapses, v_graph_collapses)
                     index_row += 1
-
                 if c.type == "i":
                     self._add_I_tgn(M, S, v_graph_nodes, i_graph_nodes, c, i_graph_collapses)
                 if c.type == "g":
@@ -818,9 +805,8 @@ class AnalyseCircuit:
             for symb in symbols_to_append:
                 symbols.append(symb)
 
-            #sympy.pprint(equation_matrix)
-
         elif self.method == "two_graph_node" and self.phases != "undefined":
+            sc_value_error = "Resistors, inductors, current sources, CCVSs and VCCSs aren't permitted in switched capacitor mode"
             num_of_phases = self.phases[0]
             symbols = []
             v_graph_collapses = []
@@ -828,6 +814,23 @@ class AnalyseCircuit:
             v_graph_nodes = []
             i_graph_nodes = []
             matrix_col_expand = 0
+
+            for key in self.components:
+                c = self.components[key]
+                if c.type == "v":
+                    if self.scsi == "siideal":
+                        raise ValueError("Inductors, voltage sources and CCVSs aren't permitted in switched current mode")
+                if c.type == "l":
+                    raise ValueError("Inductors are not permitted in SC/SI mode")
+                if c.type == "r":
+                    raise ValueError(sc_value_error)
+                if c.type == "i":
+                    raise ValueError(sc_value_error)
+                if c.type == "g":
+                    if self.scsi == "scideal":
+                        raise ValueError(sc_value_error)
+                if c.type == "h":
+                    raise ValueError("Current controlled voltage sources aren't permitted in SC/SI mode")
 
             for key in self.components:
                 c = self.components[key]
@@ -887,6 +890,28 @@ class AnalyseCircuit:
                         self.SCSI_collapse_tgn(v_graph_collapses, c_v.node2 + '_' + str(phase),
                                                c_v.shorted_node + '_' + str(phase))
                     matrix_col_expand += num_of_phases
+                if c.type == "r":
+                    for phase in range(1, num_of_phases + 1):
+                        self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), v_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node2 + '_' + str(phase), v_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), i_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node2 + '_' + str(phase), i_graph_nodes)
+                if c.type == "i":
+                    for phase in range(1, num_of_phases + 1):
+                        self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), v_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node2 + '_' + str(phase), v_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), i_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node2 + '_' + str(phase), i_graph_nodes)
+                if c.type == "g":
+                    for phase in range(1, num_of_phases + 1):
+                        self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), v_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node2 + '_' + str(phase), v_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node3 + '_' + str(phase), v_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node4 + '_' + str(phase), v_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), i_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node2 + '_' + str(phase), i_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node3 + '_' + str(phase), i_graph_nodes)
+                        self.SCSI_graph_append_tgn(c.node4 + '_' + str(phase), i_graph_nodes)
 
             i_graph_collapses = self.SCSI_collapse_list_collapser(i_graph_collapses)
             v_graph_collapses = self.SCSI_collapse_list_collapser(v_graph_collapses)
@@ -930,10 +955,11 @@ class AnalyseCircuit:
                 c = self.components[key]
                 if c.type == "c":
                     self.SCSI_add_capacitor_tgn(M, v_graph_nodes, i_graph_nodes,
-                                                c, i_graph_collapses, v_graph_collapses, num_of_phases, matrix_col_expand)
+                                                c, i_graph_collapses, v_graph_collapses,
+                                                num_of_phases, matrix_col_expand)
                 if c.type == "v":
                     index_row = self.SCSI_add_voltage_source_tgn(M, S, v_graph_nodes, i_graph_nodes,
-                                                     c, index_row, v_graph_collapses, num_of_phases)
+                                                                 c, index_row, v_graph_collapses, num_of_phases)
                 if c.type == "s":
                     index_row = self.SCSI_add_switch_tgn(M, v_graph_nodes, i_graph_nodes,
                                                          c, index_row, v_graph_collapses, num_of_phases)
@@ -944,6 +970,14 @@ class AnalyseCircuit:
                                                       c, index_row, v_graph_collapses, num_of_phases)
                 if c.type == "f":
                     pass
+                if c.type == "r":
+                    self.SI_add_resistor_tgn(M, v_graph_nodes, i_graph_nodes,
+                                             c, i_graph_collapses, v_graph_collapses, num_of_phases)
+                if c.type == "i":
+                    self.SI_add_current_source_tgn(M, i_graph_nodes, c, i_graph_collapses, num_of_phases)
+                if c.type == "g":
+                    self.SI_add_VCT_tgn(M, v_graph_nodes, i_graph_nodes,
+                                        c, i_graph_collapses, v_graph_collapses, num_of_phases)
 
             for key in self.components:
                 c = self.components[key]
@@ -951,7 +985,10 @@ class AnalyseCircuit:
                     index_col = self.SCSI_add_QQT_tgn(M, v_graph_nodes, i_graph_nodes,
                                                       c, index_col, i_graph_collapses, num_of_phases)
                     for phase in range(1, num_of_phases + 1):
-                        symbols_to_append.append(sympy.Symbol(f"q({c.control_voltage})_{phase}"))
+                        if self.scsi == "scideal":
+                            symbols_to_append.append(sympy.Symbol(f"q({c.control_voltage})_{phase}"))
+                        else:
+                            symbols_to_append.append(sympy.Symbol(f"i({c.control_voltage})_{phase}"))
 
             equation_matrix = M.col_insert(m_size, S)
 
@@ -965,15 +1002,6 @@ class AnalyseCircuit:
 
             # print(equation_matrix.shape)
             # print(len(symbols))
-
-            # file = open(r"C:\Users\fspim\Desktop\Test texts\matrix.txt", "w")
-            # file.write(str(M))
-            # file.write("\n")
-            # file.write(str(S))
-            # file.write("\n")
-            # file.write(str(symbols))
-            # file.close()
-
 
         elif self.method == "modified_node" and self.phases != "undefined": # used by SCSI
             if self.scsi == "siideal":
@@ -1474,6 +1502,67 @@ class AnalyseCircuit:
                     M[n4i, col] += -1
             index_col += 1
         return index_col
+
+    def SI_add_resistor_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
+        y = 1 / val
+        for phase in range(1, num_of_phases + 1):
+            n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
+            n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
+            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
+            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
+            if n1v is not None:
+                if n1i is not None:
+                    M[n1i, n1v] += +y
+                if n2i is not None:
+                    M[n2i, n1v] += -y
+            if n2v is not None:
+                if n1i is not None:
+                    M[n1i, n2v] += -y
+                if n2i is not None:
+                    M[n2i, n2v] += +y
+
+    def SI_add_current_source_tgn(self, S, i_nodes, c, i_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
+        for phase in range(1, num_of_phases + 1):
+            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
+            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
+            if n1i is not None:
+                S[n1i, 0] += -val
+            if n2i is not None:
+                S[n2i, 0] += val
+
+    def SI_add_VCT_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            g = c.sym_value
+        else:
+            g = c.value
+        for phase in range(1, num_of_phases + 1):
+            n1v = self.SCSI_index_tgn(v_nodes, c.node3 + '_' + str(phase), v_graph_collapses)
+            n2v = self.SCSI_index_tgn(v_nodes, c.node4 + '_' + str(phase), v_graph_collapses)
+            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
+            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
+            if n1v is not None:
+                if n1i is not None:
+                    M[n1i, n1v] += +g
+                if n2i is not None:
+                    M[n2i, n1v] += -g
+            if n2v is not None:
+                if n1i is not None:
+                    M[n1i, n2v] += -g
+                if n2i is not None:
+                    M[n2i, n2v] += +g
 
     def collapse(self, graph_collapses, node1, node2):
         collapsed = False
