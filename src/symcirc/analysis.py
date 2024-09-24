@@ -459,12 +459,12 @@ class AnalyseCircuit:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
                         except KeyError:
                             pass
+
             elif self.analysis_type == "AC":
                 eqn_matrix, symbols = self._build_system_eqn()
                 solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
                 self.SCSI_symbol_z_factor(solved_dict)
                 self.SCSI_z_pow_inv_sub(solved_dict)
-                f = sympy.symbols("f", real=True, positive=True)
                 f = self.frequency
                 if self.is_symbolic:
                     for sym in symbols:
@@ -732,7 +732,7 @@ class AnalyseCircuit:
             if c.type == "s":
                     pass
 
-            """Collapse nodes based on collapse dictioanaries"""
+            """Collapse nodes based on collapse dictionaries"""
             for collapse_list in i_graph_collapses:
                 i = 0
                 tmp_i_graph_nodes = copy.copy(i_graph_nodes)
@@ -957,6 +957,7 @@ class AnalyseCircuit:
                     self.SCSI_add_capacitor_tgn(M, v_graph_nodes, i_graph_nodes,
                                                 c, i_graph_collapses, v_graph_collapses,
                                                 num_of_phases, matrix_col_expand)
+                    #print(c.value)
                 if c.type == "v":
                     index_row = self.SCSI_add_voltage_source_tgn(M, S, v_graph_nodes, i_graph_nodes,
                                                                  c, index_row, v_graph_collapses, num_of_phases)
@@ -1563,6 +1564,44 @@ class AnalyseCircuit:
                     M[n1i, n2v] += -g
                 if n2i is not None:
                     M[n2i, n2v] += +g
+
+    def SCSI_get_node_voltage(self, node, phase, force_z = False):
+        phase_string = str(phase)
+        formatted_node = str(node) + "_" + phase_string
+        formatted_voltage = sympy.symbols("v(" + str(node) + ")_" + phase_string)
+        value = None
+        try:
+            value = self.solved_dict[formatted_voltage]
+        except KeyError:
+            for identity in self.node_voltage_identities:
+                if formatted_node in identity:
+                    if any(identity_node.startswith("0") for identity_node in identity):
+                        value = 0
+                    else:
+                        for identity_node in identity:
+                            try:
+                                formatted_voltage = sympy.symbols("v(" + identity_node + ")_" + phase_string)
+                                value = self.solved_dict[formatted_voltage]
+                            except:
+                                pass
+        if force_z:
+            return value
+        elif self.analysis_type == "tran":
+            if value is None:
+                return value
+            else:
+                pass
+                #return z_transform.iZT(value)
+        else:
+            return value
+
+    def SCSI_all_node_voltages(self):
+        value_dict = {}
+        num_of_phases = self.phases[0]
+        for phase in range(1, num_of_phases + 1):
+            for node in self.node_dict:
+                value_dict[f"v({node})_{phase}"] = self.SCSI_get_node_voltage(node, phase)
+        return value_dict
 
     def collapse(self, graph_collapses, node1, node2):
         collapsed = False
