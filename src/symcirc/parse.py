@@ -372,7 +372,7 @@ def parse(netlist, tran=False):
                 c = Capacitor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
             except IndexError:
                 init_cond = 0
-                c = Capacitor(name, variant, node1, node2, sym_value=sym_value, value=value)
+                c = Capacitor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
             basic_components.append(c)
 
         elif name[0] in ["l", "L"]:
@@ -387,7 +387,7 @@ def parse(netlist, tran=False):
                 c = Inductor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
             except IndexError:
                 init_cond = 0
-                c = Inductor(name, variant, node1, node2, sym_value=sym_value, value=value)
+                c = Inductor(name, variant, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
             basic_components.append(c)
 
         elif name[0] in ["a", "A"]:

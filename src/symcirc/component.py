@@ -49,7 +49,7 @@ class Capacitor(Component):
         :param sympy_expression value: first node id
         :param int init_cond: initial condition
     """
-    def __init__(self, name, type, node1, node2, sym_value, value, init_cond=None):
+    def __init__(self, name, type, node1, node2, sym_value, value, init_cond=0):
         super().__init__(name, type, node1, node2, sym_value, value)
         self.init_cond = init_cond
         self.netlist_keywords = ["C", "c"]
@@ -67,7 +67,7 @@ class Inductor(Component):
         :param sympy_expression value: numeric value of the component
         :param int init_cond: initial condition
     """
-    def __init__(self, name, type, node1, node2, sym_value, value, init_cond=None, coupling=None):
+    def __init__(self, name, type, node1, node2, sym_value, value, init_cond=0, coupling=None):
         super().__init__(name, type, node1, node2, sym_value, value)
         self.init_cond = init_cond
         self.coupling = coupling
