@@ -5,6 +5,7 @@ import sympy
 from symcirc import parse, laplace, utils
 from symcirc.utils import j,s,t
 from symcirc.pole_zero import *
+from symcirc.component import Component, Coupling
 from sympy.parsing.sympy_parser import T
 from sympy.parsing.sympy_parser import (_token_splittable,
                                             standard_transformations, implicit_multiplication,
@@ -23,46 +24,63 @@ class AnalyseCircuit:
 
     :raise ValueError: If the analysis_type argument is invalid.
     """
-    def __init__(self, netlist, analysis_type="DC", method="tableau", phases="undefined", symbolic=True, precision=6, sympy_ilt=True, use_symengine=False):
+    def __init__(self, netlist: str, analysis_type: str = "DC", method: str = "tableau", phases: str = "undefined",
+                 symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True, use_symengine: bool = False):
+
         if use_symengine:
-            os.environ["USE_SYMENGINE"] = 1
+            os.environ["USE_SYMENGINE"] = "1"
 
         if analysis_type not in ["DC", "AC", "TF", "tran"]:
-            raise ValueError("Nonexistent analysis type: {}".format(analysis_type))
+            raise ValueError(f"Nonexistent analysis type: {analysis_type}")
 
-        self.is_symbolic = symbolic
-        self.analysis_type = analysis_type
-        self.precision = precision
-        self.method = method
-        self.sympy_ilt = sympy_ilt
-        self.netlist = netlist
-        self.node_voltage_identities = []
+        if method not in ["tableau", "two_graph_node"]:
+            raise ValueError(f"Nonexistent analysis method: {method}")
+
+        self.is_symbolic: bool = symbolic
+        self.analysis_type: str = analysis_type
+        self.precision: int = precision
+        self.method: str = method
+        self.sympy_ilt: bool = sympy_ilt
+        self.netlist: str = netlist
+        self.node_voltage_identities: list = []
+
         if analysis_type == "tran":
-            data = parse.parse(netlist, tran=True)
+            data: dict = parse.parse(netlist, tran=True)
         else:
-            data = parse.parse(netlist)
+            data: dict = parse.parse(netlist)
 
         self.phases = self.parse_phases(phases)
 
-        self.components = data["components"]   # {<name> : <Component>} (see component.py)
-        self.node_dict = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
-        self.node_count = data["node_count"]
-        self.couplings = data["couplings"]
+        self.components: dict[str, Component] = data["components"]   # {<name> : <Component>} (see component.py)
+        self.node_dict: dict[str, int] = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
+        self.node_count: int = data["node_count"]
+        self.couplings: list[Coupling] = data["couplings"]
 
-        self.c_count = self.count_components()
-        self.node_voltage_symbols = self._node_voltage_symbols()
+        self.c_count: int = self.count_components()  # Amount of components
+        self.node_voltage_symbols: list[sympy.Symbol] = self._node_voltage_symbols()
+
+        self.eqn_matrix: sympy.Matrix
+        self.solved_dict: dict[sympy.Symbol, sympy.Expr]
+        self.symbols: list[sympy.Symbol]
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
-        self.symbol_dict = self.generate_symbol_dict()
 
-    def v(self, name):
+        self.symbol_dict: dict[str, sympy.Symbol] = self.generate_symbol_dict()  # format: {<symbol_name> : <Symbol>}
+
+    def v(self, name: str) -> sympy.Expr:
+        """
+        Returns the specified voltage
+        """
         symbol = self.symbol_dict[f"v({name})"]
         return self.solved_dict[symbol]
 
-    def i(self, name):
+    def i(self, name: str) -> sympy.Expr:
+        """
+        Returns the specified current
+        """
         symbol = self.symbol_dict[f"i({name})"]
         return self.solved_dict[symbol]
 
-    def generate_symbol_dict(self):
+    def generate_symbol_dict(self) -> dict[str, sympy.Symbol]:
         symbol_dict = {}
         for symbol in self.symbols:
             symbol_dict[symbol.name] = symbol
@@ -98,7 +116,10 @@ class AnalyseCircuit:
                 raise SyntaxError(phase_def_syntax_error)
         return phases
 
-    def component_voltage(self, name):
+    def component_voltage(self, name: str) -> sympy.Expr:
+        """
+        Old way to return a component voltage, will be deprecated soon
+        """
         ret = None
         v = f"v({name})"
 
@@ -153,9 +174,14 @@ class AnalyseCircuit:
                 return sympy.Symbol(v)
             else:
                 return ret
-    def get_node_voltage_symbol(self, node):
+
+    def get_node_voltage_symbol(self, node: str) -> sympy.Symbol:
         return self.node_voltage_symbols[self.node_dict[node]]
-    def get_node_voltage(self, node, force_s_domain=False):
+
+    def get_node_voltage(self, node: str, force_s_domain: bool=False) -> sympy.Expr:
+        """
+        Old way to return a node voltage, will be deprecated soon
+        """
         F = None
         try:
             F = self.solved_dict[self.node_voltage_symbols[self.node_dict[node]]]
@@ -180,7 +206,10 @@ class AnalyseCircuit:
         else:
             return F
 
-    def component_current(self, name):
+    def component_current(self, name: str) -> sympy.Symbol:
+        """
+        Old way to return a component current, will be deprecated soon
+        """
         ret = None
         i = f"i({name})"
         if self.method in ["tableau", "eliminated_tableau"]:
@@ -231,12 +260,13 @@ class AnalyseCircuit:
             else:
                 return ret
 
-    def component_values(self, name="all", default_python_datatypes=False):
+    def component_values(self, name: str = "all", default_python_datatypes: bool=False) -> dict[str, sympy.Expr]:
         """
           Takes a string containing a single component name and returns a dictionary containing the voltage and current
             of the input component.
 
           :param str name: component id
+          :param bool default_python_datatypes:
           :return dict ret: in format {"v(name)" : value, "i(name)" : value}
         """
         ret = {}
