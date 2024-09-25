@@ -1,5 +1,4 @@
 import sympy
-from sympy.abc import s, t
 from sympy import expand, factor, simplify, limit, diff, solve, parse_expr
 from sympy import oo as infinity
 from sympy import log, exp, sin, cos, tan, cot
@@ -8,6 +7,8 @@ from sympy import I as j
 from typing import Dict
 
 f = sympy.symbols("f", real=True, positive=True)
+s = sympy.symbols("t", real=False)
+t = sympy.symbols("t", real=True, positive=True)
 #j = sympy.symbols("j", real=False)
 
 def numer(H):
