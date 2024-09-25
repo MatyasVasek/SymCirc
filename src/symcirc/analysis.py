@@ -2,6 +2,7 @@ import os
 import copy
 import time
 import sympy
+from typing import Dict, List
 from symcirc import parse, laplace, utils
 from symcirc.utils import j,s,t
 from symcirc.pole_zero import *
@@ -45,26 +46,26 @@ class AnalyseCircuit:
         self.node_voltage_identities: list = []
 
         if analysis_type == "tran":
-            data: dict = parse.parse(netlist, tran=True)
+            data = parse.parse(netlist, tran=True)
         else:
-            data: dict = parse.parse(netlist)
+            data = parse.parse(netlist)
 
         self.phases = self.parse_phases(phases)
 
-        self.components: dict[str, Component] = data["components"]   # {<name> : <Component>} (see component.py)
-        self.node_dict: dict[str, int] = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
+        self.components: Dict[str, Component] = data["components"]   # {<name> : <Component>} (see component.py)
+        self.node_dict: Dict[str, int] = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
         self.node_count: int = data["node_count"]
-        self.couplings: list[Coupling] = data["couplings"]
+        self.couplings: List[Coupling] = data["couplings"]
 
         self.c_count: int = self.count_components()  # Amount of components
-        self.node_voltage_symbols: list[sympy.Symbol] = self._node_voltage_symbols()
+        self.node_voltage_symbols: List[sympy.Symbol] = self._node_voltage_symbols()
 
         self.eqn_matrix: sympy.Matrix
-        self.solved_dict: dict[sympy.Symbol, sympy.Expr]
-        self.symbols: list[sympy.Symbol]
+        self.solved_dict: Dict[sympy.Symbol, sympy.Expr]
+        self.symbols: List[sympy.Symbol]
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
 
-        self.symbol_dict: dict[str, sympy.Symbol] = self.generate_symbol_dict()  # format: {<symbol_name> : <Symbol>}
+        self.symbol_dict: Dict[str, sympy.Symbol] = self.generate_symbol_dict()  # format: {<symbol_name> : <Symbol>}
 
     def v(self, name: str) -> sympy.Expr:
         """
@@ -80,7 +81,7 @@ class AnalyseCircuit:
         symbol = self.symbol_dict[f"i({name})"]
         return self.solved_dict[symbol]
 
-    def generate_symbol_dict(self) -> dict[str, sympy.Symbol]:
+    def generate_symbol_dict(self) -> Dict[str, sympy.Symbol]:
         symbol_dict = {}
         for symbol in self.symbols:
             symbol_dict[symbol.name] = symbol
@@ -260,7 +261,7 @@ class AnalyseCircuit:
             else:
                 return ret
 
-    def component_values(self, name: str = "all", default_python_datatypes: bool=False) -> dict[str, sympy.Expr]:
+    def component_values(self, name: str = "all", default_python_datatypes: bool=False) -> Dict[str, sympy.Expr]:
         """
           Takes a string containing a single component name and returns a dictionary containing the voltage and current
             of the input component.
