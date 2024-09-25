@@ -1603,6 +1603,28 @@ class AnalyseCircuit:
                 value_dict[f"v({node})_{phase}"] = self.SCSI_get_node_voltage(node, phase)
         return value_dict
 
+    def SCSI_component_voltage(self, name, phase):
+        value = None
+        if self.method in ["two_graph_node", "modified_node"]:
+            c = self.components[name]
+            if c.node1 == "0":
+                node1_value = 0
+            else:
+                node1_value = self.SCSI_get_node_voltage(c.node1, phase, force_z=True)
+            if c.node2 == "0":
+                node2_value = 0
+            else:
+                node2_value = self.SCSI_get_node_voltage(c.node2, phase, force_z=True)
+            value = sympy.cancel(node1_value - node2_value)
+        if self.analysis_type == "tran":
+            if value is None:
+                return value
+            else:
+                pass
+                # return z_transform.IZT(value)
+        else:
+            return value
+
     def collapse(self, graph_collapses, node1, node2):
         collapsed = False
         for collapse_list in graph_collapses:
