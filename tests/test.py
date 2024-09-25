@@ -13,7 +13,8 @@ if __name__ == '__main__':
     parser_test = False
     analysis_test = True
     #netlist = symcirc.utils.load_file("netlists\\symbulator\\NR11_13_7_tran.txt")
-    netlist = symcirc.utils.load_file("netlists\\RLLC.txt")
+    #netlist = symcirc.utils.load_file("netlists\\geec_1685.txt")
+    netlist = symcirc.utils.load_file("netlists\\ic_test_1.txt")
     #netlist = symcirc.utils.load_file("netlists\\DC_elem_10.txt")
 
     method = "two_graph_node"
@@ -28,9 +29,9 @@ if __name__ == '__main__':
         """n = utils.load_file(netlist)
         circuit = parse.unpack_subcircuit(n)"""
 
-        analysis = "TF"
+        analysis = "tran"
         t0 = time.time()
-        circuit = symcirc.analysis.AnalyseCircuit(netlist, analysis, symbolic=True, precision=6, method=method, sympy_ilt=True)
+        circuit = symcirc.analysis.AnalyseCircuit(netlist, analysis, symbolic=False, precision=6, method=method, sympy_ilt=True)
         print(time.time() - t0)
         all = circuit.component_values()
         t1 = time.time()
