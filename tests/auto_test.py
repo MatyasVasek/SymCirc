@@ -20,24 +20,25 @@ def test_analysis(analysis_type, analysis_method="tableau", is_symbolic=True):
 
 
 if __name__ == "__main__":
+    method = "two_graph_node"
     #numeric_test("tran")
     print("{}DC:".format('\033[93m'))
     print("{} Numeric test:".format('\033[95m'))
-    test_analysis("DC", is_symbolic=False, analysis_method="two_graph_node")
+    test_analysis("DC", is_symbolic=False, analysis_method=method)
     #print("{} Symbolic test:".format('\033[95m'))
     #test_analysis("DC", is_symbolic=True, analysis_method="two_graph_node")
 
     print("{}TF:".format('\033[93m'))
     print("{} Numeric test:".format('\033[95m'))
-    test_analysis("TF", is_symbolic=False, analysis_method="two_graph_node")
+    test_analysis("TF", is_symbolic=False, analysis_method=method)
     print("{} Symbolic test:".format('\033[95m'))
-    test_analysis("TF", is_symbolic=True, analysis_method="two_graph_node")
+    test_analysis("TF", is_symbolic=True, analysis_method=method)
 
     print("{}tran:".format('\033[93m'))
     print("{} Numeric test:".format('\033[95m'))
-    test_analysis("tran", is_symbolic=False, analysis_method="two_graph_node")
+    test_analysis("tran", is_symbolic=False, analysis_method=method)
     print("{} Symbolic test:".format('\033[95m'))
-    test_analysis("tran", is_symbolic=True, analysis_method="two_graph_node")
+    test_analysis("tran", is_symbolic=True, analysis_method=method)
 
 
 

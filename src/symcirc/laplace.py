@@ -1,6 +1,6 @@
 import sympy
 import time
-from sympy import exp, sin, cos, sqrt, factorial, DiracDelta
+from sympy import exp, sin, cos, sqrt, factorial, DiracDelta, abc
 from symcirc.utils import s, t
 
 
@@ -41,18 +41,12 @@ def residue_laplace(F):
 def latex_print(data):
     print("{}".format(sympy.latex(data)))
 
-
 def laplace(func):
     return sympy.laplace_transform(func, t, s, noconds=True)
 
-
-def inv_laplace(func):
-    return sympy.inverse_laplace_transform(func, s, t)
-
-
 def visualise(func):
     func_laplace = laplace(func)
-    func_inv_laplace = inv_laplace(func_laplace)
+    func_inv_laplace = iLT(func_laplace)
     print("Laplace: " + str(func) + " => " + str(func_laplace))
     print("Inverse Laplace: " + str(func_laplace) + " => " + str(func_inv_laplace))
 
@@ -93,10 +87,10 @@ def separate_s(f):
     return coeff
 
 
-def iLT(F):
-    try:
+def iLT(F, sympy_ilt=True):
+    if sympy_ilt:
         return sympy.integrals.transforms.inverse_laplace_transform(F, s, t, plane=None)
-    except:
+    else:
         f = 0
         F = sympy.apart(F, s)
         part_list = split_parts(F)

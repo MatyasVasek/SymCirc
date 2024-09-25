@@ -1,0 +1,7 @@
+GEEC 1730
+X1 1 2 0 potenciometer PARAMS: R_par=1k k_par=0.5
+.subckt potenciometer 1 2 3 PARAMS: R_par=1k k_par=0.5
+R1 1 2 {R_par*(1-k_par)}
+R2 2 3 {R_par*k_par}
+.ends potenciometer
+V1 1 0 dc 10

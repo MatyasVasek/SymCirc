@@ -1,4 +1,4 @@
-
+Operacni zesilovac
 V1 1 0 dc 0 ac 1 0 sin 0 1 1500 0 0
 R1 1 2 1k
 R2 2 o 10k
