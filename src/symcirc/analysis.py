@@ -55,12 +55,7 @@ class AnalyseCircuit:
         self.phases, self.frequency = self.parse_phases(phases)
         self.scsi = scsi
         self.symbol_dict = {}
-        if self.phases != "undefined" and analysis_type not in ["AC", "TF", "tran"]:
-            raise ValueError("Valid analysis types for SCSI circuits are: 'AC', 'TF' and 'tran'")
-        if self.phases != "undefined" and method not in ["modified_node", "two_graph_node"]:
-            raise ValueError("Valid methods for SCSI circuits are: 'modified_node' and 'two_graph_node'")
-        if self.phases != "undefined" and scsi not in ["scideal", "siideal"]:
-            raise ValueError("Please specify if circuit is in switched capacitor ('scideal') mode or switched current mode ('siideal')")
+        self.SCSI_initial_values()
 
         self.components: Dict[str, Component] = data["components"]   # {<name> : <Component>} (see component.py)
         self.node_dict: Dict[str, int] = data["node_dict"]  # {<node_name>: <index in equation matrix>, ...}
@@ -76,6 +71,14 @@ class AnalyseCircuit:
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
 
         self.symbol_dict: Dict[str, sympy.Symbol] = self.generate_symbol_dict()  # format: {<symbol_name> : <Symbol>}
+
+    def SCSI_initial_values(self):
+        if self.phases != "undefined" and self.analysis_type not in ["AC", "TF", "tran"]:
+            raise ValueError("Valid analysis types for SCSI circuits are: 'AC', 'TF' and 'tran'")
+        if self.phases != "undefined" and self.method not in ["modified_node", "two_graph_node"]:
+            raise ValueError("Valid methods for SCSI circuits are: 'modified_node' and 'two_graph_node'")
+        if self.phases != "undefined" and self.scsi not in ["scideal", "siideal"]:
+            raise ValueError("Please specify if circuit is in switched capacitor ('scideal') mode or switched current mode ('siideal')")
 
     def v(self, name: str) -> sympy.Expr:
         """
