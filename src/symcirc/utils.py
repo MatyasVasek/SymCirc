@@ -7,7 +7,7 @@ from sympy import I as j
 from typing import Dict
 
 f = sympy.symbols("f", real=True, positive=True)
-s = sympy.symbols("t", real=False)
+s = sympy.symbols("s", real=False)
 t = sympy.symbols("t", real=True, positive=True)
 #j = sympy.symbols("j", real=False)
 
