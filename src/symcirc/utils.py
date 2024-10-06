@@ -9,6 +9,7 @@ from typing import Dict
 f = sympy.symbols("f", real=True, positive=True)
 s = sympy.symbols("s", real=False)
 t = sympy.symbols("t", real=True, positive=True)
+z = sympy.symbols("z", real=True, positive=True)
 #j = sympy.symbols("j", real=False)
 
 def numer(H):
