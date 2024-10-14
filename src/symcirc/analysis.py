@@ -304,34 +304,6 @@ class AnalyseCircuit:
             else:
                 return ret
 
-    def SCSI_component_charge(self, name, phase):
-        #TODO finish all possibilities
-        if self.scsi == "scideal":
-            charge = f"q({name})_{phase}"
-        else:
-            charge = f"i({name})_{phase}"
-        value_dict = {}
-        c = self.components[name]
-        if c.type in ["c", "r"]:
-            if c.node1 == "0":
-                node1_value = 0
-            else:
-                node1_value = self.SCSI_get_node_voltage(c.node1, phase, force_z=True)
-            if c.node2 == "0":
-                node2_value = 0
-            else:
-                node2_value = self.SCSI_get_node_voltage(c.node2, phase, force_z=True)
-
-            if self.is_symbolic:
-                value = c.sym_value
-            else:
-                value = c.value
-
-            if c.type == "r":
-                value_dict[f"i({name})_{phase}"] = sympy.cancel((node1_value - node2_value) / value)
-            if c.type == "c":
-                value_dict[f"q({name})_{phase}"] = sympy.cancel((node1_value - node2_value) * value)
-
     def component_values(self, name: str = "all", default_python_datatypes: bool=False) -> Dict[str, sympy.Expr]:
         """
           Takes a string containing a single component name and returns a dictionary containing the voltage and current
@@ -1054,6 +1026,8 @@ class AnalyseCircuit:
             index_col = 0
             symbols_to_append = []
 
+            sympy.pprint(v_graph_collapses)
+
             for key in self.components:
                 c = self.components[key]
                 if c.type == "c":
@@ -1683,7 +1657,8 @@ class AnalyseCircuit:
                     else:
                         for identity_node in identity:
                             try:
-                                formatted_voltage = sympy.symbols("v(" + identity_node + ")_" + phase_string)
+                                formatted_voltage = sympy.symbols("v(" + identity_node.split("_")[0]
+                                                                  + ")_" + phase_string)
                                 value = self.solved_dict[formatted_voltage]
                             except:
                                 pass
@@ -1745,6 +1720,47 @@ class AnalyseCircuit:
         # if self.analysis_type == "tran":
         #     for entry in value_dict:
         #         value_dict[entry] = z_transform.IZT(value_dict[entry])
+        return value_dict
+
+    def SCSI_component_charge(self, name, phase):
+        if self.scsi == "scideal":
+            charge = f"q({name})_{phase}"
+        else:
+            charge = f"i({name})_{phase}"
+        value_dict = {}
+        c = self.components[name]
+        if self.is_symbolic:
+            value = c.sym_value
+        else:
+            value = c.value
+        if c.type in ["c", "r"]:
+            if c.type == "r":
+                value_dict[charge] = sympy.cancel((self.SCSI_component_voltage(name, phase)[f"v({name})_{phase}"])
+                                                  / value)
+            if c.type == "c":
+                value_dict[charge] = sympy.cancel((self.SCSI_component_voltage(name, phase)[f"v({name})_{phase}"])
+                                                  * value)
+        elif c.type == "i":
+            if self.is_symbolic:
+                value = c.sym_value
+            else:
+                if self.analysis_type == "DC":
+                    value = c.dc_value
+                elif self.analysis_type == "tran":
+                    value = c.tran_value
+                else:
+                    value = c.ac_value
+            value_dict[charge] = value
+        elif c.type == "g":
+            value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[f"v({name})_{phase}"] * value)
+        elif c.type == "f":
+            if self.scsi == "scideal":
+                control_charge = sympy.symbols(f"q({c.control_voltage})_{phase}")
+            elif self.scsi == "siideal":
+                control_charge = sympy.symbols(f"i({c.control_voltage})_{phase}")
+            value_dict[charge] = sympy.cancel(self.solved_dict[control_charge] * value)
+        else:
+            value_dict[charge] = charge
         return value_dict
 
     def collapse(self, graph_collapses, node1, node2):
