@@ -69,9 +69,6 @@ class AnalyseCircuit:
         self.solved_dict: Dict[sympy.Symbol, sympy.Expr]
         self.symbols: List[sympy.Symbol]
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
-        if phases != "undefined":
-            self.SCSI_update_solved_dict()
-            self.SCSI_result_formatter()
         self.symbol_dict: Dict[str, sympy.Symbol] = self.generate_symbol_dict()  # format: {<symbol_name> : <Symbol>}
 
     def SCSI_initial_values(self):
@@ -316,14 +313,21 @@ class AnalyseCircuit:
           :return dict ret: in format {"v(name)" : value, "i(name)" : value}
         """
         ret = {}
-        if name == "all":
-            ret = self.all_component_values(default_python_datatypes)
-            return ret
+        if self.scsi == "undefined":
+            if name == "all":
+                ret = self.all_component_values(default_python_datatypes)
+            else:
+                v = f"v({name})"
+                i = f"i({name})"
+                ret[v] = self.component_voltage(name)
+                ret[i] = self.component_current(name)
         else:
-            v = f"v({name})"
-            i = f"i({name})"
-            ret[v] = self.component_voltage(name)
-            ret[i] = self.component_current(name)
+            if name == "all":
+                ret = self.all_component_values(default_python_datatypes)
+            else:
+                temp = {}
+                temp.update(self.SCSI_component_values(name))
+                ret = self.SCSI_result_formatter(temp)
         return ret
 
     def all_component_values(self, default_python_datatypes=False):
@@ -333,24 +337,30 @@ class AnalyseCircuit:
           :return dict ret: in format {"v(id1)" : value, "i(id2)" : value, ...}
         """
         ret = {}
-        for key in self.components:
-            if self.components[key].type == "k":
-                pass
-            elif self.components[key].name[-3:] == "_IC":
-                pass
-            else:
-                if default_python_datatypes:
-                    name = self.components[key].name
-                    elem_dict = self.component_values(name)
-                    try:
-                        for key in elem_dict:
-                            ret[key] = float(elem_dict[key])
-                    except TypeError:
-                        ret.update(elem_dict)
+        if self.scsi == "undefined":
+            for key in self.components:
+                if self.components[key].type == "k":
+                    pass
+                elif self.components[key].name[-3:] == "_IC":
+                    pass
                 else:
-                    name = self.components[key].name
-                    elem_dict = self.component_values(name)
-                    ret.update(elem_dict)
+                    if default_python_datatypes:
+                        name = self.components[key].name
+                        elem_dict = self.component_values(name)
+                        try:
+                            for key in elem_dict:
+                                ret[key] = float(elem_dict[key])
+                        except TypeError:
+                            ret.update(elem_dict)
+                    else:
+                        name = self.components[key].name
+                        elem_dict = self.component_values(name)
+                        ret.update(elem_dict)
+        else:
+            temp = {}
+            for key in self.components:
+                temp.update(self.SCSI_component_values(self.components[key].name))
+            ret = self.SCSI_result_formatter(temp)
         return ret
 
     def node_voltages(self):
@@ -360,8 +370,15 @@ class AnalyseCircuit:
           :return dict ret: in format {"v(node1)" : value, ...}
         """
         ret = {}
-        for node in self.node_dict:
-            ret[f"v({node})"] = self.get_node_voltage(node)
+        if self.scsi == "undefined":
+            for node in self.node_dict:
+                ret[f"v({node})"] = self.get_node_voltage(node)
+        else:
+            num_of_phases = self.phases[0]
+            for phase in range(1, num_of_phases + 1):
+                for node in self.node_dict:
+                    ret[sympy.symbols(f"v({node})_{phase}")] = self.SCSI_get_node_voltage(node, phase)
+            ret = self.SCSI_result_formatter(ret)
         return ret
 
     def transfer_function(self, node1, node2):
@@ -568,6 +585,9 @@ class AnalyseCircuit:
                             pass
             elif self.analysis_type == "tran":
                 raise ValueError("Transient analysis not yet implemented.")
+            if not self.is_symbolic:
+                pass
+
         return eqn_matrix, solved_dict, symbols
 
     def _node_voltage_symbols(self):
@@ -1668,15 +1688,6 @@ class AnalyseCircuit:
         else:
             return value
 
-    def SCSI_all_node_voltages(self):
-        value_dict = {}
-        num_of_phases = self.phases[0]
-        for phase in range(1, num_of_phases + 1):
-            for node in self.node_dict:
-                if sympy.symbols(f"v({node})_{phase}") not in self.solved_dict:
-                    value_dict[sympy.symbols(f"v({node})_{phase}")] = self.SCSI_get_node_voltage(node, phase)
-        return value_dict
-
     def SCSI_component_voltage(self, name, phase):
         value_dict = {}
         c = self.components[name]
@@ -1757,9 +1768,12 @@ class AnalyseCircuit:
             value_dict[charge] = sympy.cancel(self.solved_dict[control_charge] * value)
         else:
             value_dict[charge] = charge
+        # if self.analysis_type == "tran":
+        #     for entry in value_dict:
+        #         value_dict[entry] = z_transform.IZT(value_dict[entry])
         return value_dict
 
-    def SCSI_all_component_values(self, name):
+    def SCSI_component_values(self, name):
         num_of_phases = self.phases[0]
         value_dict = {}
         for phase in range(1, num_of_phases + 1):
@@ -1767,23 +1781,18 @@ class AnalyseCircuit:
             value_dict.update(self.SCSI_component_charge(name, phase))
         return value_dict
 
-    def SCSI_update_solved_dict(self):
-        self.solved_dict.update(self.SCSI_all_node_voltages())
-        for key in self.components:
-            self.solved_dict.update(self.SCSI_all_component_values(self.components[key].name))
-
-    def SCSI_result_formatter(self):
+    def SCSI_result_formatter(self, dict):
         temp = {}
-        for key in self.solved_dict:
+        for key in dict:
             name = str(key).split("_")[0]
             temp[name] = []
             for i in range(self.phases[0]):
                 temp[name].append(0)
-        for key in self.solved_dict:
+        for key in dict:
             name = str(key).split("_")[0]
             phase = int(str(key).split("_")[1])
-            temp[name][phase - 1] = self.solved_dict[key]
-        self.solved_dict = temp
+            temp[name][phase - 1] = dict[key]
+        return temp
 
     def collapse(self, graph_collapses, node1, node2):
         collapsed = False
