@@ -248,9 +248,9 @@ def unpack(parsed_netlist, subckt_models):
                     split_elem[2] = f"{split_elem[2]}_({words[0]})"
                     if split_elem[3][0] == "{":
                         try:
-                            split_elem[3] = params[split_elem[3][1:-1]]
+                            split_elem[3] = str(params[split_elem[3][1:-1]])
                         except KeyError:
-                            split_elem[3] = model.param_dict[split_elem[3][1:-1]]
+                            split_elem[3] = str(model.param_dict[split_elem[3][1:-1]])
                 else:
                     node_count = nodes_per_element(split_elem[0][0])
                     for i in range(1, node_count+1): # shift by one to avoid classifying name as node
