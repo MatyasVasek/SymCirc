@@ -202,7 +202,9 @@ class AnalyseCircuit:
             if ret is None:
                 return laplace.iLT(sympy.Symbol(v), self.sympy_ilt)
             else:
-                return laplace.iLT(ret, self.sympy_ilt)
+                ret = laplace.iLT(ret, self.sympy_ilt)
+                ret = sympy.factor_terms(ret)
+                return ret
         elif self.analysis_type == "DC":
             if ret is None:
                 return sympy.Symbol(v)
@@ -245,7 +247,9 @@ class AnalyseCircuit:
             if F is None:
                 return F
             else:
-                return laplace.iLT(F, self.sympy_ilt)
+                res = laplace.iLT(F, self.sympy_ilt)
+                res = sympy.factor_terms(res)
+                return res
         else:
             return F
 
@@ -287,7 +291,9 @@ class AnalyseCircuit:
             if ret is None:
                 return laplace.iLT(sympy.Symbol(i), self.sympy_ilt)
             else:
-                return laplace.iLT(ret, self.sympy_ilt)
+                ret = laplace.iLT(ret, self.sympy_ilt)
+                ret = sympy.factor_terms(ret)
+                return ret
         elif self.analysis_type == "DC":
             if ret is None:
                 return sympy.Symbol(i)
@@ -439,6 +445,7 @@ class AnalyseCircuit:
         if self.phases == "undefined":
             eqn_matrix, symbols = self._build_system_eqn()
             solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+
             if self.analysis_type == "DC":
                 if self.is_symbolic:
                     for sym in symbols:
@@ -538,6 +545,7 @@ class AnalyseCircuit:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
                         except KeyError:
                             pass
+
         else: # used by SCSI
             if self.analysis_type == "TF":
                 eqn_matrix, symbols = self._build_system_eqn()
@@ -1053,7 +1061,6 @@ class AnalyseCircuit:
                     self.SCSI_add_capacitor_tgn(M, v_graph_nodes, i_graph_nodes,
                                                 c, i_graph_collapses, v_graph_collapses,
                                                 num_of_phases, matrix_col_expand)
-                    #print(c.value)
                 if c.type == "v":
                     index_row = self.SCSI_add_voltage_source_tgn(M, S, v_graph_nodes, i_graph_nodes,
                                                                  c, index_row, v_graph_collapses, num_of_phases)
@@ -1093,12 +1100,6 @@ class AnalyseCircuit:
                 symbols.append(sympy.Symbol(f"v({node[0:-2]}){node[-2:]}"))
             for symb in symbols_to_append:
                 symbols.append(symb)
-
-            # sympy.pprint(equation_matrix)
-            # sympy.pprint(symbols)
-
-            # print(equation_matrix.shape)
-            # print(len(symbols))
 
         elif self.method == "modified_node" and self.phases != "undefined": # used by SCSI
             if self.scsi == "siideal":
