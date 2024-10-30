@@ -224,6 +224,7 @@ def unpack(parsed_netlist, subckt_models):
                 elif not loading_params:
                     try:
                         model = subckt_models[word]
+                        params = model.param_dict
                     except KeyError:
                         nodes.append(word)
 
@@ -253,7 +254,7 @@ def unpack(parsed_netlist, subckt_models):
                             split_elem[3] = str(model.param_dict[split_elem[3][1:-1]])
                 else:
                     node_count = nodes_per_element(split_elem[0][0])
-                    for i in range(1, node_count+1): # shift by one to avoid classifying name as node
+                    for i in range(1, node_count+1): # scan and connect subcircuit nodes with outside circuit nodes
                         if split_elem[i] in ["0", 0]:
                             pass
                         else:
@@ -261,25 +262,30 @@ def unpack(parsed_netlist, subckt_models):
                                 split_elem[i] = node_dict[split_elem[i]]
                             except KeyError:
                                 split_elem[i] = f"{split_elem[i]}_({words[0]})"
-                    index = 0
-                    for e in split_elem:
+                    index = node_count+1
+                    for e in split_elem[node_count+1:]:
+                        local = sympy.abc._clash
+                        tmp_elem = None
                         if e[0] == "{":
-                            local = sympy.abc._clash
+                            local.update(params)
                             try:
-                                local.update(params)
-                                split_elem[index] = str(sympy.parse_expr(e[1:-1], local_dict=local))
-                                #split_elem[index] = params[e[1:-1]]
-                            except KeyError:
-                                local.update(model.param_dict)
-                                split_elem[index] = str(sympy.parse_expr(e[1:-1], local_dict=local))
-                                #split_elem[index] = model.param_dict[e[1:-1]]
+                                tmp_elem = sympy.parse_expr(e[1:-1], local_dict=local)
+                            except SyntaxError: # TODO: this is a hotfix, needs a more robust solution in the future
+                                tmp_elem, _ = convert_units(e[1:-1])
+                        else:
+                            local.update(params)
+                            try:
+                                tmp_elem = sympy.parse_expr(e, local_dict=local)
+                            except SyntaxError: # TODO: this is a hotfix, needs a more robust solution in the future
+                                tmp_elem, _ = convert_units(e)
+
+                        split_elem[index] = str(tmp_elem)
 
                         index += 1
                 split_elem[0] = f"{split_elem[0]}_({words[0]})"
                 final_netlist.append(" ".join(split_elem))
         else:
             final_netlist.append(line)
-
     return final_netlist
 
 
