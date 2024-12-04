@@ -951,7 +951,7 @@ class AnalyseCircuit:
                         self.SCSI_graph_append_tgn(c.node3 + '_' + str(phase), i_graph_nodes)
                         self.SCSI_graph_append_tgn(c.node4 + '_' + str(phase), i_graph_nodes)
                         self.SCSI_collapse_tgn(i_graph_collapses, c.node1 + '_' + str(phase), c.node2 + '_' + str(phase))
-                if c.type == "f":
+                if c.type == "f": # TODO: fix after bug #8 fix
                     c_v = self.components[c.control_voltage]
                     for phase in range(1, num_of_phases + 1):
                         self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), v_graph_nodes)
