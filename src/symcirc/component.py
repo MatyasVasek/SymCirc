@@ -99,7 +99,6 @@ class VoltageSource(Component):
         self.ac_value = ac_value
         self.tran_value = tran_value
         self.position = position
-        self.shorted_node = shorted_node
         self.netlist_keywords = ["V", "v", "U", "u"]
 
 
