@@ -1150,622 +1150,6 @@ class AnalyseCircuit:
 
         return equation_matrix, symbols
 
-    def SCSI_node_voltage_symbols(self):
-        num_of_phases = self.phases[0]
-        voltage_symbol_list = []
-        for phases in range(num_of_phases):
-            for node in self.node_dict:
-                if node != "0":
-                    voltage_symbol_list.append(sympy.Symbol("v({node})_{phases}".format(node=node, phases=phases + 1)))
-        return voltage_symbol_list
-
-    def SCSI_symbol_list_order(self, node_symbols, charge_symbols):
-        charge_length = len(charge_symbols)
-        node_length = len(node_symbols)
-        num_of_phases = self.phases[0]
-        symbols = []
-        for phase in range(1, num_of_phases + 1):
-            for symbol in range(node_length):
-                if int(str(node_symbols[symbol])[-1]) == phase:
-                    symbols.append(node_symbols[symbol])
-            for symbol in range(charge_length):
-                if int(str(charge_symbols[symbol])[-1]) == phase:
-                    symbols.append(charge_symbols[symbol])
-        return symbols
-
-    def SCSI_symbol_z_factor(self, symbols):
-        num_of_phases = self.phases[0]
-        phase_helper_array = []
-        for phase in range(num_of_phases):
-            phase_helper_array.append(self.phases[phase + 1])
-        for symbol in symbols:
-            symbol_phase = int(str(symbol)[-1])
-            temp = 0
-            for phase in range(symbol_phase - 1):
-                temp += phase_helper_array[phase]
-            if symbol_phase != num_of_phases:
-                symbols[symbol] *= z ** (- temp)
-            else:
-                symbols[symbol] *= z ** phase_helper_array[-1]
-
-    def SCSI_z_pow_inv_sub(self, solved_dict):
-        for expression in solved_dict:
-            solved_dict[expression] = solved_dict[expression].subs(self.symbol_dict)
-
-    def SCSI_z_power_substitution(self, symbol):
-        dict_length = len(self.symbol_dict)
-        x = sympy.Symbol("x_{index}".format(index=dict_length))
-        self.symbol_dict[x] = symbol
-        return x
-
-    def SCSI_submatrix_write(self, matrix, submatrix, start_y, start_x, phase_y, phase_x):
-        if isinstance(submatrix, list):
-            y_dimension = sympy.shape(submatrix[0][0])[0]
-            x_dimension = sympy.shape(submatrix[0][0])[1]
-        else:
-            y_dimension = sympy.shape(submatrix)[0]
-            x_dimension = sympy.shape(submatrix)[1]
-        phase_y_offset = (self.c_count + self.node_count) * phase_y
-        phase_x_offset = (self.c_count + self.node_count) * phase_x
-        for y in range(y_dimension):
-            for x in range(x_dimension):
-                if isinstance(submatrix, list):
-                    matrix[phase_y_offset + start_y + y, phase_x_offset + start_x + x] += submatrix[phase_y][phase_x][y, x]
-                else:
-                    matrix[phase_y_offset + start_y + y, phase_x_offset + start_x + x] += submatrix[y, x]
-
-    def SCSI_incidence_matrix_generate(self, incidence_matrix, N1, N2, component_index, phase_y, phase_x, capacitor=False):
-        if N1 == "0":
-            pass
-        else:
-            node_pos = self.node_dict[N1]
-            if capacitor:
-                incidence_matrix[phase_y][phase_x][node_pos, component_index] = -1
-            else:
-                incidence_matrix[phase_y][phase_x][node_pos, component_index] = 1
-        if N2 == "0":
-            pass
-        else:
-            node_pos = self.node_dict[N2]
-            if capacitor:
-                incidence_matrix[phase_y][phase_x][node_pos, component_index] = 1
-            else:
-                incidence_matrix[phase_y][phase_x][node_pos, component_index] = -1
-
-    def SCSI_matrix_z_symbol(self, matrix):
-        num_of_phases = self.phases[0]
-        submatrix_dimension = self.node_count + self.c_count
-        phase_offset = submatrix_dimension * (num_of_phases - 1)
-        for y in range(submatrix_dimension):
-            for x in range(submatrix_dimension):
-                matrix[phase_offset + y, phase_offset + x] *= z
-
-    def SCSI_add_capacitor(self, A, Y, Z, c, component_index, phase_y, phase_x, num_of_phases):
-        N1 = c.node1
-        N2 = c.node2
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            val = c.value
-        y_b = val
-        z_b = -1
-
-        Y[phase_y][phase_x][component_index, component_index] = y_b
-        if phase_y == phase_x:
-            Z[phase_y][phase_x][component_index, component_index] = z_b
-            self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase_y, phase_x)
-        else:
-            if (abs(phase_y - phase_x) == 1 and phase_y > phase_x) or (phase_y == 0 and phase_x + 1 == num_of_phases):
-                Z[phase_y][phase_x][component_index, component_index] = - z_b
-                self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase_y, phase_x, True)
-
-    def SCSI_add_voltage_source(self, A, Y, result, c, component_index, phase, num_of_phases):
-        N1 = c.node1
-        N2 = c.node2
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            if self.analysis_type == "DC":
-                val = c.dc_value
-            elif self.analysis_type == "tran":
-                val = c.tran_value
-            else:
-                val = c.ac_value
-        Y[phase][phase][component_index, component_index] = 1
-        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase, phase)
-
-        phase_offset = self.c_count * phase
-        node_offset = self.node_count * (phase + 1)
-        phase_helper_array = []
-        z_symbol_array = []
-        temp = 0
-        for f in range(num_of_phases):
-            phase_helper_array.append(temp)
-            temp += self.phases[f + 1]
-            z_symbol_array.append(z ** sympy.sympify(phase_helper_array[f]))
-        result[phase_offset + node_offset + component_index, 0] = val * self.SCSI_z_power_substitution(
-          z_symbol_array[phase])
-
-    def SCSI_add_switch(self, A, Y, Z, c, component_index, phase):
-        N1 = c.node1
-        N2 = c.node2
-        switch_phase = (int(c.phase)) - 1
-
-        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase, phase)
-        if phase == switch_phase:
-            Y[phase][phase][component_index, component_index] = 1
-        else:
-            Z[phase][phase][component_index, component_index] = -1
-
-    def SCSI_add_OpAmp(self, A, Y, Z, c, component_index, phase):
-        N1 = c.node1
-        N2 = c.node2
-        N3 = c.node3
-        N4 = c.node4
-        self.SCSI_incidence_matrix_generate(A, N3, N4, component_index, phase, phase)
-        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index + 1, phase, phase)
-        Y[phase][phase][component_index, component_index] = 1
-        Z[phase][phase][component_index + 1, component_index] = 1
-
-    def SCSI_add_VVT(self, A, Y, Z, c, component_index, phase):
-        N1 = c.node1
-        N2 = c.node2
-        N3 = c.node3
-        N4 = c.node4
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            val = c.value
-        self.SCSI_incidence_matrix_generate(A, N3, N4, component_index, phase, phase)
-        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index + 1, phase, phase)
-        Y[phase][phase][component_index + 1, component_index] = val
-        Y[phase][phase][component_index + 1, component_index + 1] = -1
-        Z[phase][phase][component_index, component_index] = 1
-
-    def SCSI_add_QQT(self, A, Y, Z, c, component_index, phase):
-        N1 = c.node1
-        N2 = c.node2
-        c_v = self.components[c.control_voltage]
-        N3 = c_v.node2
-        N4 = c_v.shorted_node
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            val = c.value
-        self.SCSI_incidence_matrix_generate(A, N3, N4, component_index, phase, phase)
-        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index + 1, phase, phase)
-        Y[phase][phase][component_index, component_index] = 1
-        Z[phase][phase][component_index + 1, component_index] = val
-        Z[phase][phase][component_index + 1, component_index + 1] = -1
-
-    def SCSI_graph_append_tgn(self, node, graph):
-        if node.startswith('0'):
-            pass
-        elif node not in graph:
-            graph.append(node)
-
-    def SCSI_collapse_tgn(self, graph_collapses, node1, node2):
-        collapsed = False
-        for collapse_list in graph_collapses:
-            if node1 in collapse_list:
-                collapsed = True
-                collapse_list.append(node2)  # set node2 to be collapsed into node1 on the current graph
-            elif node2 in collapse_list:
-                collapsed = True
-                collapse_list.append(node1)  # set node1 to be collapsed into node2 on the current graph
-        if not collapsed:
-            graph_collapses.append([node1, node2])  # set node2 to be collapsed into node1 on the current graph
-
-    def SCSI_collapse_list_collapser(self, graph_collapses):
-        for collapse_list in graph_collapses:
-            for node in collapse_list:
-                for cl in graph_collapses:
-                    if node in cl and cl!=collapse_list:
-                        for n in cl:
-                            if n not in collapse_list:
-                                collapse_list.append(n)
-        for collapse_list in graph_collapses:
-            collapse_list.sort()
-
-        temp = []
-        for collapse_list in graph_collapses:
-            if collapse_list not in temp:
-                temp.append(collapse_list)
-
-        return temp
-
-    def SCSI_node_list_sort(self, nodes):
-        helper = []
-        i = 0
-        for element in nodes:
-            helper.append([])
-            helper[i].append(element[:element.index('_')])
-            helper[i].append(element[element.index('_') + 1:])
-            i += 1
-        helper.sort(key=operator.itemgetter(1, 0))
-        nodes_new = []
-        for element in helper:
-            nodes_new.append(element[0] + '_' + element[1])
-        return nodes_new
-
-    def SCSI_index_tgn(self, nodes, node, collapses):
-        try:
-            return nodes.index(node)
-        except ValueError:
-            for collapse_list in collapses:
-                if node in collapse_list:
-                    if any(n.startswith('0') for n in collapse_list):
-                        return None
-                    else:
-                        return nodes.index(min(collapse_list))
-                elif node.startswith("0"):
-                    return None
-
-    def SCSI_add_capacitor_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases, matrix_col_expand):
-        phase_offset = int((M.shape[0] - matrix_col_expand) / num_of_phases)
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            val = c.value
-        for phase in range(1, num_of_phases + 1):
-            n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
-            n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
-            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
-            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
-            if n1v is not None:
-                if n1i is not None:
-                    if phase == num_of_phases:
-                        M[n1i, n1v] += +val*z
-                    else:
-                        M[n1i, n1v] += +val
-                    if phase == 1:
-                        M[n1i, n1v - phase_offset - matrix_col_expand] += -val
-                    else:
-                        M[n1i, n1v - phase_offset] += -val
-                if n2i is not None:
-                    if phase == num_of_phases:
-                        M[n2i, n1v] += -val*z
-                    else:
-                        M[n2i, n1v] += -val
-                    if phase == 1:
-                        M[n2i, n1v - phase_offset - matrix_col_expand] += +val
-                    else:
-                        M[n2i, n1v - phase_offset] += +val
-            if n2v is not None:
-                if n1i is not None:
-                    if phase == num_of_phases:
-                        M[n1i, n2v] += -val*z
-                    else:
-                        M[n1i, n2v] += -val
-                    if phase == 1:
-                        M[n1i, n2v - phase_offset - matrix_col_expand] += +val
-                    else:
-                        M[n1i, n2v - phase_offset] += +val
-                if n2i is not None:
-                    if phase == num_of_phases:
-                        M[n2i, n2v] += +val*z
-                    else:
-                        M[n2i, n2v] += +val
-                    if phase == 1:
-                        M[n2i, n2v - phase_offset - matrix_col_expand] += -val
-                    else:
-                        M[n2i, n2v - phase_offset] += -val
-
-    def SCSI_add_voltage_source_tgn(self, M, S, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            if self.analysis_type == "DC":
-                val = c.dc_value
-            elif self.analysis_type == "tran":
-                val = c.tran_value
-            else:
-                val = c.ac_value
-        phase_helper_array = []
-        z_symbol_array = []
-        temp = 0
-        for f in range(num_of_phases):
-            phase_helper_array.append(temp)
-            temp += self.phases[f + 1]
-            z_symbol_array.append(z ** sympy.sympify(phase_helper_array[f]))
-        for phase in range(1, num_of_phases + 1):
-            n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
-            n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
-            row = len(i_nodes) + index_row
-            if n1v is not None:
-                if phase == num_of_phases:
-                    M[row, n1v] += z
-                else:
-                    M[row, n1v] += 1
-            if n2v is not None:
-                if phase == num_of_phases:
-                    M[row, n2v] += -z
-                else:
-                    M[row, n2v] += -1
-            S[row, 0] += val * self.SCSI_z_power_substitution(z_symbol_array[phase - 1])
-            index_row += 1
-        return index_row
-
-    def SCSI_add_switch_tgn(self, M, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
-        n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(c.phase), v_graph_collapses)
-        n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(c.phase), v_graph_collapses)
-        row = len(i_nodes) + index_row
-        if n1v is not None:
-            if int(c.phase) == num_of_phases:
-                M[row, n1v] += z
-            else:
-                M[row, n1v] += 1
-        if n2v is not None:
-            if int(c.phase) == num_of_phases:
-                M[row, n2v] += -z
-            else:
-                M[row, n2v] += -1
-        index_row += 1
-        return index_row
-
-    def SCSI_add_VVT_tgn(self, M, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
-        if self.is_symbolic:
-            e = c.sym_value
-        else:
-            e = c.value
-        for phase in range(1, num_of_phases + 1):
-            n1v = self.SCSI_index_tgn(v_nodes, c.node3 + '_' + str(phase), v_graph_collapses)
-            n2v = self.SCSI_index_tgn(v_nodes, c.node4 + '_' + str(phase), v_graph_collapses)
-            n3v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
-            n4v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
-            row = len(i_nodes) + index_row
-            if n1v is not None:
-                if phase == num_of_phases:
-                    M[row, n1v] += -e*z
-                else:
-                    M[row, n1v] += -e
-            if n2v is not None:
-                if phase == num_of_phases:
-                    M[row, n2v] += e*z
-                else:
-                    M[row, n2v] += e
-            if n3v is not None:
-                if phase == num_of_phases:
-                    M[row, n3v] += z
-                else:
-                    M[row, n3v] += 1
-            if n4v is not None:
-                if phase == num_of_phases:
-                    M[row, n4v] += -z
-                else:
-                    M[row, n4v] += -1
-            index_row += 1
-        return index_row
-
-    def SCSI_add_QQT_tgn(self, M, v_nodes, i_nodes, c, index_col, i_graph_collapses, num_of_phases):
-        if self.is_symbolic:
-            f = c.sym_value
-        else:
-            f = c.value
-        c_v = self.components[c.control_voltage]
-        for phase in range(1, num_of_phases + 1):
-            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
-            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
-            n3i = self.SCSI_index_tgn(i_nodes, c_v.node2 + '_' + str(phase), i_graph_collapses)
-            n4i = self.SCSI_index_tgn(i_nodes, c_v.shorted_node + '_' + str(phase), i_graph_collapses)
-            col = len(v_nodes) + index_col
-            if n1i is not None:
-                if phase == num_of_phases:
-                    M[n1i, col] += f*z
-                else:
-                    M[n1i, col] += f
-            if n2i is not None:
-                if phase == num_of_phases:
-                    M[n2i, col] += -f*z
-                else:
-                    M[n2i, col] += -f
-            if n3i is not None:
-                if phase == num_of_phases:
-                    M[n3i, col] += z
-                else:
-                    M[n3i, col] += 1
-            if n4i is not None:
-                if phase == num_of_phases:
-                    M[n4i, col] += -z
-                else:
-                    M[n4i, col] += -1
-            index_col += 1
-        return index_col
-
-    def SI_add_resistor_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases):
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            val = c.value
-        y = 1 / val
-        for phase in range(1, num_of_phases + 1):
-            n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
-            n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
-            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
-            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
-            if n1v is not None:
-                if n1i is not None:
-                    M[n1i, n1v] += +y
-                if n2i is not None:
-                    M[n2i, n1v] += -y
-            if n2v is not None:
-                if n1i is not None:
-                    M[n1i, n2v] += -y
-                if n2i is not None:
-                    M[n2i, n2v] += +y
-
-    def SI_add_current_source_tgn(self, S, i_nodes, c, i_graph_collapses, num_of_phases):
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            if self.analysis_type == "DC":
-                val = c.dc_value
-            elif self.analysis_type == "tran":
-                val = c.tran_value
-            else:
-                val = c.ac_value
-        for phase in range(1, num_of_phases + 1):
-            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
-            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
-            if n1i is not None:
-                S[n1i, 0] += -val
-            if n2i is not None:
-                S[n2i, 0] += val
-
-    def SI_add_VCT_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases):
-        if self.is_symbolic:
-            g = c.sym_value
-        else:
-            g = c.value
-        for phase in range(1, num_of_phases + 1):
-            n1v = self.SCSI_index_tgn(v_nodes, c.node3 + '_' + str(phase), v_graph_collapses)
-            n2v = self.SCSI_index_tgn(v_nodes, c.node4 + '_' + str(phase), v_graph_collapses)
-            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
-            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
-            if n1v is not None:
-                if n1i is not None:
-                    M[n1i, n1v] += +g
-                if n2i is not None:
-                    M[n2i, n1v] += -g
-            if n2v is not None:
-                if n1i is not None:
-                    M[n1i, n2v] += -g
-                if n2i is not None:
-                    M[n2i, n2v] += +g
-
-    def SCSI_get_node_voltage(self, node, phase, force_z = False):
-        phase_string = str(phase)
-        formatted_node = str(node) + "_" + phase_string
-        formatted_voltage = sympy.symbols("v(" + str(node) + ")_" + phase_string)
-        try:
-            value = self.solved_dict[formatted_voltage]
-        except KeyError:
-            for identity in self.node_voltage_identities:
-                if formatted_node in identity:
-                    if any(identity_node.startswith("0") for identity_node in identity):
-                        value = 0
-                    else:
-                        for identity_node in identity:
-                            try:
-                                formatted_voltage = sympy.symbols("v(" + identity_node.split("_")[0]
-                                                                  + ")_" + phase_string)
-                                value = self.solved_dict[formatted_voltage]
-                            except KeyError:
-                                pass
-        if force_z:
-            return value
-        elif self.analysis_type == "tran":
-            pass
-            #return z_transform.iZT(value)
-        else:
-            return value
-
-    def SCSI_component_voltage(self, name, phase):
-        value_dict = {}
-        c = self.components[name]
-        biquad_input_key = sympy.symbols(f"v({name}-in)_{phase}")
-        if c.node1 == "0":
-            node1_value = 0
-        else:
-            node1_value = self.SCSI_get_node_voltage(c.node1, phase, force_z=True)
-        if c.node2 == "0":
-            node2_value = 0
-        else:
-            node2_value = self.SCSI_get_node_voltage(c.node2, phase, force_z=True)
-        if c.type in ["a", "e", "g"]:
-            if c.node3 == "0":
-                node3_value = 0
-            else:
-                node3_value = self.SCSI_get_node_voltage(c.node3, phase, force_z=True)
-            if c.node4 == "0":
-                node4_value = 0
-            else:
-                node4_value = self.SCSI_get_node_voltage(c.node4, phase, force_z=True)
-            value_dict[biquad_input_key] = sympy.cancel(node3_value - node4_value)
-        if c.type == "f":
-            c_v = self.components[c.control_voltage]
-            if c_v.node2 == "0":
-                cv_node_value = 0
-            else:
-                cv_node_value = self.SCSI_get_node_voltage(c_v.node2, phase, force_z=True)
-            if c_v.shorted_node == "0":
-                cv_short_value = 0
-            else:
-                cv_short_value = self.SCSI_get_node_voltage(c_v.shorted_node, phase, force_z=True)
-            value_dict[biquad_input_key] = sympy.cancel(cv_node_value - cv_short_value)
-        if c.type in ["a", "e", "f", "g"]:
-            value_dict[sympy.symbols(f"v({name}-out)_{phase}")] = sympy.cancel(node1_value - node2_value)
-        else:
-            value_dict[sympy.symbols(f"v({name})_{phase}")] = sympy.cancel(node1_value - node2_value)
-        # if self.analysis_type == "tran":
-        #     for entry in value_dict:
-        #         value_dict[entry] = z_transform.IZT(value_dict[entry])
-        return value_dict
-
-    def SCSI_component_charge(self, name, phase):
-        if self.scsi == "scideal":
-            charge = sympy.symbols(f"q({name})_{phase}")
-        else:
-            charge = sympy.symbols(f"i({name})_{phase}")
-        value_dict = {}
-        c = self.components[name]
-        voltage_key = sympy.symbols(f"v({name})_{phase}")
-        if self.is_symbolic:
-            value = c.sym_value
-        else:
-            value = c.value
-        if c.type in ["c", "r"]:
-            if c.type == "r":
-                value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] / value)
-            if c.type == "c":
-                value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
-        elif c.type == "i":
-            if self.is_symbolic:
-                value = c.sym_value
-            else:
-                if self.analysis_type == "DC":
-                    value = c.dc_value
-                elif self.analysis_type == "tran":
-                    value = c.tran_value
-                else:
-                    value = c.ac_value
-            value_dict[charge] = sympy.symbols(value)
-        elif c.type == "g":
-            value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
-        elif c.type == "f":
-            if self.scsi == "scideal":
-                control_charge = sympy.symbols(f"q({c.control_voltage})_{phase}")
-            else:
-                control_charge = sympy.symbols(f"i({c.control_voltage})_{phase}")
-            value_dict[charge] = sympy.cancel(self.solved_dict[control_charge] * value)
-        else:
-            value_dict[charge] = charge
-        # if self.analysis_type == "tran":
-        #     for entry in value_dict:
-        #         value_dict[entry] = z_transform.IZT(value_dict[entry])
-        return value_dict
-
-    def SCSI_component_values(self, name):
-        num_of_phases = self.phases[0]
-        value_dict = {}
-        for phase in range(1, num_of_phases + 1):
-            value_dict.update(self.SCSI_component_voltage(name, phase))
-            value_dict.update(self.SCSI_component_charge(name, phase))
-        return value_dict
-
-    def SCSI_result_formatter(self, dict):
-        temp = {}
-        for key in dict:
-            name = str(key).split("_")[0]
-            temp[name] = []
-            for i in range(self.phases[0]):
-                temp[name].append(0)
-        for key in dict:
-            name = str(key).split("_")[0]
-            phase = int(str(key).split("_")[1])
-            temp[name][phase - 1] = dict[key]
-        return temp
-
     def collapse(self, graph_collapses, node1, node2):
         collapsed = False
         for collapse_list in graph_collapses:
@@ -2205,6 +1589,621 @@ class AnalyseCircuit:
         self._incidence_matrix_write(N1, N2, matrix, index)
         return matrix
 
+    def SCSI_node_voltage_symbols(self):
+        num_of_phases = self.phases[0]
+        voltage_symbol_list = []
+        for phases in range(num_of_phases):
+            for node in self.node_dict:
+                if node != "0":
+                    voltage_symbol_list.append(sympy.Symbol("v({node})_{phases}".format(node=node, phases=phases + 1)))
+        return voltage_symbol_list
 
+    def SCSI_symbol_list_order(self, node_symbols, charge_symbols):
+        charge_length = len(charge_symbols)
+        node_length = len(node_symbols)
+        num_of_phases = self.phases[0]
+        symbols = []
+        for phase in range(1, num_of_phases + 1):
+            for symbol in range(node_length):
+                if int(str(node_symbols[symbol])[-1]) == phase:
+                    symbols.append(node_symbols[symbol])
+            for symbol in range(charge_length):
+                if int(str(charge_symbols[symbol])[-1]) == phase:
+                    symbols.append(charge_symbols[symbol])
+        return symbols
 
+    def SCSI_symbol_z_factor(self, symbols):
+        num_of_phases = self.phases[0]
+        phase_helper_array = []
+        for phase in range(num_of_phases):
+            phase_helper_array.append(self.phases[phase + 1])
+        for symbol in symbols:
+            symbol_phase = int(str(symbol)[-1])
+            temp = 0
+            for phase in range(symbol_phase - 1):
+                temp += phase_helper_array[phase]
+            if symbol_phase != num_of_phases:
+                symbols[symbol] *= z ** (- temp)
+            else:
+                symbols[symbol] *= z ** phase_helper_array[-1]
+
+    def SCSI_z_pow_inv_sub(self, solved_dict):
+        for expression in solved_dict:
+            solved_dict[expression] = solved_dict[expression].subs(self.symbol_dict)
+
+    def SCSI_z_power_substitution(self, symbol):
+        dict_length = len(self.symbol_dict)
+        x = sympy.Symbol("x_{index}".format(index=dict_length))
+        self.symbol_dict[x] = symbol
+        return x
+
+    def SCSI_submatrix_write(self, matrix, submatrix, start_y, start_x, phase_y, phase_x):
+        if isinstance(submatrix, list):
+            y_dimension = sympy.shape(submatrix[0][0])[0]
+            x_dimension = sympy.shape(submatrix[0][0])[1]
+        else:
+            y_dimension = sympy.shape(submatrix)[0]
+            x_dimension = sympy.shape(submatrix)[1]
+        phase_y_offset = (self.c_count + self.node_count) * phase_y
+        phase_x_offset = (self.c_count + self.node_count) * phase_x
+        for y in range(y_dimension):
+            for x in range(x_dimension):
+                if isinstance(submatrix, list):
+                    matrix[phase_y_offset + start_y + y, phase_x_offset + start_x + x] += submatrix[phase_y][phase_x][y, x]
+                else:
+                    matrix[phase_y_offset + start_y + y, phase_x_offset + start_x + x] += submatrix[y, x]
+
+    def SCSI_incidence_matrix_generate(self, incidence_matrix, N1, N2, component_index, phase_y, phase_x, capacitor=False):
+        if N1 == "0":
+            pass
+        else:
+            node_pos = self.node_dict[N1]
+            if capacitor:
+                incidence_matrix[phase_y][phase_x][node_pos, component_index] = -1
+            else:
+                incidence_matrix[phase_y][phase_x][node_pos, component_index] = 1
+        if N2 == "0":
+            pass
+        else:
+            node_pos = self.node_dict[N2]
+            if capacitor:
+                incidence_matrix[phase_y][phase_x][node_pos, component_index] = 1
+            else:
+                incidence_matrix[phase_y][phase_x][node_pos, component_index] = -1
+
+    def SCSI_matrix_z_symbol(self, matrix):
+        num_of_phases = self.phases[0]
+        submatrix_dimension = self.node_count + self.c_count
+        phase_offset = submatrix_dimension * (num_of_phases - 1)
+        for y in range(submatrix_dimension):
+            for x in range(submatrix_dimension):
+                matrix[phase_offset + y, phase_offset + x] *= z
+
+    def SCSI_add_capacitor(self, A, Y, Z, c, component_index, phase_y, phase_x, num_of_phases):
+        N1 = c.node1
+        N2 = c.node2
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
+        y_b = val
+        z_b = -1
+
+        Y[phase_y][phase_x][component_index, component_index] = y_b
+        if phase_y == phase_x:
+            Z[phase_y][phase_x][component_index, component_index] = z_b
+            self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase_y, phase_x)
+        else:
+            if (abs(phase_y - phase_x) == 1 and phase_y > phase_x) or (phase_y == 0 and phase_x + 1 == num_of_phases):
+                Z[phase_y][phase_x][component_index, component_index] = - z_b
+                self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase_y, phase_x, True)
+
+    def SCSI_add_voltage_source(self, A, Y, result, c, component_index, phase, num_of_phases):
+        N1 = c.node1
+        N2 = c.node2
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
+        Y[phase][phase][component_index, component_index] = 1
+        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase, phase)
+
+        phase_offset = self.c_count * phase
+        node_offset = self.node_count * (phase + 1)
+        phase_helper_array = []
+        z_symbol_array = []
+        temp = 0
+        for f in range(num_of_phases):
+            phase_helper_array.append(temp)
+            temp += self.phases[f + 1]
+            z_symbol_array.append(z ** sympy.sympify(phase_helper_array[f]))
+        result[phase_offset + node_offset + component_index, 0] = val * self.SCSI_z_power_substitution(
+          z_symbol_array[phase])
+
+    def SCSI_add_switch(self, A, Y, Z, c, component_index, phase):
+        N1 = c.node1
+        N2 = c.node2
+        switch_phase = (int(c.phase)) - 1
+
+        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase, phase)
+        if phase == switch_phase:
+            Y[phase][phase][component_index, component_index] = 1
+        else:
+            Z[phase][phase][component_index, component_index] = -1
+
+    def SCSI_add_OpAmp(self, A, Y, Z, c, component_index, phase):
+        N1 = c.node1
+        N2 = c.node2
+        N3 = c.node3
+        N4 = c.node4
+        self.SCSI_incidence_matrix_generate(A, N3, N4, component_index, phase, phase)
+        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index + 1, phase, phase)
+        Y[phase][phase][component_index, component_index] = 1
+        Z[phase][phase][component_index + 1, component_index] = 1
+
+    def SCSI_add_VVT(self, A, Y, Z, c, component_index, phase):
+        N1 = c.node1
+        N2 = c.node2
+        N3 = c.node3
+        N4 = c.node4
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
+        self.SCSI_incidence_matrix_generate(A, N3, N4, component_index, phase, phase)
+        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index + 1, phase, phase)
+        Y[phase][phase][component_index + 1, component_index] = val
+        Y[phase][phase][component_index + 1, component_index + 1] = -1
+        Z[phase][phase][component_index, component_index] = 1
+
+    def SCSI_add_QQT(self, A, Y, Z, c, component_index, phase):
+        # TODO: Fix after bug #8 fix "shorted_node" removed, the node info is now directly in "c"
+        N1 = c.node1
+        N2 = c.node2
+        c_v = self.components[c.control_voltage]
+        N3 = c_v.node2
+        N4 = c_v.shorted_node
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
+        self.SCSI_incidence_matrix_generate(A, N3, N4, component_index, phase, phase)
+        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index + 1, phase, phase)
+        Y[phase][phase][component_index, component_index] = 1
+        Z[phase][phase][component_index + 1, component_index] = val
+        Z[phase][phase][component_index + 1, component_index + 1] = -1
+
+    def SCSI_graph_append_tgn(self, node, graph):
+        if node.startswith('0'):
+            pass
+        elif node not in graph:
+            graph.append(node)
+
+    def SCSI_collapse_tgn(self, graph_collapses, node1, node2):
+        collapsed = False
+        for collapse_list in graph_collapses:
+            if node1 in collapse_list:
+                collapsed = True
+                collapse_list.append(node2)  # set node2 to be collapsed into node1 on the current graph
+            elif node2 in collapse_list:
+                collapsed = True
+                collapse_list.append(node1)  # set node1 to be collapsed into node2 on the current graph
+        if not collapsed:
+            graph_collapses.append([node1, node2])  # set node2 to be collapsed into node1 on the current graph
+
+    def SCSI_collapse_list_collapser(self, graph_collapses):
+        for collapse_list in graph_collapses:
+            for node in collapse_list:
+                for cl in graph_collapses:
+                    if node in cl and cl!=collapse_list:
+                        for n in cl:
+                            if n not in collapse_list:
+                                collapse_list.append(n)
+        for collapse_list in graph_collapses:
+            collapse_list.sort()
+
+        temp = []
+        for collapse_list in graph_collapses:
+            if collapse_list not in temp:
+                temp.append(collapse_list)
+
+        return temp
+
+    def SCSI_node_list_sort(self, nodes):
+        helper = []
+        i = 0
+        for element in nodes:
+            helper.append([])
+            helper[i].append(element[:element.index('_')])
+            helper[i].append(element[element.index('_') + 1:])
+            i += 1
+        helper.sort(key=operator.itemgetter(1, 0))
+        nodes_new = []
+        for element in helper:
+            nodes_new.append(element[0] + '_' + element[1])
+        return nodes_new
+
+    def SCSI_index_tgn(self, nodes, node, collapses):
+        try:
+            return nodes.index(node)
+        except ValueError:
+            for collapse_list in collapses:
+                if node in collapse_list:
+                    if any(n.startswith('0') for n in collapse_list):
+                        return None
+                    else:
+                        return nodes.index(min(collapse_list))
+                elif node.startswith("0"):
+                    return None
+
+    def SCSI_add_capacitor_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases, matrix_col_expand):
+        phase_offset = int((M.shape[0] - matrix_col_expand) / num_of_phases)
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
+        for phase in range(1, num_of_phases + 1):
+            n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
+            n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
+            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
+            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
+            if n1v is not None:
+                if n1i is not None:
+                    if phase == num_of_phases:
+                        M[n1i, n1v] += +val*z
+                    else:
+                        M[n1i, n1v] += +val
+                    if phase == 1:
+                        M[n1i, n1v - phase_offset - matrix_col_expand] += -val
+                    else:
+                        M[n1i, n1v - phase_offset] += -val
+                if n2i is not None:
+                    if phase == num_of_phases:
+                        M[n2i, n1v] += -val*z
+                    else:
+                        M[n2i, n1v] += -val
+                    if phase == 1:
+                        M[n2i, n1v - phase_offset - matrix_col_expand] += +val
+                    else:
+                        M[n2i, n1v - phase_offset] += +val
+            if n2v is not None:
+                if n1i is not None:
+                    if phase == num_of_phases:
+                        M[n1i, n2v] += -val*z
+                    else:
+                        M[n1i, n2v] += -val
+                    if phase == 1:
+                        M[n1i, n2v - phase_offset - matrix_col_expand] += +val
+                    else:
+                        M[n1i, n2v - phase_offset] += +val
+                if n2i is not None:
+                    if phase == num_of_phases:
+                        M[n2i, n2v] += +val*z
+                    else:
+                        M[n2i, n2v] += +val
+                    if phase == 1:
+                        M[n2i, n2v - phase_offset - matrix_col_expand] += -val
+                    else:
+                        M[n2i, n2v - phase_offset] += -val
+
+    def SCSI_add_voltage_source_tgn(self, M, S, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
+        phase_helper_array = []
+        z_symbol_array = []
+        temp = 0
+        for f in range(num_of_phases):
+            phase_helper_array.append(temp)
+            temp += self.phases[f + 1]
+            z_symbol_array.append(z ** sympy.sympify(phase_helper_array[f]))
+        for phase in range(1, num_of_phases + 1):
+            n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
+            n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
+            row = len(i_nodes) + index_row
+            if n1v is not None:
+                if phase == num_of_phases:
+                    M[row, n1v] += z
+                else:
+                    M[row, n1v] += 1
+            if n2v is not None:
+                if phase == num_of_phases:
+                    M[row, n2v] += -z
+                else:
+                    M[row, n2v] += -1
+            S[row, 0] += val * self.SCSI_z_power_substitution(z_symbol_array[phase - 1])
+            index_row += 1
+        return index_row
+
+    def SCSI_add_switch_tgn(self, M, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
+        n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(c.phase), v_graph_collapses)
+        n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(c.phase), v_graph_collapses)
+        row = len(i_nodes) + index_row
+        if n1v is not None:
+            if int(c.phase) == num_of_phases:
+                M[row, n1v] += z
+            else:
+                M[row, n1v] += 1
+        if n2v is not None:
+            if int(c.phase) == num_of_phases:
+                M[row, n2v] += -z
+            else:
+                M[row, n2v] += -1
+        index_row += 1
+        return index_row
+
+    def SCSI_add_VVT_tgn(self, M, v_nodes, i_nodes, c, index_row, v_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            e = c.sym_value
+        else:
+            e = c.value
+        for phase in range(1, num_of_phases + 1):
+            n1v = self.SCSI_index_tgn(v_nodes, c.node3 + '_' + str(phase), v_graph_collapses)
+            n2v = self.SCSI_index_tgn(v_nodes, c.node4 + '_' + str(phase), v_graph_collapses)
+            n3v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
+            n4v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
+            row = len(i_nodes) + index_row
+            if n1v is not None:
+                if phase == num_of_phases:
+                    M[row, n1v] += -e*z
+                else:
+                    M[row, n1v] += -e
+            if n2v is not None:
+                if phase == num_of_phases:
+                    M[row, n2v] += e*z
+                else:
+                    M[row, n2v] += e
+            if n3v is not None:
+                if phase == num_of_phases:
+                    M[row, n3v] += z
+                else:
+                    M[row, n3v] += 1
+            if n4v is not None:
+                if phase == num_of_phases:
+                    M[row, n4v] += -z
+                else:
+                    M[row, n4v] += -1
+            index_row += 1
+        return index_row
+
+    def SCSI_add_QQT_tgn(self, M, v_nodes, i_nodes, c, index_col, i_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            f = c.sym_value
+        else:
+            f = c.value
+        c_v = self.components[c.control_voltage]
+        for phase in range(1, num_of_phases + 1):
+            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
+            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
+            # TODO: fix after bug #8 fix
+            n3i = self.SCSI_index_tgn(i_nodes, c_v.node2 + '_' + str(phase), i_graph_collapses)
+            n4i = self.SCSI_index_tgn(i_nodes, c_v.shorted_node + '_' + str(phase), i_graph_collapses)
+            col = len(v_nodes) + index_col
+            if n1i is not None:
+                if phase == num_of_phases:
+                    M[n1i, col] += f*z
+                else:
+                    M[n1i, col] += f
+            if n2i is not None:
+                if phase == num_of_phases:
+                    M[n2i, col] += -f*z
+                else:
+                    M[n2i, col] += -f
+            if n3i is not None:
+                if phase == num_of_phases:
+                    M[n3i, col] += z
+                else:
+                    M[n3i, col] += 1
+            if n4i is not None:
+                if phase == num_of_phases:
+                    M[n4i, col] += -z
+                else:
+                    M[n4i, col] += -1
+            index_col += 1
+        return index_col
+
+    def SI_add_resistor_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            val = c.value
+        y = 1 / val
+        for phase in range(1, num_of_phases + 1):
+            n1v = self.SCSI_index_tgn(v_nodes, c.node1 + '_' + str(phase), v_graph_collapses)
+            n2v = self.SCSI_index_tgn(v_nodes, c.node2 + '_' + str(phase), v_graph_collapses)
+            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
+            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
+            if n1v is not None:
+                if n1i is not None:
+                    M[n1i, n1v] += +y
+                if n2i is not None:
+                    M[n2i, n1v] += -y
+            if n2v is not None:
+                if n1i is not None:
+                    M[n1i, n2v] += -y
+                if n2i is not None:
+                    M[n2i, n2v] += +y
+
+    def SI_add_current_source_tgn(self, S, i_nodes, c, i_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
+        for phase in range(1, num_of_phases + 1):
+            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
+            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
+            if n1i is not None:
+                S[n1i, 0] += -val
+            if n2i is not None:
+                S[n2i, 0] += val
+
+    def SI_add_VCT_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses, num_of_phases):
+        if self.is_symbolic:
+            g = c.sym_value
+        else:
+            g = c.value
+        for phase in range(1, num_of_phases + 1):
+            n1v = self.SCSI_index_tgn(v_nodes, c.node3 + '_' + str(phase), v_graph_collapses)
+            n2v = self.SCSI_index_tgn(v_nodes, c.node4 + '_' + str(phase), v_graph_collapses)
+            n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
+            n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
+            if n1v is not None:
+                if n1i is not None:
+                    M[n1i, n1v] += +g
+                if n2i is not None:
+                    M[n2i, n1v] += -g
+            if n2v is not None:
+                if n1i is not None:
+                    M[n1i, n2v] += -g
+                if n2i is not None:
+                    M[n2i, n2v] += +g
+
+    def SCSI_get_node_voltage(self, node, phase, force_z = False):
+        phase_string = str(phase)
+        formatted_node = str(node) + "_" + phase_string
+        formatted_voltage = sympy.symbols("v(" + str(node) + ")_" + phase_string)
+        try:
+            value = self.solved_dict[formatted_voltage]
+        except KeyError:
+            for identity in self.node_voltage_identities:
+                if formatted_node in identity:
+                    if any(identity_node.startswith("0") for identity_node in identity):
+                        value = 0
+                    else:
+                        for identity_node in identity:
+                            try:
+                                formatted_voltage = sympy.symbols("v(" + identity_node.split("_")[0]
+                                                                  + ")_" + phase_string)
+                                value = self.solved_dict[formatted_voltage]
+                            except KeyError:
+                                pass
+        if force_z:
+            return value
+        elif self.analysis_type == "tran":
+            pass
+            #return z_transform.iZT(value)
+        else:
+            return value
+
+    def SCSI_component_voltage(self, name, phase):
+        value_dict = {}
+        c = self.components[name]
+        biquad_input_key = sympy.symbols(f"v({name}-in)_{phase}")
+        if c.node1 == "0":
+            node1_value = 0
+        else:
+            node1_value = self.SCSI_get_node_voltage(c.node1, phase, force_z=True)
+        if c.node2 == "0":
+            node2_value = 0
+        else:
+            node2_value = self.SCSI_get_node_voltage(c.node2, phase, force_z=True)
+        if c.type in ["a", "e", "g"]:
+            if c.node3 == "0":
+                node3_value = 0
+            else:
+                node3_value = self.SCSI_get_node_voltage(c.node3, phase, force_z=True)
+            if c.node4 == "0":
+                node4_value = 0
+            else:
+                node4_value = self.SCSI_get_node_voltage(c.node4, phase, force_z=True)
+            value_dict[biquad_input_key] = sympy.cancel(node3_value - node4_value)
+        if c.type == "f":
+            c_v = self.components[c.control_voltage]
+            if c_v.node2 == "0":
+                cv_node_value = 0
+            else:
+                cv_node_value = self.SCSI_get_node_voltage(c_v.node2, phase, force_z=True)
+            if c_v.shorted_node == "0": # TODO: fix after bug #8 fix
+                cv_short_value = 0
+            else:
+                cv_short_value = self.SCSI_get_node_voltage(c_v.shorted_node, phase, force_z=True) # TODO: fix after bug #8 fix
+            value_dict[biquad_input_key] = sympy.cancel(cv_node_value - cv_short_value)
+        if c.type in ["a", "e", "f", "g"]:
+            value_dict[sympy.symbols(f"v({name}-out)_{phase}")] = sympy.cancel(node1_value - node2_value)
+        else:
+            value_dict[sympy.symbols(f"v({name})_{phase}")] = sympy.cancel(node1_value - node2_value)
+        # if self.analysis_type == "tran":
+        #     for entry in value_dict:
+        #         value_dict[entry] = z_transform.IZT(value_dict[entry])
+        return value_dict
+
+    def SCSI_component_charge(self, name, phase):
+        if self.scsi == "scideal":
+            charge = sympy.symbols(f"q({name})_{phase}")
+        else:
+            charge = sympy.symbols(f"i({name})_{phase}")
+        value_dict = {}
+        c = self.components[name]
+        voltage_key = sympy.symbols(f"v({name})_{phase}")
+        if self.is_symbolic:
+            value = c.sym_value
+        else:
+            value = c.value
+        if c.type in ["c", "r"]:
+            if c.type == "r":
+                value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] / value)
+            if c.type == "c":
+                value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
+        elif c.type == "i":
+            if self.is_symbolic:
+                value = c.sym_value
+            else:
+                if self.analysis_type == "DC":
+                    value = c.dc_value
+                elif self.analysis_type == "tran":
+                    value = c.tran_value
+                else:
+                    value = c.ac_value
+            value_dict[charge] = sympy.symbols(value)
+        elif c.type == "g":
+            value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
+        elif c.type == "f":
+            if self.scsi == "scideal":
+                control_charge = sympy.symbols(f"q({c.control_voltage})_{phase}")
+            else:
+                control_charge = sympy.symbols(f"i({c.control_voltage})_{phase}")
+            value_dict[charge] = sympy.cancel(self.solved_dict[control_charge] * value)
+        else:
+            value_dict[charge] = charge
+        # if self.analysis_type == "tran":
+        #     for entry in value_dict:
+        #         value_dict[entry] = z_transform.IZT(value_dict[entry])
+        return value_dict
+
+    def SCSI_component_values(self, name):
+        num_of_phases = self.phases[0]
+        value_dict = {}
+        for phase in range(1, num_of_phases + 1):
+            value_dict.update(self.SCSI_component_voltage(name, phase))
+            value_dict.update(self.SCSI_component_charge(name, phase))
+        return value_dict
+
+    def SCSI_result_formatter(self, dict):
+        temp = {}
+        for key in dict:
+            name = str(key).split("_")[0]
+            temp[name] = []
+            for i in range(self.phases[0]):
+                temp[name].append(0)
+        for key in dict:
+            name = str(key).split("_")[0]
+            phase = int(str(key).split("_")[1])
+            temp[name][phase - 1] = dict[key]
+        return temp
 
