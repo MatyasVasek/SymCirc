@@ -782,9 +782,12 @@ class AnalyseCircuit:
                 if c.type == "f":   # CCT/CCCS
                     node1 = c.node1
                     node2 = c.node2
-                    c_v = self.components[c.control_voltage]
-                    node3 = c_v.node2
-                    node4 = c_v.shorted_node
+                    if c.node3 is None:
+                        c_v = self.components[c.control_voltage]
+                        node3 = c_v.shorted_node
+                    else:
+                        node3 = c.node3
+                    node4 = c.node4
                     self.graph_append(node1, v_graph_nodes)
                     self.graph_append(node2, v_graph_nodes)
                     self.graph_append(node3, v_graph_nodes)
@@ -800,9 +803,12 @@ class AnalyseCircuit:
                 if c.type == "h":   # CVT/CCVS
                     node1 = c.node1
                     node2 = c.node2
-                    c_v = self.components[c.control_voltage]
-                    node3 = c_v.node2
-                    node4 = c_v.shorted_node
+                    if c.node3 is None:
+                        c_v = self.components[c.control_voltage]
+                        node3 = c_v.shorted_node
+                    else:
+                        node3 = c.node3
+                    node4 = c.node4
                     self.graph_append(node1, v_graph_nodes)
                     self.graph_append(node2, v_graph_nodes)
                     self.graph_append(node3, v_graph_nodes)
@@ -812,9 +818,9 @@ class AnalyseCircuit:
                     self.graph_append(node3, i_graph_nodes)
                     self.graph_append(node4, i_graph_nodes)
 
-                    self.collapse(v_graph_collapses, node1, node2)
                     matrix_col_expand += 1
-                    self.collapse(i_graph_collapses, node3, node4)
+                    self.collapse(i_graph_collapses, node1, node2)
+                    self.collapse(v_graph_collapses, node3, node4)
 
                 if c.type == "a":
                     self.graph_append(c.node1, v_graph_nodes)
@@ -890,11 +896,11 @@ class AnalyseCircuit:
                 if c.type == "f":
                     #raise TypeError("CCCS not supported in 'two_graph_node' analysis")
                     self._add_CCT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_col, i_graph_collapses)
-                    symbols_to_append.append(sympy.Symbol(f"i({c.control_voltage})"))
+                    symbols_to_append.append(sympy.Symbol(f"i({c.name})"))
                     index_col += 1
                 if c.type == "h":
                     self._add_CVT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_col, index_row, i_graph_collapses, v_graph_collapses)
-                    symbols_to_append.append(sympy.Symbol(f"i({c.control_voltage})"))
+                    symbols_to_append.append(sympy.Symbol(f"i({c.name})"))
                     index_col += 1
                     index_row += 1
                 if c.type == "a":
@@ -1812,57 +1818,67 @@ class AnalyseCircuit:
             r = c.sym_value
         else:
             r = c.value
+
         node1 = c.node1
         node2 = c.node2
+        if c.node3 is None:
+            c_v = self.components[c.control_voltage]
+            node3 = c_v.shorted_node
+            c.node3 = node3
+        else:
+            node3 = c.node3
+        node4 = c.node4
+
         c_v = self.components[c.control_voltage]
-        node3 = c_v.node2
-        node4 = c_v.shorted_node
-        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
-        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
-        n3v = self.index_tgn(v_nodes, node3, v_graph_collapses)
-        n4v = self.index_tgn(v_nodes, node4, v_graph_collapses)
+
+        n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
+        n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
+        n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
+        n4i = self.index_tgn(i_nodes, node4, i_graph_collapses)
+
         col = len(v_nodes) + index_col
         row = len(i_nodes) + index_row
 
-        if n1i is not None:
-            M[n1i, col] += 1
-        if n2i is not None:
-            M[n2i, col] += -1
-        if n3v is not None:
-            M[row, n3v] += 1
-        if n4v is not None:
-            M[row, n4v] += -1
+        if n3i is not None:
+            M[n3i, col] += 1
+        if n4i is not None:
+            M[n4i, col] += -1
+        if n1v is not None:
+            M[row, n1v] += 1
+        if n2v is not None:
+            M[row, n2v] += -1
 
         M[row, col] += -r
 
     def _add_CCT_tgn(self, M, v_nodes, i_nodes, c, index, i_graph_collapses):
         f = None
-        try:
-            if self.is_symbolic:
-                f = c.sym_value
-            else:
-                f = c.value
-            node1 = c.node1
-            node2 = c.node2
+        if self.is_symbolic:
+            f = c.sym_value
+        else:
+            f = c.value
+        node1 = c.node1
+        node2 = c.node2
+        if c.node3 is None:
             c_v = self.components[c.control_voltage]
-            node3 = c_v.node2
-            node4 = c_v.shorted_node
-            n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
-            n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
-            n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
-            n4i = self.index_tgn(i_nodes, node4, i_graph_collapses)
-            col = len(v_nodes) + index
-            if n1i is not None:
-                M[n1i, col] += f
-            if n2i is not None:
-                M[n2i, col] += -f
-            if n3i is not None:
-                M[n3i, col] += 1
-            if n4i is not None:
-                M[n4i, col] += -1
-        except:
-            print(f)
-            print(type(f))
+            node3 = c_v.shorted_node
+            c.node3 = node3
+        else:
+            node3 = c.node3
+        node4 = c.node4
+
+        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
+        n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
+        n4i = self.index_tgn(i_nodes, node4, i_graph_collapses)
+        col = len(v_nodes) + index
+        if n1i is not None:
+            M[n1i, col] += f
+        if n2i is not None:
+            M[n2i, col] += -f
+        if n3i is not None:
+            M[n3i, col] += 1
+        if n4i is not None:
+            M[n4i, col] += -1
 
     def _add_VCT_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses):
         if self.is_symbolic:
@@ -2139,9 +2155,13 @@ class AnalyseCircuit:
     def _add_CCT(self, matrix, c, index):  # current to current transformer
         N1 = c.node1
         N2 = c.node2
-        c_v = self.components[c.control_voltage]
-        N3 = c_v.node2
-        N4 = c_v.shorted_node
+        if c.node3 is None:
+            c_v = self.components[c.control_voltage]
+            N3 = c_v.shorted_node
+            c.node3 = N3
+        else:
+            N3 = c.node3
+        N4 = c.node4
         if self.is_symbolic:
             val = c.sym_value
         else:
@@ -2156,9 +2176,14 @@ class AnalyseCircuit:
     def _add_CVT(self, matrix, c, index):  # Current to voltage transformer
         N1 = c.node1
         N2 = c.node2
-        c_v = self.components[c.control_voltage]
-        N3 = c_v.node2
-        N4 = c_v.shorted_node
+        if c.node3 is None:
+            c_v = self.components[c.control_voltage]
+            N3 = c_v.shorted_node
+            c.node3 = N3
+        else:
+            N3 = c.node3
+        N4 = c.node4
+
         if self.is_symbolic:
             val = c.sym_value
         else:

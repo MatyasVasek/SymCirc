@@ -318,7 +318,7 @@ def parse(netlist, tran=False):
     operational_amplifiers = []
     couplings = []
     SCSI_components = []
-    add_short = []
+    add_short = {}
     matrix_expansion_coef = 0
     parsed_netlist = parse_subcircuits(parsed_netlist)
 
@@ -476,7 +476,14 @@ def parse(netlist, tran=False):
             c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, value=value, sym_value=sym_value,
                           position=matrix_expansion_coef)
             matrix_expansion_coef += 1
-            add_short.append(v_c)
+            try:
+                add_short[v_c].append(name)
+                c.node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
+                c.node4 = f"*ctrl{v_c}{add_short[v_c][-1]}"
+            except:
+                add_short[v_c] = [name]
+                c.node3 = None
+                c.node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
             controlled_sources.append(c)
 
         elif name[0] in ["h", "H"]:  # CVT
@@ -495,7 +502,14 @@ def parse(netlist, tran=False):
             c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, value=value, sym_value=sym_value,
                           position=matrix_expansion_coef)
             matrix_expansion_coef += 1
-            add_short.append(v_c)
+            try:
+                add_short[v_c].append(name)
+                c.node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
+                c.node4 = f"*ctrl{v_c}{add_short[v_c][-1]}"
+            except:
+                add_short[v_c] = [name]
+                c.node3 = None
+                c.node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
             controlled_sources.append(c)
 
         elif name[0] in ["k", "K"]:  # coupled inductors
@@ -516,16 +530,14 @@ def parse(netlist, tran=False):
         components[c.name] = c
         count += 1
 
-    shorts = []
-    for key in components:
-        if key in add_short:
-            shorts.append(key)
-    for key in shorts:
-        c = components[key]
-        new_node = "*short{}".format(c.name)
-        nodes.append(new_node)
-        c.shorted_node = c.node2
-        c.node2 = new_node
+    for key in add_short:
+        c_s = components[key]
+        new_node = None
+        for c_name in add_short[key]:
+            new_node = f"*ctrl{c_s.name}{c_name}"
+            nodes.append(new_node)
+        c_s.shorted_node = c_s.node1
+        c_s.node1 = new_node
 
     node_dict = {}
     i = 0

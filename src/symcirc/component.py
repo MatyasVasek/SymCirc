@@ -89,8 +89,12 @@ class VoltageSource(Component):
         :param int position: this element causes equation matrix expansion and needs the row/col index saved
     """
     def __init__(self, name, type, node1, node2, sym_value, dc_value=None, ac_value=None, tran_value=None,
-                 position=None, shorted_node=None):
+                 position=None, shorted_nodes=None):
         super().__init__(name, type, node1, node2, sym_value, value=dc_value)
+        if shorted_nodes is None:
+            self.shorted_nodes = []
+        else:
+            self.shorted_nodes = shorted_nodes
         self.dc_value = dc_value
         self.ac_value = ac_value
         self.tran_value = tran_value
