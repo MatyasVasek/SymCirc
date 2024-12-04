@@ -8,10 +8,7 @@ from symcirc import parse, laplace, utils
 from symcirc.utils import j,s,t,z
 from symcirc.pole_zero import *
 from symcirc.component import Component, Coupling
-from sympy.parsing.sympy_parser import T
-from sympy.parsing.sympy_parser import (_token_splittable,
-                                            standard_transformations, implicit_multiplication,
-                                            split_symbols_custom)
+
 
 class AnalyseCircuit:
     """
@@ -684,38 +681,6 @@ class AnalyseCircuit:
 
             equation_matrix = M.col_insert(self.c_count*2 + self.node_count, R)
             symbols = voltage_symbols + current_symbols + node_symbols
-
-        elif self.method == "eliminated_tableau" and self.phases == "undefined":
-            size = self.c_count
-            M = sympy.Matrix(sympy.zeros(size + self.node_count))
-            R = sympy.Matrix(sympy.zeros(size + self.node_count, 1))
-            index = 0
-            node_symbols = self.node_voltage_symbols
-            voltage_symbols = []
-            current_symbols = []
-            inductor_index = {}
-            couplings = []
-
-            for key in self.components:
-                if self.components[key].type == "k":
-                    pass
-                else:
-                    c = self.components[key]
-                    if c.type in ["r", "l", "c"]:
-                        self._add_basic(M, R, c, index)
-                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
-                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
-                        if c.type == "l":
-                            inductor_index[c.name] = index
-
-                    if c.type == "v":
-                        self._add_voltage_source(M, R, c, index)
-                        voltage_symbols.append(sympy.Symbol(f"v({c.name})"))
-                        current_symbols.append(sympy.Symbol(f"i({c.name})"))
-                index += 1
-
-            equation_matrix = M.col_insert(self.c_count + self.node_count, R)
-            symbols = node_symbols + current_symbols
 
         elif self.method == "two_graph_node" and self.phases == "undefined":
             symbols = []
