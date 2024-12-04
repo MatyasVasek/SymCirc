@@ -415,7 +415,7 @@ def parse(netlist, tran=False):
             matrix_expansion_coef += 1
             operational_amplifiers.append(c)
 
-        elif name[0] in ["e", "E"]:  # VVT
+        elif name[0] in ["e", "E"]:  # VVT (VCVS)
             variant = "e"
             sym_value = sympy.Symbol(name, real=True)
             node3 = words[3]
@@ -440,7 +440,7 @@ def parse(netlist, tran=False):
             matrix_expansion_coef += 1
             controlled_sources.append(c)
 
-        elif name[0] in ["g", "G"]:  # VCT
+        elif name[0] in ["g", "G"]:  # VCT (VCCS)
             variant = "g"
             node3 = words[3]
             node4 = words[4]
@@ -460,7 +460,7 @@ def parse(netlist, tran=False):
             c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
             controlled_sources.append(c)
 
-        elif name[0] in ["f", "F"]:  # CCT
+        elif name[0] in ["f", "F"]:  # CCT (CCCS)
             variant = "f"
             sym_value = sympy.Symbol(name, real=True)
             v_c = words[3]
@@ -486,7 +486,7 @@ def parse(netlist, tran=False):
                 c.node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
             controlled_sources.append(c)
 
-        elif name[0] in ["h", "H"]:  # CVT
+        elif name[0] in ["h", "H"]:  # CVT (CCVS)
             variant = "h"
             sym_value = sympy.Symbol(name, real=True)
             v_c = words[3]
