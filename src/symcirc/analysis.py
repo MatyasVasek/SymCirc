@@ -859,7 +859,7 @@ class AnalyseCircuit:
                     self._add_VVT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_row, i_graph_collapses, v_graph_collapses)
                     index_row += 1
                 if c.type == "f":
-                    #raise TypeError("CCCS not supported in 'two_graph_node' analysis")
+                    #raise NotImplementedError("CCCS not supported in 'two_graph_node' analysis")
                     self._add_CCT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_col, i_graph_collapses)
                     symbols_to_append.append(sympy.Symbol(f"i({c.name})"))
                     index_col += 1
@@ -871,7 +871,7 @@ class AnalyseCircuit:
                 if c.type == "a":
                     pass
                 if c.type == "s":
-                    raise TypeError("Switch not supported in 'two_graph_node' analysis")
+                    raise NotImplementedError("Switch not supported in 'two_graph_node' analysis")
 
             equation_matrix = M.col_insert(m_size, S)
 

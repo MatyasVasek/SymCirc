@@ -160,7 +160,7 @@ def parse_subcircuits(netlist):
             pass
 
         elif words[0][0] not in NETLIST_KEYCHARS:
-            raise SyntaxError(f"Keyword/Element '{words[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
+            raise NotImplementedError(f"Keyword/Element '{words[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
 
         elif words[0] in [".subckt", ".SUBCKT"]:
             in_model = True
@@ -186,7 +186,7 @@ def parse_subcircuits(netlist):
             elif words[0] in [".end", ".END"]:
                 break
             else:
-                raise SyntaxError(f"Keyword/Element '{words[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
+                raise NotImplementedError(f"Keyword/Element '{words[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
 
         elif in_model:
             current_model.elements.append(line)
@@ -219,7 +219,7 @@ def unpack(parsed_netlist, subckt_models):
                     if model:
                         loading_params = True
                     else:
-                        raise SyntaxError(f"Model of element '{words[0]}' is not present in the netlist.")
+                        raise NotImplementedError(f"Model of element '{words[0]}' is not present in the netlist.")
 
                 elif not loading_params:
                     try:
@@ -241,8 +241,8 @@ def unpack(parsed_netlist, subckt_models):
 
             for elem in model.elements:
                 split_elem = elem.split(" ")
-                if split_elem[0][0] not in NETLIST_KEYCHARS:
-                    raise SyntaxError(
+                if split_elem[0][0] not in NETLIST_KEYCHARS: # filter unsupported elements and syntax errors
+                    raise NotImplementedError(
                         f"Keyword/Element '{split_elem[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
                 elif split_elem[0] in ["k", "K"]:
                     split_elem[1] = f"{split_elem[1]}_({words[0]})"
