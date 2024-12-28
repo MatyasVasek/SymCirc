@@ -1152,15 +1152,22 @@ class AnalyseCircuit:
 
     def collapse(self, graph_collapses, node1, node2):
         collapsed = False
-        for collapse_list in graph_collapses:
-            if node1 in collapse_list:
-                collapsed = True
-                collapse_list.append(node2)  # set node2 to be collapsed into node1 on the current graph
-            elif node2 in collapse_list:
-                collapsed = True
-                collapse_list.append(node1)  # set node1 to be collapsed into node2 on the current graph
-        if not collapsed:
-            graph_collapses.append([node1, node2])  # set node2 to be collapsed into node1 on the current graph
+        node1_in = None
+        node2_in = None
+        for i in range(len(graph_collapses)):
+            if node1 in graph_collapses[i]:
+                node1_in = i
+            if node2 in graph_collapses[i]:
+                node2_in = i
+        if (node1_in is None) and (node2_in is None): # collapsed nodes not present in any existing collapse list
+            graph_collapses.append([node1, node2])  # set node2 to be collapsed into node1 on the graph
+        elif (node1_in is not None) and (node2_in is not None):
+            graph_collapses[node2_in] = list(set(graph_collapses[node2_in]) | set(graph_collapses[node1_in]))
+            del graph_collapses[node1_in]
+        elif node1_in is not None:
+            graph_collapses[node1_in].append(node2)  # set node2 to be collapsed into node1 on the graph
+        elif node2_in is not None:
+            graph_collapses[node2_in].append(node1)  # set node1 to be collapsed into node2 on the graph
 
     def _add_CVT_tgn(self, M, v_nodes, i_nodes, c, index_col, index_row, i_graph_collapses, v_graph_collapses):
         if self.is_symbolic:
