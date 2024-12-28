@@ -11,8 +11,8 @@ from tests.geec_test import parse_expression
 NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
 UNITS = {"f": sympy.Rational(1, 1000000000000000), "p": sympy.Rational(1, 1000000000000),
          "n": sympy.Rational(1, 1000000000), "u": sympy.Rational(1, 1000000), "m": sympy.Rational(1, 1000),
-         "k": 1000, "meg": 1000000, "G": 1000000000,
-         "T": 1000000000000}
+         "k": sympy.Rational(1000), "meg": sympy.Rational(1000000), "Meg": sympy.Rational(1000000), "G": sympy.Rational(1000000000),
+         "T": sympy.Rational(1000000000000)}
 OPERATORS = ["+", "-", "*", "/", "."]
 RESERVED = ["sin"]
 
