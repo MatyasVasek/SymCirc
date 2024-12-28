@@ -149,6 +149,8 @@ def value_enum(words, source=False):
 def nodes_per_element(type):
     if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "s", "S"]:
         return 2
+    if type in ["f", "F", "h", "H"]:
+        return 3
     elif type in ["a", "A", "e", "E", "g", "G"]:
         return 4
     elif type in ["k", "K"]:
@@ -252,7 +254,7 @@ def unpack(parsed_netlist, subckt_models):
                 if split_elem[0][0] not in NETLIST_KEYCHARS: # filter unsupported elements and syntax errors
                     raise NotImplementedError(
                         f"Keyword/Element '{split_elem[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
-                elif split_elem[0] in ["k", "K"]:
+                elif split_elem[0] in ["k", "K"]: # parse couplings
                     split_elem[1] = f"{split_elem[1]}_({words[0]})"
                     split_elem[2] = f"{split_elem[2]}_({words[0]})"
                     if split_elem[3][0] == "{":
@@ -260,8 +262,10 @@ def unpack(parsed_netlist, subckt_models):
                             split_elem[3] = str(params[split_elem[3][1:-1]])
                         except KeyError:
                             split_elem[3] = str(model.param_dict[split_elem[3][1:-1]])
-                else:
-                    node_count = nodes_per_element(split_elem[0][0])
+                else: # parse the rest
+                    if split_elem[0][0] in ["f", "F", "h", "H"]: # correct subcircuit CC(C/V)S control voltage source (current sensor) name
+                        split_elem[3] = f"{split_elem[3]}_({words[0]})"
+                    node_count = nodes_per_element(split_elem[0][0]) # get expected node count
                     for i in range(1, node_count+1): # scan and connect subcircuit nodes with outside circuit nodes
                         if split_elem[i] in ["0", 0]:
                             pass
@@ -271,23 +275,18 @@ def unpack(parsed_netlist, subckt_models):
                             except KeyError:
                                 split_elem[i] = f"{split_elem[i]}_({words[0]})"
                     index = node_count+1
-                    for e in split_elem[node_count+1:]:
+                    for e in split_elem[node_count+1:]: # substitute parameters
+                        if e == "":
+                            continue
                         local = sympy.abc._clash
                         tmp_elem = None
-                        if e[0] == "{":
-                            local.update(params)
-                            try:
-                                tmp_elem = sympy.parse_expr(e[1:-1], local_dict=local)
-                            except SyntaxError: # TODO: this is a hotfix, needs a more robust solution in the future
-                                tmp_elem, _ = convert_units(e[1:-1])
-                        else:
-                            local.update(params)
-                            try:
-                                tmp_elem = sympy.parse_expr(e, local_dict=local)
-                            except SyntaxError: # TODO: this is a hotfix, needs a more robust solution in the future
-                                tmp_elem, _ = convert_units(e)
+
+                        tmp_elem = e.replace("{", "")
+                        tmp_elem = tmp_elem.replace("}", "")
+                        local.update(params)
 
                         split_elem[index] = str(tmp_elem)
+
 
                         index += 1
                 split_elem[0] = f"{split_elem[0]}_({words[0]})"
@@ -557,7 +556,7 @@ def parse(netlist, tran=False):
         if node == "0":
             grounded = True
     if not grounded:
-        exit("Circuit not grounded")
+        print("Circuit not grounded")
 
     for couple in couplings:
         L1 = components[couple.L1]
