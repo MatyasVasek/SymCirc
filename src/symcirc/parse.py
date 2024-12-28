@@ -105,6 +105,7 @@ def tran_value(words, dc):
     freq = 1
     delay = 0
     damping = 1
+    omega = 2*sympy.pi*freq
     #tran = sympy.Symbol("N/A")
 
     for word in words:
@@ -122,12 +123,11 @@ def tran_value(words, dc):
             freq, _ = convert_units(words[index+2], forced_numeric=True)
             delay, _ = convert_units(words[index+3])
             damping, _ = convert_units(words[index+4])
+            omega = 2*sympy.pi*freq
         except IndexError:
             pass
-        #offset, amp, freq, delay, damping = sympy.symbols("off, A, f, del, damp", real=True)
-        #pi = 3.14159
-        pi = sympy.pi
-        tran = (offset/s)+amp*sympy.exp(-s*delay)*2*pi*freq/((s+damping)**2+(2*pi*freq)**2)
+        #tran = ((offset/s)+amp*sympy.exp(-s*delay)*2*pi*freq/((s+damping)**2+(2*pi*freq)**2))
+        tran = amp*((damping+s)*sympy.sin(delay)+omega*sympy.cos(delay))/(damping**2+2*damping*s+omega**2+s**2)
     return tran
 
 def value_enum(words, source=False):
@@ -285,8 +285,10 @@ def unpack(parsed_netlist, subckt_models):
                         tmp_elem = tmp_elem.replace("}", "")
                         local.update(params)
 
-                        split_elem[index] = str(tmp_elem)
+                        tmp_elem, _ = convert_units(tmp_elem, local_dict=local)
 
+                        string_tmp = str(tmp_elem).replace(" ", "")
+                        split_elem[index] = string_tmp
 
                         index += 1
                 split_elem[0] = f"{split_elem[0]}_({words[0]})"
