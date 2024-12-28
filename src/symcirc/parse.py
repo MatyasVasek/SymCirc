@@ -186,7 +186,7 @@ def parse_subcircuits(netlist):
                     node_list.append(w)
                 else:
                     key, val = w.split("=")
-                    param_dict[key] = val
+                    param_dict[key], _ = convert_units(val)
             current_model = SubcktModel(model_id, node_list, param_dict)
 
         elif words[0][0] == ".":
