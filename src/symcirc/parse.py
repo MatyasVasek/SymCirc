@@ -6,7 +6,6 @@ import sys
 from sympy.parsing.sympy_parser import standard_transformations, convert_xor
 
 TRANSFORMS = (standard_transformations + (convert_xor,))
-from tests.geec_test import parse_expression
 
 NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
 UNITS = {"f": sympy.Rational(1, 1000000000000000), "p": sympy.Rational(1, 1000000000000),
