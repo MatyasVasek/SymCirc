@@ -375,7 +375,10 @@ class AnalyseCircuit:
         ret = {}
         if self.scsi == "undefined":
             for node in self.node_dict:
-                ret[f"v({node})"] = self.get_node_voltage(node)
+                if node.find("*ctrl") == -1:
+                    ret[f"v({node})"] = self.get_node_voltage(node)
+                else: # Filter nodes added by virtual current sensors for CCC(V)S
+                    pass
         else:
             num_of_phases = self.phases[0]
             for phase in range(1, num_of_phases + 1):
