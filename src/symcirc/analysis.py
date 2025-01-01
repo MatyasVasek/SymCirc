@@ -44,10 +44,7 @@ class AnalyseCircuit:
         self.netlist: str = netlist
         self.node_voltage_identities: list = []
 
-        if analysis_type == "tran":
-            data = parse.parse(netlist, tran=True)
-        else:
-            data = parse.parse(netlist)
+        data = parse.parse(netlist, analysis_type)
 
         self.phases, self.frequency = self.parse_phases(phases)
         self.scsi = scsi
