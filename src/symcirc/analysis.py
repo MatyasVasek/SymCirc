@@ -453,7 +453,7 @@ class AnalyseCircuit:
                 if self.is_symbolic:
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
+                            solved_dict[sym] = sympy.limit(solved_dict[sym], utils.s, 0)
                         except KeyError:
                             pass
                         except TypeError:
