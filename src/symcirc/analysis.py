@@ -5,9 +5,9 @@ import operator
 import sympy
 from typing import Dict, List
 from symcirc import parse, laplace, utils
-from symcirc.utils import j,s,t,z
 from symcirc.pole_zero import *
 from symcirc.component import Component, Coupling
+from symcirc.utils import j, t, z
 
 
 class AnalyseCircuit:
@@ -172,12 +172,12 @@ class AnalyseCircuit:
                 c = self.components[name]
                 if self.is_symbolic:
                     if name[0] in ["c", "C"]:
-                        impedance = s/c.sym_value
+                        impedance = utils.s/c.sym_value
                     else:
                         impedance = c.sym_value
                 else:
                     if name[0] in ["c", "C"]:
-                        impedance = s/c.value
+                        impedance = utils.s/c.value
                     else:
                         impedance = c.value
                 ret = self.solved_dict[sympy.symbols(i)]*impedance
@@ -207,7 +207,7 @@ class AnalyseCircuit:
                 return sympy.Symbol(v)
             else:
                 try:
-                    ret = sympy.limit(ret, s, 0)
+                    ret = sympy.limit(ret, utils.s, 0)
                     return ret
                 except KeyError:
                     return ret
@@ -296,7 +296,7 @@ class AnalyseCircuit:
                 return sympy.Symbol(i)
             else:
                 try:
-                    ret = sympy.limit(ret, s, 0)
+                    ret = sympy.limit(ret, utils.s, 0)
                     return ret
                 except KeyError:
                     return ret
@@ -458,7 +458,7 @@ class AnalyseCircuit:
                 else:
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
+                            solved_dict[sym] = sympy.limit(solved_dict[sym], utils.s, 0)
                             for name in self.components:
                                 c = self.components[name]
                                 if c.type in ["v", "i"]:
@@ -472,18 +472,17 @@ class AnalyseCircuit:
                             pass
 
             elif self.analysis_type == "AC":
-                f = sympy.symbols("f", real=True, positive=True)
                 if self.is_symbolic:
                     i = 1
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
+                            solved_dict[sym] = solved_dict[sym].subs(utils.s, 2 * sympy.pi * utils.f * j)
                         except KeyError:
                             pass
                 else:
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
+                            solved_dict[sym] = solved_dict[sym].subs(utils.s, 2 * sympy.pi * utils.f * j)
                             for name in self.components:
                                 c = self.components[name]
                                 if c.type in ["v", "i"]:
@@ -1337,9 +1336,9 @@ class AnalyseCircuit:
         if c.type == "r":
             y = 1 / val
         if c.type == "l":
-            y = 1 / (val*s)
+            y = 1 / (val*utils.s)
         if c.type == "c":
-            y = s * val
+            y = utils.s * val
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
         n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
@@ -1414,9 +1413,9 @@ class AnalyseCircuit:
             z_b = -val
         elif c.type == "l":
             y_b = 1
-            z_b = -s * val
+            z_b = -utils.s * val
         elif c.type == "c":
-            y_b = s * val
+            y_b = utils.s * val
             z_b = -1
 
         if self.method == "tableau":
@@ -1583,8 +1582,8 @@ class AnalyseCircuit:
             coupling_coeff = c.value
             M = coupling_coeff * sympy.sqrt(L1 * L2)
 
-        matrix[self.c_count + L2_index, self.c_count + L1_index] += -s*M
-        matrix[self.c_count + L1_index, self.c_count + L2_index] += -s*M
+        matrix[self.c_count + L2_index, self.c_count + L1_index] += -utils.s*M
+        matrix[self.c_count + L1_index, self.c_count + L2_index] += -utils.s*M
         if c_L1.init_cond != None:
             vi_vector[self.c_count + L2_index, 0] += -M*c_L1.init_cond
         if c_L2.init_cond != None:
