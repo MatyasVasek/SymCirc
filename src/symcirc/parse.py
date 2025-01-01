@@ -304,6 +304,13 @@ def unpack(parsed_netlist, subckt_models):
                     for e in split_elem[node_count+1:]: # substitute parameters
                         if e == "":
                             continue
+
+                        name = words[0]
+                        if "IC" not in params: # Needed to differentiate between OP of different semiconductor elements
+                            params["IC"] = sympy.Symbol(f"IC_{name}")
+                        if "ID" not in params: # Needed to differentiate between OP of different semiconductor elements
+                            params["ID"] = sympy.Symbol(f"ID_{name}")
+
                         local = sympy.abc._clash
                         tmp_elem = None
 
