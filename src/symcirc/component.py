@@ -29,8 +29,8 @@ class Resistor(Component):
         :param str type: component type id
         :param str node1: first node id
         :param str node2: second node id
-        :param sympy_expression sym_value: first node id
-        :param sympy_expression value: first node id
+        :param sympy_expression sym_value: a sympy expression used in symbolic
+        :param sympy_expression value: a numeric value used in semisymbolic
     """
     def __init__(self, name, type, node1, node2, sym_value, value):
         super().__init__(name, type, node1, node2, sym_value, value)
