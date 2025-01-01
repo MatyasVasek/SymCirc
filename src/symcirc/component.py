@@ -213,6 +213,20 @@ class SubcktModel():
         self.param_dict = param_dict
         self.elements = []
 
+class NPNModel(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["c", "b", "e"]
+        super().__init__(model_id, node_list, param_dict)
+        # gm = "Is*exp(UBE/(Nf*Ut))/(Nf*Ut)"
+        self.elements = ["Rpi b e bf/(40*IC)", "Ro c e vaf/IC", "G1 c e b e 40*IC"]
+
+class Tranzistor(Component):
+    def __init__(self, name, model, node1, node2, node3, sym_value, value=None):
+        super().__init__(name, model, node1, node2, sym_value, value)
+        self.node3 = node3
+        self.netlist_keywords = ["Q", "q"]
+
+
 class PeriodicSwitch(Component):
     # periodic switch used for SC/SI analysis
     def __init__(self, name, type, node1, node2, phase):

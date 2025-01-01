@@ -16,8 +16,8 @@ OPERATORS = ["+", "-", "*", "/", "."]
 RESERVED = ["sin"]
 
 NETLIST_KEYCHARS = ["R", "r", "C", "c", "L", "l", "V", "v", "U", "u", "I", "i", "A", "a", "F", "f", "H", "h", "G", "g",
-                    "E", "e", "K", "k", "S", "s", "X", "x", ".", "*"]
-
+                    "E", "e", "K", "k", "S", "s", "X", "x", "Q", "q", ".", "*"]
+TRANZISTOR_MODELS = ["npn", "NPN"]
 def check_if_symbolic(val):
     symbolic = False
     for c in val:
@@ -148,7 +148,7 @@ def value_enum(words, source=False):
 def nodes_per_element(type):
     if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "s", "S"]:
         return 2
-    if type in ["f", "F", "h", "H"]:
+    if type in ["f", "F", "h", "H", "q", "Q"]:
         return 3
     elif type in ["a", "A", "e", "E", "g", "G"]:
         return 4
@@ -158,7 +158,7 @@ def nodes_per_element(type):
 def parse_subcircuits(netlist):
     subckt_models = {}
     in_model = False
-    model_id = ""
+    subckt_model_id = ""
     current_model = None
     parsed_netlist = []
 
@@ -173,11 +173,10 @@ def parse_subcircuits(netlist):
 
         elif words[0] in [".subckt", ".SUBCKT"]:
             in_model = True
-            model_id = words[1]
             loading_nodes = True
             node_list = []
             param_dict = {}
-            model_id = words[1]
+            subckt_model_id = words[1]
             for w in words[2:]:
                 if w in ["PARAMS:", "params:"]:
                     loading_nodes = False
@@ -186,12 +185,24 @@ def parse_subcircuits(netlist):
                 else:
                     key, val = w.split("=")
                     param_dict[key], _ = convert_units(val)
-            current_model = SubcktModel(model_id, node_list, param_dict)
+            current_model = SubcktModel(subckt_model_id, node_list, param_dict)
+
+        elif words[0] in [".model", ".MODEL"]:
+            model_id = words[1]
+            model_type = words[2]
+            param_dict = {}
+            param_dict["nr"] = 1
+            for w in words[3:]:
+                key, val = w.split("=")
+                param_dict[key], _ = convert_units(val)
+            if model_type in ["npn", "NPN"]:
+                model = NPNModel(model_id, param_dict)
+                subckt_models[model_id] = model
 
         elif words[0][0] == ".":
-            if (words[0] in [".ends", ".ENDS"]) and (model_id in words[1]):
+            if (words[0] in [".ends", ".ENDS"]) and (subckt_model_id in words[1]):
                 in_model = False
-                subckt_models[model_id] = current_model
+                subckt_models[subckt_model_id] = current_model
             elif words[0] in [".end", ".END"]:
                 break
             else:
@@ -218,7 +229,7 @@ def unpack(parsed_netlist, subckt_models):
     final_netlist = []
     for line in parsed_netlist:
         words = line.split()
-        if words[0][0] in ["x", "X"]:
+        if words[0][0] in ["x", "X", "q", "Q"]:
             loading_params = False
             nodes = []
             params = {}
