@@ -150,7 +150,7 @@ def nodes_per_element(type):
     elif type in ["k", "K"]:
         return 0
 
-def parse_subcircuits(netlist):
+def parse_subcircuits(netlist, analysis_type):
     subckt_models = {}
     in_model = False
     subckt_model_id = ""
