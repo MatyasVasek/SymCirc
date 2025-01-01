@@ -230,7 +230,7 @@ def parse_subcircuits(netlist, analysis_type):
         else:
             parsed_netlist.append(line)
 
-    final_netlist = unpack(parsed_netlist, subckt_models, analysis_type)
+    final_netlist = unpack(parsed_netlist, subckt_models)
 
     return final_netlist
 
@@ -325,8 +325,8 @@ def unpack(parsed_netlist, subckt_models):
 
 def preparse(netist_lines):
     # Add "PARAMS:" keyword to mosfet models in a netlist
-    preparsed_netlist_lines = []
-    for line in netist_lines:
+    preparsed_netlist_lines = [netist_lines[1]]
+    for line in netist_lines[1:]:
         split_line = line.split()
         if split_line != []:
             if split_line[0][0] in ["m", "M"]:
