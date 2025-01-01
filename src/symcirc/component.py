@@ -213,18 +213,50 @@ class SubcktModel():
         self.param_dict = param_dict
         self.elements = []
 
-class NPNModel(SubcktModel):
+
+class DiodeModelAC(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["a", "k"]
+        super().__init__(model_id, node_list, param_dict)
+        self.elements = ["Rd a k 1/(38*ID)"]
+
+class NPNModelAC(SubcktModel):
     def __init__(self, model_id, param_dict):
         node_list = ["c", "b", "e"]
         super().__init__(model_id, node_list, param_dict)
+        self.elements = ["Rpi b e bf/(38*IC)",
+                         "G1 c e b e 38*IC"]
         # gm = "Is*exp(UBE/(Nf*Ut))/(Nf*Ut)"
-        self.elements = ["Rpi b e bf/(40*IC)", "Ro c e vaf/IC", "G1 c e b e 40*IC"]
+        params = param_dict.keys()
+        if "vaf" in params:
+            self.elements.append("Ro c e vaf/IC")
+        if "CJC" in params:
+            self.elements.append("Cmu b c CJE")
+        if "CJE" in params:
+            self.elements.append("Cpi b e CJC")
 
-class Tranzistor(Component):
-    def __init__(self, name, model, node1, node2, node3, sym_value, value=None):
-        super().__init__(name, model, node1, node2, sym_value, value)
-        self.node3 = node3
-        self.netlist_keywords = ["Q", "q"]
+
+class PNPModelAC(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["c", "b", "e"]
+        super().__init__(model_id, node_list, param_dict)
+        self.elements = ["Rpi b e bf/(38*IC)",
+                         "G1 c e e b 38*IC"]
+        # gm = "Is*exp(UBE/(Nf*Ut))/(Nf*Ut)"
+        params = param_dict.keys()
+        if "vaf" in params:
+            self.elements.append("Ro c e vaf/IC")
+        if "CJC" in params:
+            self.elements.append("Cmu b c CJE")
+        if "CJE" in params:
+            self.elements.append("Cpi b e CJC")
+
+
+class NMOSModelAC(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["d", "g", "s", "b"]
+        super().__init__(model_id, node_list, param_dict)
+        self.elements = ["G1 d s g s sqrt(2*W*KP*ID/L)"]
 
 
 class PeriodicSwitch(Component):

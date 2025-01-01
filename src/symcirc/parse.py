@@ -16,8 +16,8 @@ OPERATORS = ["+", "-", "*", "/", "."]
 RESERVED = ["sin"]
 
 NETLIST_KEYCHARS = ["R", "r", "C", "c", "L", "l", "V", "v", "U", "u", "I", "i", "A", "a", "F", "f", "H", "h", "G", "g",
-                    "E", "e", "K", "k", "S", "s", "X", "x", "Q", "q", ".", "*"]
-TRANZISTOR_MODELS = ["npn", "NPN"]
+                    "E", "e", "K", "k", "S", "s", "X", "x", "Q", "q", "M", "m", "D", "d", ".", "*"]
+
 def check_if_symbolic(val):
     symbolic = False
     for c in val:
@@ -141,11 +141,11 @@ def value_enum(words, source=False):
         return value, symbolic
 
 def nodes_per_element(type):
-    if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "s", "S"]:
+    if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "d", "D", "s", "S"]:
         return 2
     if type in ["f", "F", "h", "H", "q", "Q"]:
         return 3
-    elif type in ["a", "A", "e", "E", "g", "G"]:
+    elif type in ["a", "A", "e", "E", "g", "G", "m", "M"]:
         return 4
     elif type in ["k", "K"]:
         return 0
@@ -191,7 +191,28 @@ def parse_subcircuits(netlist, analysis_type):
                 key, val = w.split("=")
                 param_dict[key], _ = convert_units(val)
             if model_type in ["npn", "NPN"]:
-                model = NPNModel(model_id, param_dict)
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"NPN model not implemented outside of AC or TF analysis.")
+                model = NPNModelAC(model_id, param_dict)
+                subckt_models[model_id] = model
+            elif model_type in ["pnp", "PNP"]:
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"PNP model not implemented outside of AC or TF analysis.")
+                model = PNPModelAC(model_id, param_dict)
+                subckt_models[model_id] = model
+            elif model_type in ["nmos", "NMOS", "pmos", "PMOS"]:
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"MOS model not implemented outside of AC or TF analysis.")
+                model = NMOSModelAC(model_id, param_dict)
+                subckt_models[model_id] = model
+            elif model_type in ["d", "D"]:
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"Diode model not implemented outside of AC or TF analysis.")
+                model = DiodeModelAC(model_id, param_dict)
                 subckt_models[model_id] = model
 
         elif words[0][0] == ".":
@@ -209,7 +230,7 @@ def parse_subcircuits(netlist, analysis_type):
         else:
             parsed_netlist.append(line)
 
-    final_netlist = unpack(parsed_netlist, subckt_models)
+    final_netlist = unpack(parsed_netlist, subckt_models, analysis_type)
 
     return final_netlist
 
@@ -224,7 +245,7 @@ def unpack(parsed_netlist, subckt_models):
     final_netlist = []
     for line in parsed_netlist:
         words = line.split()
-        if words[0][0] in ["x", "X", "q", "Q"]:
+        if words[0][0] in ["x", "X", "q", "Q", "m", "M", "d", "D"]:
             loading_params = False
             nodes = []
             params = {}
@@ -302,8 +323,22 @@ def unpack(parsed_netlist, subckt_models):
             final_netlist.append(line)
     return final_netlist
 
+def preparse(netist_lines):
+    # Add "PARAMS:" keyword to mosfet models in a netlist
+    preparsed_netlist_lines = []
+    for line in netist_lines:
+        split_line = line.split()
+        if split_line != []:
+            if split_line[0][0] in ["m", "M"]:
+                if split_line[6] != "PARAMS:":
+                    split_line.insert(6, "PARAMS:")
+                preparsed_line = " ".join(split_line)
+            else:
+                preparsed_line = " ".join(split_line)
+            preparsed_netlist_lines.append(preparsed_line)
+    return preparsed_netlist_lines
 
-def parse(netlist, tran=False):
+def parse(netlist, analysis_type):
     """
     Translates
     :param str netlist: netlist in a string format
@@ -322,6 +357,7 @@ def parse(netlist, tran=False):
     """
     data = {}
     parsed_netlist = netlist.splitlines() #[x.strip() for x in netlist]
+    parsed_netlist = preparse(parsed_netlist)
     components = {}
     count = 0
     c = None
@@ -334,7 +370,7 @@ def parse(netlist, tran=False):
     SCSI_components = []
     add_short = {}
     matrix_expansion_coef = 0
-    parsed_netlist = parse_subcircuits(parsed_netlist)
+    parsed_netlist = parse_subcircuits(parsed_netlist, analysis_type)
 
     for line in parsed_netlist:
         words = line.split()
