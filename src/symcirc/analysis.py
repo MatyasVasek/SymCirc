@@ -277,9 +277,15 @@ class AnalyseCircuit:
                 if c.type == "r":
                     ret = sympy.cancel((vn1 - vn2) / val)
                 if c.type == "l":
-                    ret = sympy.cancel((vn1 - vn2) / (val * s))
+                    if self.analysis_type == "TF":
+                        ret = sympy.cancel((vn1 - vn2) / (val * utils.s))
+                    elif self.analysis_type == "AC":
+                        ret = sympy.cancel((vn1 - vn2) / (val * 2 * sympy.pi * utils.f * j))
                 if c.type == "c":
-                    ret = sympy.cancel((vn1 - vn2) * val*s)
+                    if self.analysis_type == "TF":
+                        ret = sympy.cancel((vn1 - vn2) * val*utils.s)
+                    elif self.analysis_type == "AC":
+                        ret = sympy.cancel((vn1 - vn2) * (val * 2 * sympy.pi * utils.f * j))
 
         if self.analysis_type == "tran":
             if ret is None:
