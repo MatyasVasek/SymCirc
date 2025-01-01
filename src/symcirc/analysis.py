@@ -749,7 +749,7 @@ class AnalyseCircuit:
                     node1 = c.node1
                     node2 = c.node2
                     if c.node3 is None:
-                        c_v = self.components[c.control_voltage]
+                        c_v = self.components[c.current_sensor]
                         node3 = c_v.shorted_node
                     else:
                         node3 = c.node3
@@ -770,7 +770,7 @@ class AnalyseCircuit:
                     node1 = c.node1
                     node2 = c.node2
                     if c.node3 is None:
-                        c_v = self.components[c.control_voltage]
+                        c_v = self.components[c.current_sensor]
                         node3 = c_v.shorted_node
                     else:
                         node3 = c.node3
@@ -953,7 +953,7 @@ class AnalyseCircuit:
                         self.SCSI_graph_append_tgn(c.node4 + '_' + str(phase), i_graph_nodes)
                         self.SCSI_collapse_tgn(i_graph_collapses, c.node1 + '_' + str(phase), c.node2 + '_' + str(phase))
                 if c.type == "f": # TODO: fix after bug #8 fix
-                    c_v = self.components[c.control_voltage]
+                    c_v = self.components[c.current_sensor]
                     for phase in range(1, num_of_phases + 1):
                         self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), v_graph_nodes)
                         self.SCSI_graph_append_tgn(c.node2 + '_' + str(phase), v_graph_nodes)
@@ -1062,9 +1062,9 @@ class AnalyseCircuit:
                                                       c, index_col, i_graph_collapses, num_of_phases)
                     for phase in range(1, num_of_phases + 1):
                         if self.scsi == "scideal":
-                            symbols_to_append.append(sympy.Symbol(f"q({c.control_voltage})_{phase}"))
+                            symbols_to_append.append(sympy.Symbol(f"q({c.current_sensor})_{phase}"))
                         else:
-                            symbols_to_append.append(sympy.Symbol(f"i({c.control_voltage})_{phase}"))
+                            symbols_to_append.append(sympy.Symbol(f"i({c.current_sensor})_{phase}"))
 
             equation_matrix = M.col_insert(m_size, S)
 
@@ -1179,14 +1179,14 @@ class AnalyseCircuit:
         node1 = c.node1
         node2 = c.node2
         if c.node3 is None:
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             node3 = c_v.shorted_node
             c.node3 = node3
         else:
             node3 = c.node3
         node4 = c.node4
 
-        c_v = self.components[c.control_voltage]
+        c_v = self.components[c.current_sensor]
 
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
@@ -1216,7 +1216,7 @@ class AnalyseCircuit:
         node1 = c.node1
         node2 = c.node2
         if c.node3 is None:
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             node3 = c_v.shorted_node
             c.node3 = node3
         else:
@@ -1513,7 +1513,7 @@ class AnalyseCircuit:
         N1 = c.node1
         N2 = c.node2
         if c.node3 is None:
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             N3 = c_v.shorted_node
             c.node3 = N3
         else:
@@ -1534,7 +1534,7 @@ class AnalyseCircuit:
         N1 = c.node1
         N2 = c.node2
         if c.node3 is None:
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             N3 = c_v.shorted_node
             c.node3 = N3
         else:
@@ -1773,7 +1773,7 @@ class AnalyseCircuit:
         # TODO: Fix after bug #8 fix "shorted_node" removed, the node info is now directly in "c"
         N1 = c.node1
         N2 = c.node2
-        c_v = self.components[c.control_voltage]
+        c_v = self.components[c.current_sensor]
         N3 = c_v.node2
         N4 = c_v.shorted_node
         if self.is_symbolic:
@@ -1990,7 +1990,7 @@ class AnalyseCircuit:
             f = c.sym_value
         else:
             f = c.value
-        c_v = self.components[c.control_voltage]
+        c_v = self.components[c.current_sensor]
         for phase in range(1, num_of_phases + 1):
             n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
             n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
@@ -2132,7 +2132,7 @@ class AnalyseCircuit:
                 node4_value = self.SCSI_get_node_voltage(c.node4, phase, force_z=True)
             value_dict[biquad_input_key] = sympy.cancel(node3_value - node4_value)
         if c.type == "f":
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             if c_v.node2 == "0":
                 cv_node_value = 0
             else:
@@ -2183,9 +2183,9 @@ class AnalyseCircuit:
             value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
         elif c.type == "f":
             if self.scsi == "scideal":
-                control_charge = sympy.symbols(f"q({c.control_voltage})_{phase}")
+                control_charge = sympy.symbols(f"q({c.current_sensor})_{phase}")
             else:
-                control_charge = sympy.symbols(f"i({c.control_voltage})_{phase}")
+                control_charge = sympy.symbols(f"i({c.current_sensor})_{phase}")
             value_dict[charge] = sympy.cancel(self.solved_dict[control_charge] * value)
         else:
             value_dict[charge] = charge
