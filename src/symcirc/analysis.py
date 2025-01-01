@@ -5,9 +5,9 @@ import operator
 import sympy
 from typing import Dict, List
 from symcirc import parse, laplace, utils
-from symcirc.utils import j,s,t,z
 from symcirc.pole_zero import *
 from symcirc.component import Component, Coupling
+from symcirc.utils import j, t, z
 
 
 class AnalyseCircuit:
@@ -44,10 +44,7 @@ class AnalyseCircuit:
         self.netlist: str = netlist
         self.node_voltage_identities: list = []
 
-        if analysis_type == "tran":
-            data = parse.parse(netlist, tran=True)
-        else:
-            data = parse.parse(netlist)
+        data = parse.parse(netlist, analysis_type)
 
         self.phases, self.frequency = self.parse_phases(phases)
         self.scsi = scsi
@@ -172,12 +169,12 @@ class AnalyseCircuit:
                 c = self.components[name]
                 if self.is_symbolic:
                     if name[0] in ["c", "C"]:
-                        impedance = s/c.sym_value
+                        impedance = utils.s/c.sym_value
                     else:
                         impedance = c.sym_value
                 else:
                     if name[0] in ["c", "C"]:
-                        impedance = s/c.value
+                        impedance = utils.s/c.value
                     else:
                         impedance = c.value
                 ret = self.solved_dict[sympy.symbols(i)]*impedance
@@ -207,7 +204,7 @@ class AnalyseCircuit:
                 return sympy.Symbol(v)
             else:
                 try:
-                    ret = sympy.limit(ret, s, 0)
+                    ret = sympy.limit(ret, utils.s, 0)
                     return ret
                 except KeyError:
                     return ret
@@ -280,9 +277,15 @@ class AnalyseCircuit:
                 if c.type == "r":
                     ret = sympy.cancel((vn1 - vn2) / val)
                 if c.type == "l":
-                    ret = sympy.cancel((vn1 - vn2) / (val * s))
+                    if self.analysis_type == "TF":
+                        ret = sympy.cancel((vn1 - vn2) / (val * utils.s))
+                    elif self.analysis_type == "AC":
+                        ret = sympy.cancel((vn1 - vn2) / (val * 2 * sympy.pi * utils.f * j))
                 if c.type == "c":
-                    ret = sympy.cancel((vn1 - vn2) * val*s)
+                    if self.analysis_type == "TF":
+                        ret = sympy.cancel((vn1 - vn2) * val*utils.s)
+                    elif self.analysis_type == "AC":
+                        ret = sympy.cancel((vn1 - vn2) * (val * 2 * sympy.pi * utils.f * j))
 
         if self.analysis_type == "tran":
             if ret is None:
@@ -296,7 +299,7 @@ class AnalyseCircuit:
                 return sympy.Symbol(i)
             else:
                 try:
-                    ret = sympy.limit(ret, s, 0)
+                    ret = sympy.limit(ret, utils.s, 0)
                     return ret
                 except KeyError:
                     return ret
@@ -450,7 +453,7 @@ class AnalyseCircuit:
                 if self.is_symbolic:
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
+                            solved_dict[sym] = sympy.limit(solved_dict[sym], utils.s, 0)
                         except KeyError:
                             pass
                         except TypeError:
@@ -458,7 +461,7 @@ class AnalyseCircuit:
                 else:
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
+                            solved_dict[sym] = sympy.limit(solved_dict[sym], utils.s, 0)
                             for name in self.components:
                                 c = self.components[name]
                                 if c.type in ["v", "i"]:
@@ -467,24 +470,22 @@ class AnalyseCircuit:
                                 else:
                                     if c.value:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                                #if self.method != "two_graph_node":
-                                    solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                         except KeyError:
                             pass
 
             elif self.analysis_type == "AC":
-                f = sympy.symbols("f", real=True, positive=True)
                 if self.is_symbolic:
                     i = 1
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
+                            solved_dict[sym] = solved_dict[sym].subs(utils.s, 2 * sympy.pi * utils.f * j)
                         except KeyError:
                             pass
                 else:
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = solved_dict[sym].subs(s, 2 * sympy.pi * f * j)
+                            solved_dict[sym] = solved_dict[sym].subs(utils.s, 2 * sympy.pi * utils.f * j)
                             for name in self.components:
                                 c = self.components[name]
                                 if c.type in ["v", "i"]:
@@ -493,8 +494,7 @@ class AnalyseCircuit:
                                 else:
                                     if c.value:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                                #if self.method != "two_graph_node":
-                                    solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                         except KeyError:
                             pass
 
@@ -510,8 +510,7 @@ class AnalyseCircuit:
                                 else:
                                     if c.value:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                                #if self.method != "two_graph_node":
-                                    solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                         except KeyError:
                             pass
 
@@ -543,6 +542,7 @@ class AnalyseCircuit:
                                 else:
                                     if c.value:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                         except KeyError:
                             pass
 
@@ -751,7 +751,7 @@ class AnalyseCircuit:
                     node1 = c.node1
                     node2 = c.node2
                     if c.node3 is None:
-                        c_v = self.components[c.control_voltage]
+                        c_v = self.components[c.current_sensor]
                         node3 = c_v.shorted_node
                     else:
                         node3 = c.node3
@@ -772,7 +772,7 @@ class AnalyseCircuit:
                     node1 = c.node1
                     node2 = c.node2
                     if c.node3 is None:
-                        c_v = self.components[c.control_voltage]
+                        c_v = self.components[c.current_sensor]
                         node3 = c_v.shorted_node
                     else:
                         node3 = c.node3
@@ -955,7 +955,7 @@ class AnalyseCircuit:
                         self.SCSI_graph_append_tgn(c.node4 + '_' + str(phase), i_graph_nodes)
                         self.SCSI_collapse_tgn(i_graph_collapses, c.node1 + '_' + str(phase), c.node2 + '_' + str(phase))
                 if c.type == "f": # TODO: fix after bug #8 fix
-                    c_v = self.components[c.control_voltage]
+                    c_v = self.components[c.current_sensor]
                     for phase in range(1, num_of_phases + 1):
                         self.SCSI_graph_append_tgn(c.node1 + '_' + str(phase), v_graph_nodes)
                         self.SCSI_graph_append_tgn(c.node2 + '_' + str(phase), v_graph_nodes)
@@ -1064,9 +1064,9 @@ class AnalyseCircuit:
                                                       c, index_col, i_graph_collapses, num_of_phases)
                     for phase in range(1, num_of_phases + 1):
                         if self.scsi == "scideal":
-                            symbols_to_append.append(sympy.Symbol(f"q({c.control_voltage})_{phase}"))
+                            symbols_to_append.append(sympy.Symbol(f"q({c.current_sensor})_{phase}"))
                         else:
-                            symbols_to_append.append(sympy.Symbol(f"i({c.control_voltage})_{phase}"))
+                            symbols_to_append.append(sympy.Symbol(f"i({c.current_sensor})_{phase}"))
 
             equation_matrix = M.col_insert(m_size, S)
 
@@ -1181,14 +1181,14 @@ class AnalyseCircuit:
         node1 = c.node1
         node2 = c.node2
         if c.node3 is None:
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             node3 = c_v.shorted_node
             c.node3 = node3
         else:
             node3 = c.node3
         node4 = c.node4
 
-        c_v = self.components[c.control_voltage]
+        c_v = self.components[c.current_sensor]
 
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
@@ -1218,7 +1218,7 @@ class AnalyseCircuit:
         node1 = c.node1
         node2 = c.node2
         if c.node3 is None:
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             node3 = c_v.shorted_node
             c.node3 = node3
         else:
@@ -1339,9 +1339,9 @@ class AnalyseCircuit:
         if c.type == "r":
             y = 1 / val
         if c.type == "l":
-            y = 1 / (val*s)
+            y = 1 / (val*utils.s)
         if c.type == "c":
-            y = s * val
+            y = utils.s * val
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
         n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
@@ -1416,9 +1416,9 @@ class AnalyseCircuit:
             z_b = -val
         elif c.type == "l":
             y_b = 1
-            z_b = -s * val
+            z_b = -utils.s * val
         elif c.type == "c":
-            y_b = s * val
+            y_b = utils.s * val
             z_b = -1
 
         if self.method == "tableau":
@@ -1515,7 +1515,7 @@ class AnalyseCircuit:
         N1 = c.node1
         N2 = c.node2
         if c.node3 is None:
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             N3 = c_v.shorted_node
             c.node3 = N3
         else:
@@ -1536,7 +1536,7 @@ class AnalyseCircuit:
         N1 = c.node1
         N2 = c.node2
         if c.node3 is None:
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             N3 = c_v.shorted_node
             c.node3 = N3
         else:
@@ -1585,8 +1585,8 @@ class AnalyseCircuit:
             coupling_coeff = c.value
             M = coupling_coeff * sympy.sqrt(L1 * L2)
 
-        matrix[self.c_count + L2_index, self.c_count + L1_index] += -s*M
-        matrix[self.c_count + L1_index, self.c_count + L2_index] += -s*M
+        matrix[self.c_count + L2_index, self.c_count + L1_index] += -utils.s*M
+        matrix[self.c_count + L1_index, self.c_count + L2_index] += -utils.s*M
         if c_L1.init_cond != None:
             vi_vector[self.c_count + L2_index, 0] += -M*c_L1.init_cond
         if c_L2.init_cond != None:
@@ -1775,7 +1775,7 @@ class AnalyseCircuit:
         # TODO: Fix after bug #8 fix "shorted_node" removed, the node info is now directly in "c"
         N1 = c.node1
         N2 = c.node2
-        c_v = self.components[c.control_voltage]
+        c_v = self.components[c.current_sensor]
         N3 = c_v.node2
         N4 = c_v.shorted_node
         if self.is_symbolic:
@@ -1992,7 +1992,7 @@ class AnalyseCircuit:
             f = c.sym_value
         else:
             f = c.value
-        c_v = self.components[c.control_voltage]
+        c_v = self.components[c.current_sensor]
         for phase in range(1, num_of_phases + 1):
             n1i = self.SCSI_index_tgn(i_nodes, c.node1 + '_' + str(phase), i_graph_collapses)
             n2i = self.SCSI_index_tgn(i_nodes, c.node2 + '_' + str(phase), i_graph_collapses)
@@ -2134,7 +2134,7 @@ class AnalyseCircuit:
                 node4_value = self.SCSI_get_node_voltage(c.node4, phase, force_z=True)
             value_dict[biquad_input_key] = sympy.cancel(node3_value - node4_value)
         if c.type == "f":
-            c_v = self.components[c.control_voltage]
+            c_v = self.components[c.current_sensor]
             if c_v.node2 == "0":
                 cv_node_value = 0
             else:
@@ -2185,9 +2185,9 @@ class AnalyseCircuit:
             value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
         elif c.type == "f":
             if self.scsi == "scideal":
-                control_charge = sympy.symbols(f"q({c.control_voltage})_{phase}")
+                control_charge = sympy.symbols(f"q({c.current_sensor})_{phase}")
             else:
-                control_charge = sympy.symbols(f"i({c.control_voltage})_{phase}")
+                control_charge = sympy.symbols(f"i({c.current_sensor})_{phase}")
             value_dict[charge] = sympy.cancel(self.solved_dict[control_charge] * value)
         else:
             value_dict[charge] = charge

@@ -29,8 +29,8 @@ class Resistor(Component):
         :param str type: component type id
         :param str node1: first node id
         :param str node2: second node id
-        :param sympy_expression sym_value: first node id
-        :param sympy_expression value: first node id
+        :param sympy_expression sym_value: a sympy expression used in symbolic
+        :param sympy_expression value: a numeric value used in semisymbolic
     """
     def __init__(self, name, type, node1, node2, sym_value, value):
         super().__init__(name, type, node1, node2, sym_value, value)
@@ -155,13 +155,13 @@ class CurrentControlledSource(Component):
         :param str node2: second node id
         :param sympy_expression sym_value: symbolic value of the component
         :param sympy_expression value: numeric value of the component
-        :param str control_voltage: id of the element across which is the controlling voltage
+        :param str current_sensor: id of the element across which is the controlling current
         :param int position: this element causes equation matrix expansion and needs the row/col index saved
 
     """
-    def __init__(self, name, type, node1, node2, sym_value, control_voltage, position, value=None):
+    def __init__(self, name, type, node1, node2, sym_value, current_sensor, position, value=None):
         super().__init__(name, type, node1, node2, sym_value, value)
-        self.control_voltage = control_voltage
+        self.current_sensor = current_sensor
         self.position = position
         self.netlist_keywords = ["F", "f", "H", "h"]
 
@@ -212,6 +212,52 @@ class SubcktModel():
         self.node_list = node_list
         self.param_dict = param_dict
         self.elements = []
+
+
+class DiodeModelAC(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["a", "k"]
+        super().__init__(model_id, node_list, param_dict)
+        self.elements = ["Rd a k 1/(38*ID)"]
+
+class NPNModelAC(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["c", "b", "e"]
+        super().__init__(model_id, node_list, param_dict)
+        self.elements = ["Rpi b e bf/(38*IC)",
+                         "G1 c e b e 38*IC"]
+        # gm = "Is*exp(UBE/(Nf*Ut))/(Nf*Ut)"
+        params = param_dict.keys()
+        if "vaf" in params:
+            self.elements.append("Ro c e vaf/IC")
+        if "CJC" in params:
+            self.elements.append("Cmu b c CJE")
+        if "CJE" in params:
+            self.elements.append("Cpi b e CJC")
+
+
+class PNPModelAC(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["c", "b", "e"]
+        super().__init__(model_id, node_list, param_dict)
+        self.elements = ["Rpi b e bf/(38*IC)",
+                         "G1 c e e b 38*IC"]
+        # gm = "Is*exp(UBE/(Nf*Ut))/(Nf*Ut)"
+        params = param_dict.keys()
+        if "vaf" in params:
+            self.elements.append("Ro c e vaf/IC")
+        if "CJC" in params:
+            self.elements.append("Cmu b c CJE")
+        if "CJE" in params:
+            self.elements.append("Cpi b e CJC")
+
+
+class NMOSModelAC(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["d", "g", "s", "b"]
+        super().__init__(model_id, node_list, param_dict)
+        self.elements = ["G1 d s g s sqrt(2*W*KP*ID/L)"]
+
 
 class PeriodicSwitch(Component):
     # periodic switch used for SC/SI analysis

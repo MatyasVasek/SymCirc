@@ -16,7 +16,7 @@ OPERATORS = ["+", "-", "*", "/", "."]
 RESERVED = ["sin"]
 
 NETLIST_KEYCHARS = ["R", "r", "C", "c", "L", "l", "V", "v", "U", "u", "I", "i", "A", "a", "F", "f", "H", "h", "G", "g",
-                    "E", "e", "K", "k", "S", "s", "X", "x", ".", "*"]
+                    "E", "e", "K", "k", "S", "s", "X", "x", "Q", "q", "M", "m", "D", "d", ".", "*"]
 
 def check_if_symbolic(val):
     symbolic = False
@@ -41,22 +41,17 @@ def convert_units(val, forced_numeric=False, local_dict=None):
         local = local_dict
     local.update(sympy.abc._clash)
     val = val.replace("{", "").replace("}", "")
-    try:
-        if len(val) > 3:
-            if (val[-3:] in UNITS) and (val[-4].isnumeric()) :
-                ret = sympy.Float(sympy.parse_expr(val[:-3], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-3:]])
-        if ret is None:
-            if (val[-1] in UNITS) and (val[-2].isnumeric()):
-                ret = sympy.Float(sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]])
-        if ret is None:
-            try:
-                ret = sympy.Float(sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS))
-            except TypeError:
-                ret = sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS)
-    except SyntaxError:
-        print("CONVERT FAILED")
-        print(f"val: {val}| len: {len(val)}")
-
+    if len(val) > 3:
+        if (val[-3:] in UNITS) and (val[-4].isnumeric()):
+            ret = sympy.Rational(sympy.parse_expr(val[:-3], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-3:]])
+    if ret is None:
+        if (val[-1] in UNITS) and (val[-2].isnumeric()):
+            ret = sympy.Rational(sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]])
+    if ret is None:
+        try:
+            ret = sympy.Rational(sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS))
+        except TypeError:
+            ret = sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS)
 
     if forced_numeric:
         symbolic = False
@@ -146,19 +141,19 @@ def value_enum(words, source=False):
         return value, symbolic
 
 def nodes_per_element(type):
-    if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "s", "S"]:
+    if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "d", "D", "s", "S"]:
         return 2
-    if type in ["f", "F", "h", "H"]:
+    if type in ["f", "F", "h", "H", "q", "Q"]:
         return 3
-    elif type in ["a", "A", "e", "E", "g", "G"]:
+    elif type in ["a", "A", "e", "E", "g", "G", "m", "M"]:
         return 4
     elif type in ["k", "K"]:
         return 0
 
-def parse_subcircuits(netlist):
+def parse_subcircuits(netlist, analysis_type):
     subckt_models = {}
     in_model = False
-    model_id = ""
+    subckt_model_id = ""
     current_model = None
     parsed_netlist = []
 
@@ -173,11 +168,10 @@ def parse_subcircuits(netlist):
 
         elif words[0] in [".subckt", ".SUBCKT"]:
             in_model = True
-            model_id = words[1]
             loading_nodes = True
             node_list = []
             param_dict = {}
-            model_id = words[1]
+            subckt_model_id = words[1]
             for w in words[2:]:
                 if w in ["PARAMS:", "params:"]:
                     loading_nodes = False
@@ -186,12 +180,45 @@ def parse_subcircuits(netlist):
                 else:
                     key, val = w.split("=")
                     param_dict[key], _ = convert_units(val)
-            current_model = SubcktModel(model_id, node_list, param_dict)
+            current_model = SubcktModel(subckt_model_id, node_list, param_dict)
+
+        elif words[0] in [".model", ".MODEL"]:
+            model_id = words[1]
+            model_type = words[2]
+            param_dict = {}
+            param_dict["nr"] = 1
+            for w in words[3:]:
+                key, val = w.split("=")
+                param_dict[key], _ = convert_units(val)
+            if model_type in ["npn", "NPN"]:
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"NPN model not implemented outside of AC or TF analysis.")
+                model = NPNModelAC(model_id, param_dict)
+                subckt_models[model_id] = model
+            elif model_type in ["pnp", "PNP"]:
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"PNP model not implemented outside of AC or TF analysis.")
+                model = PNPModelAC(model_id, param_dict)
+                subckt_models[model_id] = model
+            elif model_type in ["nmos", "NMOS", "pmos", "PMOS"]:
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"MOS model not implemented outside of AC or TF analysis.")
+                model = NMOSModelAC(model_id, param_dict)
+                subckt_models[model_id] = model
+            elif model_type in ["d", "D"]:
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"Diode model not implemented outside of AC or TF analysis.")
+                model = DiodeModelAC(model_id, param_dict)
+                subckt_models[model_id] = model
 
         elif words[0][0] == ".":
-            if (words[0] in [".ends", ".ENDS"]) and (model_id in words[1]):
+            if (words[0] in [".ends", ".ENDS"]) and (subckt_model_id in words[1]):
                 in_model = False
-                subckt_models[model_id] = current_model
+                subckt_models[subckt_model_id] = current_model
             elif words[0] in [".end", ".END"]:
                 break
             else:
@@ -218,7 +245,7 @@ def unpack(parsed_netlist, subckt_models):
     final_netlist = []
     for line in parsed_netlist:
         words = line.split()
-        if words[0][0] in ["x", "X"]:
+        if words[0][0] in ["x", "X", "q", "Q", "m", "M", "d", "D"]:
             loading_params = False
             nodes = []
             params = {}
@@ -296,8 +323,22 @@ def unpack(parsed_netlist, subckt_models):
             final_netlist.append(line)
     return final_netlist
 
+def preparse(netist_lines):
+    # Add "PARAMS:" keyword to mosfet models in a netlist
+    preparsed_netlist_lines = [netist_lines[1]]
+    for line in netist_lines[1:]:
+        split_line = line.split()
+        if split_line != []:
+            if split_line[0][0] in ["m", "M"]:
+                if split_line[6] != "PARAMS:":
+                    split_line.insert(6, "PARAMS:")
+                preparsed_line = " ".join(split_line)
+            else:
+                preparsed_line = " ".join(split_line)
+            preparsed_netlist_lines.append(preparsed_line)
+    return preparsed_netlist_lines
 
-def parse(netlist, tran=False):
+def parse(netlist, analysis_type):
     """
     Translates
     :param str netlist: netlist in a string format
@@ -316,6 +357,7 @@ def parse(netlist, tran=False):
     """
     data = {}
     parsed_netlist = netlist.splitlines() #[x.strip() for x in netlist]
+    parsed_netlist = preparse(parsed_netlist)
     components = {}
     count = 0
     c = None
@@ -328,7 +370,7 @@ def parse(netlist, tran=False):
     SCSI_components = []
     add_short = {}
     matrix_expansion_coef = 0
-    parsed_netlist = parse_subcircuits(parsed_netlist)
+    parsed_netlist = parse_subcircuits(parsed_netlist, analysis_type)
 
     for line in parsed_netlist:
         words = line.split()
@@ -481,7 +523,7 @@ def parse(netlist, tran=False):
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
                 sym_value = sympy.Symbol(name, real=True)
-            c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, value=value, sym_value=sym_value,
+            c = CurrentControlledSource(name, variant, node1, node2, current_sensor=v_c, value=value, sym_value=sym_value,
                           position=matrix_expansion_coef)
             matrix_expansion_coef += 1
             try:
@@ -507,7 +549,7 @@ def parse(netlist, tran=False):
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
                 sym_value = sympy.Symbol(name, real=True)
-            c = CurrentControlledSource(name, variant, node1, node2, control_voltage=v_c, value=value, sym_value=sym_value,
+            c = CurrentControlledSource(name, variant, node1, node2, current_sensor=v_c, value=value, sym_value=sym_value,
                           position=matrix_expansion_coef)
             matrix_expansion_coef += 1
             try:
