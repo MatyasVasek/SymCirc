@@ -41,22 +41,17 @@ def convert_units(val, forced_numeric=False, local_dict=None):
         local = local_dict
     local.update(sympy.abc._clash)
     val = val.replace("{", "").replace("}", "")
-    try:
-        if len(val) > 3:
-            if (val[-3:] in UNITS) and (val[-4].isnumeric()) :
-                ret = sympy.Float(sympy.parse_expr(val[:-3], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-3:]])
-        if ret is None:
-            if (val[-1] in UNITS) and (val[-2].isnumeric()):
-                ret = sympy.Float(sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]])
-        if ret is None:
-            try:
-                ret = sympy.Float(sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS))
-            except TypeError:
-                ret = sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS)
-    except SyntaxError:
-        print("CONVERT FAILED")
-        print(f"val: {val}| len: {len(val)}")
-
+    if len(val) > 3:
+        if (val[-3:] in UNITS) and (val[-4].isnumeric()):
+            ret = sympy.Rational(sympy.parse_expr(val[:-3], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-3:]])
+    if ret is None:
+        if (val[-1] in UNITS) and (val[-2].isnumeric()):
+            ret = sympy.Rational(sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]])
+    if ret is None:
+        try:
+            ret = sympy.Rational(sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS))
+        except TypeError:
+            ret = sympy.Rational(sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS))
 
     if forced_numeric:
         symbolic = False
