@@ -12,9 +12,11 @@ Documentation is available on [GitHub Pages](https://matyasvasek.github.io/SymCi
 
 ## What can it do?
 
-**SymCirc** currently offers symbolic and semisymbolic **DC**, **AC** and **transient** small frequency circuit analysis.
+**SymCirc** currently offers symbolic and semisymbolic **DC**, **AC** and **transient** small signal circuit analysis.
 It supports the following ideal circuit elements: **resistors, inductors, capacitors, independent sources, controlled sources, ideal operational amplifiers and coupled inductors**.
+**BJT, MOS and diode** have models implemented only for AC and TF analysis, DC models will be implemented in the future.
 Transient simulation allows for initial conditions of capacitors and standard/coupled inductors.
+
 
 ## Install
 
