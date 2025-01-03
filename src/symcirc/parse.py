@@ -44,9 +44,10 @@ def convert_units(val, forced_numeric=False, local_dict=None):
     if len(val) > 3:
         if (val[-3:] in UNITS) and (val[-4].isnumeric()):
             ret = sympy.Rational(sympy.parse_expr(val[:-3], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-3:]])
-    if ret is None:
-        if (val[-1] in UNITS) and (val[-2].isnumeric()):
-            ret = sympy.Rational(sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]])
+    if len(val) > 1:
+        if ret is None:
+            if (val[-1] in UNITS) and (val[-2].isnumeric()):
+                ret = sympy.Rational(sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]])
     if ret is None:
         try:
             ret = sympy.Rational(sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS))
