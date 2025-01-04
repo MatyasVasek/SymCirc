@@ -547,11 +547,11 @@ class AnalyseCircuit:
                             pass
 
         else: # used by SCSI
+            eqn_matrix, symbols = self._build_system_eqn()
+            solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+            self.SCSI_symbol_z_factor(solved_dict)
+            self.SCSI_z_pow_inv_sub(solved_dict)
             if self.analysis_type == "TF":
-                eqn_matrix, symbols = self._build_system_eqn()
-                solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-                self.SCSI_symbol_z_factor(solved_dict)
-                self.SCSI_z_pow_inv_sub(solved_dict)
                 if not self.is_symbolic:
                     for sym in symbols:
                         try:
@@ -563,13 +563,10 @@ class AnalyseCircuit:
                                 else:
                                     if c.value:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                         except KeyError:
                             pass
             elif self.analysis_type == "AC":
-                eqn_matrix, symbols = self._build_system_eqn()
-                solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-                self.SCSI_symbol_z_factor(solved_dict)
-                self.SCSI_z_pow_inv_sub(solved_dict)
                 f = self.frequency
                 if self.is_symbolic:
                     for sym in symbols:
@@ -589,12 +586,11 @@ class AnalyseCircuit:
                                 else:
                                     if c.value:
                                         solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
+                            solved_dict[sym] = solved_dict[sym].evalf(self.precision)
                         except KeyError:
                             pass
             elif self.analysis_type == "tran":
                 raise ValueError("Transient analysis not yet implemented.")
-            if not self.is_symbolic:
-                pass
 
         return eqn_matrix, solved_dict, symbols
 
@@ -895,20 +891,17 @@ class AnalyseCircuit:
 
             for key in self.components:
                 c = self.components[key]
-                if c.type == "v":
-                    if self.scsi == "siideal":
-                        raise ValueError("Inductors, voltage sources and CCVSs aren't permitted in switched current mode")
-                if c.type == "l":
-                    raise ValueError("Inductors are not permitted in SC/SI mode")
-                if c.type == "r":
-                    raise ValueError(sc_value_error)
-                if c.type == "i":
-                    raise ValueError(sc_value_error)
-                if c.type == "g":
-                    if self.scsi == "scideal":
-                        raise ValueError(sc_value_error)
                 if c.type == "h":
                     raise ValueError("Current controlled voltage sources aren't permitted in SC/SI mode")
+                if c.type == "l":
+                    raise ValueError("Inductors are not permitted in SC/SI mode")
+                if self.scsi == "scideal":
+                    if c.type in ["r", "i", "g"]:
+                        raise ValueError(sc_value_error)
+                # else:
+                #     if c.type == "v":
+                #         raise ValueError("Inductors, voltage sources and CCVSs aren't permitted in switched current mode")
+
 
             for key in self.components:
                 c = self.components[key]
