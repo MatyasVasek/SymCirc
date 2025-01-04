@@ -2091,8 +2091,12 @@ class AnalyseCircuit:
                     else:
                         for identity_node in identity:
                             try:
-                                formatted_voltage = sympy.symbols("v(" + identity_node.split("_")[0]
-                                                                  + ")_" + phase_string)
+                                if str(identity_node).count("_") == 1:
+                                    formatted_voltage = sympy.symbols("v(" + identity_node.split("_")[0]
+                                                                      + ")_" + phase_string)
+                                else:
+                                    formatted_voltage = sympy.symbols("v(" + identity_node.split(")_")[0]
+                                                                      + "))_" + phase_string)
                                 value = self.solved_dict[formatted_voltage]
                             except KeyError:
                                 pass
@@ -2174,6 +2178,7 @@ class AnalyseCircuit:
                 else:
                     value = c.ac_value
             value_dict[charge] = sympy.symbols(value)
+            #value_dict[charge] = str(value)
         elif c.type == "g":
             value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
         elif c.type == "f":
@@ -2200,13 +2205,22 @@ class AnalyseCircuit:
     def SCSI_result_formatter(self, dict):
         temp = {}
         for key in dict:
-            name = str(key).split("_")[0]
+            if list(str(key)).count("_") == 1:
+                name = str(key).split("_")[0]
+            else:
+                name = str(key).split(")_")[0]
+                name = "".join([name, ')'])
             temp[name] = []
             for i in range(self.phases[0]):
                 temp[name].append(0)
         for key in dict:
-            name = str(key).split("_")[0]
-            phase = int(str(key).split("_")[1])
+            if list(str(key)).count("_") == 1:
+                name = str(key).split("_")[0]
+                phase = int(str(key).split("_")[1])
+            else:
+                name = str(key).split(")_")[0]
+                name = "".join([name, ')'])
+                phase = int(str(key).split(")_")[1])
             temp[name][phase - 1] = dict[key]
         return temp
 
