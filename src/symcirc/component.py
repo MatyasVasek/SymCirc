@@ -218,45 +218,88 @@ class DiodeModelAC(SubcktModel):
     def __init__(self, model_id, param_dict):
         node_list = ["a", "k"]
         super().__init__(model_id, node_list, param_dict)
-        self.elements = ["Rd a k 1/(38*ID)"]
+        self.elements = []
+        params = param_dict.keys()
+        if "gd" in params:
+            self.elements.append(f"rd a k 1/{param_dict['gd']}")
+        else:
+            self.elements.append("rd a k")
+
 
 class NPNModelAC(SubcktModel):
     def __init__(self, model_id, param_dict):
         node_list = ["c", "b", "e"]
         super().__init__(model_id, node_list, param_dict)
-        self.elements = ["Rpi b e bf/(38*IC)",
-                         "G1 c e b e 38*IC"]
-        # gm = "Is*exp(UBE/(Nf*Ut))/(Nf*Ut)"
+        self.elements = []
         params = param_dict.keys()
+
+        if "gpi" in params:
+            self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
+        else:
+            self.elements.append(f"rpi b e")
+
+        if "gm" in params:
+            self.elements.append(f"gm c e b e {param_dict['gm']}")
+        else:
+            self.elements.append(f"gm c e b e")
+
         if "vaf" in params:
-            self.elements.append("Ro c e vaf/IC")
+            self.elements.append(f"ro c e")
         if "CJC" in params:
-            self.elements.append("Cmu b c CJE")
+            self.elements.append(f"cmu b c {param_dict['CJC']}")
         if "CJE" in params:
-            self.elements.append("Cpi b e CJC")
+            self.elements.append(f"cpi b e {param_dict['CJE']}")
 
 
 class PNPModelAC(SubcktModel):
     def __init__(self, model_id, param_dict):
         node_list = ["c", "b", "e"]
         super().__init__(model_id, node_list, param_dict)
-        self.elements = ["Rpi b e bf/(38*IC)",
-                         "G1 c e e b 38*IC"]
-        # gm = "Is*exp(UBE/(Nf*Ut))/(Nf*Ut)"
+        self.elements = []
         params = param_dict.keys()
+
+        if "gpi" in params:
+            self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
+        else:
+            self.elements.append(f"rpi b e")
+
+        if "gm" in params:
+            self.elements.append(f"gm c e e b {param_dict['gm']}")
+        else:
+            self.elements.append(f"gm c e b e")
+
         if "vaf" in params:
-            self.elements.append("Ro c e vaf/IC")
+            self.elements.append(f"ro c e")
         if "CJC" in params:
-            self.elements.append("Cmu b c CJE")
+            self.elements.append(f"cmu b c {param_dict['CJC']}")
         if "CJE" in params:
-            self.elements.append("Cpi b e CJC")
+            self.elements.append(f"cpi b e {param_dict['CJE']}")
 
 
 class NMOSModelAC(SubcktModel):
     def __init__(self, model_id, param_dict):
         node_list = ["d", "g", "s", "b"]
         super().__init__(model_id, node_list, param_dict)
-        self.elements = ["G1 d s g s sqrt(2*W*KP*ID/L)"]
+        self.elements = []
+        params = param_dict.keys()
+
+        if "gm" in params:
+            self.elements.append(f"gm d s g s {param_dict['gm']}")
+        else:
+            self.elements.append("gm d s g s")
+
+
+class PMOSModelAC(SubcktModel):
+    def __init__(self, model_id, param_dict):
+        node_list = ["d", "g", "s", "b"]
+        super().__init__(model_id, node_list, param_dict)
+        self.elements = []
+        params = param_dict.keys()
+
+        if "gm" in params:
+            self.elements.append(f"gm s d g s {param_dict['gm']}")
+        else:
+            self.elements.append("gm s d g s")
 
 
 class PeriodicSwitch(Component):
