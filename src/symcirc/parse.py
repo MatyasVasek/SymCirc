@@ -8,10 +8,17 @@ from sympy.parsing.sympy_parser import standard_transformations, convert_xor
 TRANSFORMS = (standard_transformations + (convert_xor,))
 
 NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
-UNITS = {"f": sympy.Rational(1, 1000000000000000), "p": sympy.Rational(1, 1000000000000),
-         "n": sympy.Rational(1, 1000000000), "u": sympy.Rational(1, 1000000), "m": sympy.Rational(1, 1000),
-         "k": sympy.Rational(1000), "meg": sympy.Rational(1000000), "Meg": sympy.Rational(1000000), "G": sympy.Rational(1000000000),
-         "T": sympy.Rational(1000000000000)}
+UNITS = {"f": sympy.Rational(1, 1000000000000000), "F": sympy.Rational(1, 1000000000000000),
+         "p": sympy.Rational(1, 1000000000000), "P": sympy.Rational(1, 1000000000000),
+         "n": sympy.Rational(1, 1000000000), "N": sympy.Rational(1, 1000000000),
+         "u": sympy.Rational(1, 1000000), "U": sympy.Rational(1, 1000000),
+         "m": sympy.Rational(1, 1000), "M": sympy.Rational(1, 1000),
+         "k": sympy.Rational(1000), "K": sympy.Rational(1000),
+         "meg": sympy.Rational(1000000), "MEG": sympy.Rational(1000000), "Meg": sympy.Rational(1000000),
+         "g": sympy.Rational(1000000000), "G": sympy.Rational(1000000000),
+         "t": sympy.Rational(1000000000000), "T": sympy.Rational(1000000000000),
+         "v": sympy.Rational(1), "V": sympy.Rational(1),
+         "a": sympy.Rational(1), "A": sympy.Rational(1)}
 OPERATORS = ["+", "-", "*", "/", "."]
 RESERVED = ["sin"]
 
