@@ -199,11 +199,17 @@ def parse_subcircuits(netlist, analysis_type):
                         f"PNP model not implemented outside of AC or TF analysis.")
                 model = PNPModelAC(model_id, param_dict)
                 subckt_models[model_id] = model
-            elif model_type in ["nmos", "NMOS", "pmos", "PMOS"]:
+            elif model_type in ["nmos", "NMOS"]:
                 if analysis_type not in ["ac", "AC", "tf", "TF"]:
                     raise NotImplementedError(
-                        f"MOS model not implemented outside of AC or TF analysis.")
+                        f"NMOS model not implemented outside of AC or TF analysis.")
                 model = NMOSModelAC(model_id, param_dict)
+                subckt_models[model_id] = model
+            elif model_type in ["pmos", "PMOS"]:
+                if analysis_type not in ["ac", "AC", "tf", "TF"]:
+                    raise NotImplementedError(
+                        f"PMOS model not implemented outside of AC or TF analysis.")
+                model = PMOSModelAC(model_id, param_dict)
                 subckt_models[model_id] = model
             elif model_type in ["d", "D"]:
                 if analysis_type not in ["ac", "AC", "tf", "TF"]:
