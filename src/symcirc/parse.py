@@ -134,7 +134,7 @@ def value_enum(words, source=False):
             value, symbolic = convert_units(words[3])
         except IndexError:
             symbolic = True
-            value = sympy.parse_expr(words[0], local_dict=sympy.abc._clash, transformations=TRANSFORMS)
+            value = sympy.Symbol(words[0], real=True) #value = sympy.parse_expr(words[0], local_dict=sympy.abc._clash, transformations=TRANSFORMS)
         return value, symbolic
 
 def nodes_per_element(type):
@@ -314,7 +314,6 @@ def unpack(parsed_netlist, subckt_models):
                         tmp_elem = e.replace("{", "")
                         tmp_elem = tmp_elem.replace("}", "")
                         local.update(params)
-
                         tmp_elem, _ = convert_units(tmp_elem, local_dict=local)
 
                         string_tmp = str(tmp_elem).replace(" ", "")
@@ -482,7 +481,7 @@ def parse(netlist, analysis_type):
                 value, symbolic = convert_units(words[5])
             except IndexError:
                 symbolic = True
-                value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
+                value = sympy.Symbol(name, real=True) #value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
 
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
@@ -506,7 +505,7 @@ def parse(netlist, analysis_type):
                 value, symbolic = convert_units(words[5])
             except IndexError:
                 symbolic = True
-                value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
+                value = sympy.Symbol(name, real=True) #sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
@@ -522,7 +521,7 @@ def parse(netlist, analysis_type):
                 value, symbolic = convert_units(words[4])
             except IndexError:
                 symbolic = True
-                value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
+                value = sympy.Symbol(name, real=True) #value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
@@ -548,7 +547,7 @@ def parse(netlist, analysis_type):
                 value, symbolic = convert_units(words[4])
             except IndexError:
                 symbolic = True
-                value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
+                value = sympy.Symbol(name, real=True) #value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
             if symbolic:
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
