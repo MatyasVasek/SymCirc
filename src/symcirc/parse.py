@@ -50,11 +50,10 @@ def convert_units(val, forced_numeric=False, local_dict=None):
             ret = sympy.Rational(sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS))
         except TypeError:
             ret = sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS)
-
     if forced_numeric:
         symbolic = False
     else:
-        symbolic = check_if_symbolic(val)
+        symbolic = check_if_symbolic(ret)
     return ret, symbolic
 
 
