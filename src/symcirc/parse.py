@@ -403,17 +403,18 @@ def parse(netlist, analysis_type):
         if name[0] in ["i", "I"]:
             variant = "i"
             sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
-            value, symbolic = value_enum(words, source=True)
-            c = CurrentSource(name, variant, node1, node2, sym_value=sym_value, dc_value=value[0], ac_value=value[1],
-                              tran_value=value[2])
+            values, symbolic = value_enum(words, source=True)
+            c = CurrentSource(name, variant, node1, node2, sym_value=sym_value, dc_value=values[0], ac_value=values[1],
+                              tran_value=values[2])
             independent_sources.append(c)
 
         elif name[0] in ["v", "V", "u", "U"]:
             variant = "v"
             sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
-            value, symbolic = value_enum(words, source=True)
+            values, symbolic = value_enum(words, source=True)
+
             c = VoltageSource(name, variant, node1, node2, sym_value=sym_value, position=matrix_expansion_coef,
-                              dc_value=value[0], ac_value=value[1], tran_value=value[2])
+                              dc_value=values[0], ac_value=values[1], tran_value=values[2])
             matrix_expansion_coef += 1
             independent_sources.append(c)
 
