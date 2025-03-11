@@ -1385,9 +1385,6 @@ class AnalyseCircuit:
             if self.method == "tableau":
                 matrix[self.c_count*2 + node_pos, self.c_count + index] += 1
                 matrix[index, self.c_count*2 + node_pos] -= 1
-            elif self.method == "eliminated_tableau":
-                matrix[self.c_count + node_pos, self.node_count + index] += 1
-                matrix[index, node_pos] += y_b
         if N2 == "0":
             pass
         else:
@@ -1395,9 +1392,6 @@ class AnalyseCircuit:
             if self.method == "tableau":
                 matrix[self.c_count*2 + node_pos, self.c_count + index] += -1
                 matrix[index, self.c_count*2 + node_pos] -= -1
-            elif self.method == "eliminated_tableau":
-                matrix[self.c_count + node_pos, self.node_count + index] += -1
-                matrix[index, node_pos] += -y_b
 
         return matrix
 
