@@ -219,7 +219,7 @@ def parse_subcircuits(netlist, analysis_type):
                 subckt_models[model_id] = model
 
         elif words[0][0] == ".":
-            if (words[0] in [".ends", ".ENDS"]) and (subckt_model_id in words[1]):
+            if words[0] in [".ends", ".ENDS"]:
                 in_model = False
                 subckt_models[subckt_model_id] = current_model
             elif words[0] in [".end", ".END"]:
