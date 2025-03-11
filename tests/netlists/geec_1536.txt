@@ -1,0 +1,10 @@
+Simple NPN BJT circuit
+RC 3 1 2.1k
+RB 3 2 1.55Meg
+C1 i 2 1u
+C2 1 o 1u
+Rz o 0 1Meg
+Vi i 0 dc 0 ac 10m 0 sin 0 10m 10k 0 0
+VN 3 0 dc 10
+Q1 1 2 0 NPNmodel
+.model NPNmodel npn bf=300 is=1.5e-14 nr=0 vaf=80

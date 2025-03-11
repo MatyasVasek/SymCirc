@@ -1,0 +1,7 @@
+Simple NMOS circuit
+V1 1 0 dc 10
+V3 2 3 dc 0 ac 50m 0 pulse -0.05 0.05 1p 0.5m 0.5m 1p 1m
+RD 4 1 1.8k
+V2 3 0 dc 2.3
+M1 4 2 0 0 NMOSmodel L=10u W=160u
+.model NMOSmodel NMOS VTO=1.9 KP=0.0016

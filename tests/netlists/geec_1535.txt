@@ -1,0 +1,6 @@
+Simple diode circuit
+D 3 0 Dmod
+.model Dmod d IS=1e-14 bv=100
+V1 1 0 dc 5.7
+V2 2 1 dc 0 ac 1 0 sin 0 1 10k 0 0
+R 2 3 5k
