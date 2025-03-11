@@ -1423,14 +1423,6 @@ class AnalyseCircuit:
                 vi_vector[self.c_count + index, 0] += -val*c.init_cond
             if c.type == "c" and self.analysis_type == "tran":
                 vi_vector[self.c_count + index, 0] += val*c.init_cond
-        elif self.method == "eliminated_tableau":
-            matrix[index, self.node_count + index] += z_b
-            self._incidence_matrix_write(N1, N2, matrix, index, y_b=y_b)
-            #for i in range
-            #matrix[index, node_pos] += val
-            # matrix[]
-            # matrix[]
-            #matrix[self.c_count + index, index] += y_b
 
         return matrix
 
@@ -1446,13 +1438,11 @@ class AnalyseCircuit:
                 val = c.tran_value
             else:
                 val = c.ac_value
+
         if self.method == "tableau":
             matrix[self.c_count + index, index] = 1
             self._incidence_matrix_write(N1, N2, matrix, index)
             result[self.c_count + index, 0] = val
-        elif self.method == "eliminated_tableau":
-            self._incidence_matrix_write(N1, N2, matrix, index, y_b=1)
-            result[index, 0] = val
 
         return matrix
 
