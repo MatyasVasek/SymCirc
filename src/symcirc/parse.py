@@ -26,17 +26,7 @@ NETLIST_KEYCHARS = ["R", "r", "C", "c", "L", "l", "V", "v", "U", "u", "I", "i", 
                     "E", "e", "K", "k", "S", "s", "X", "x", "Q", "q", "M", "m", "D", "d", ".", "*"]
 
 def check_if_symbolic(val):
-    symbolic = False
-    for c in val:
-        if c in NUMS:
-            pass
-        elif c in UNITS:
-            pass
-        elif c in OPERATORS:
-            pass
-        else:
-            symbolic = True
-    return symbolic
+    return not val.is_number
 
 
 def convert_units(val, forced_numeric=False, local_dict=None):
