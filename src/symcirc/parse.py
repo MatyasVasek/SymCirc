@@ -333,18 +333,21 @@ def unpack(parsed_netlist, subckt_models):
     return final_netlist
 
 def preparse(netist_lines):
-    # Add "PARAMS:" keyword to mosfet models in a netlist
-    preparsed_netlist_lines = [netist_lines[1]]
+    preparsed_netlist_lines = [netist_lines[0]]
     for line in netist_lines[1:]:
         split_line = line.split()
-        if split_line != []:
-            if split_line[0][0] in ["m", "M"]:
+        if split_line:
+            first_char = split_line[0][0]
+            if first_char in ["m", "M"]:  # add 'PARAMS:' between mos model name and 'W' and 'L' params
                 if split_line[6] != "PARAMS:":
                     split_line.insert(6, "PARAMS:")
                 preparsed_line = " ".join(split_line)
+                preparsed_netlist_lines.append(preparsed_line)
+            elif first_char == "*":  # Strip commentaries
+                pass
             else:
                 preparsed_line = " ".join(split_line)
-            preparsed_netlist_lines.append(preparsed_line)
+                preparsed_netlist_lines.append(preparsed_line)
     return preparsed_netlist_lines
 
 def parse(netlist, analysis_type):
