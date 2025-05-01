@@ -8,8 +8,7 @@ from symcirc import parse, laplace, utils
 from symcirc.pole_zero import *
 from symcirc.component import Component, Coupling
 from symcirc.utils import j, t, z
-
-
+#TODO add SC/SI for AC/TF analysis - SC should be done and working
 class AnalyseCircuit:
     """
     Main SymCirc class.
@@ -66,6 +65,10 @@ class AnalyseCircuit:
         self.symbol_dict: Dict[str, sympy.Symbol] = self.generate_symbol_dict()  # format: {<symbol_name> : <Symbol>}
 
     def SCSI_initial_values(self):
+        """
+        Checks if __init__ parameters are valid for SC/SI.
+        """
+
         if self.phases != "undefined" and self.analysis_type not in ["AC", "TF", "tran"]:
             raise ValueError("Valid analysis types for SCSI circuits are: 'AC', 'TF' and 'tran'")
         if self.phases != "undefined" and self.method not in ["modified_node", "two_graph_node"]:
@@ -94,6 +97,13 @@ class AnalyseCircuit:
         return symbol_dict
 
     def parse_phases(self, phases): # used by SCSI analysis
+        """
+        Parameter phases should be in a correct syntax:
+        'P=integer', P=(integer,frequency),'P=[...]' or P=([...],frequency)
+        Returns phases list with number of phases (phases[0]) and
+        phase fractions which signify how long does a phase last (phases[1] to phases[n]).
+        Also returns frequency.
+        """
         frequency = 1
         if phases != "undefined":
             phase_definition = []
@@ -334,6 +344,7 @@ class AnalyseCircuit:
                 temp = {}
                 temp.update(self.SCSI_component_values(name))
                 ret = self.SCSI_result_formatter(temp)
+                # TODO result_formatter isn't working well, type error
         return ret
 
     def all_component_values(self, default_python_datatypes=False):
@@ -547,6 +558,7 @@ class AnalyseCircuit:
                             pass
 
         else: # used by SCSI
+            # TODO numerical eval for SCSI - isn't too good, also leave exponents in rational form
             eqn_matrix, symbols = self._build_system_eqn()
             solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
             self.SCSI_symbol_z_factor(solved_dict)
@@ -591,6 +603,7 @@ class AnalyseCircuit:
                             pass
             elif self.analysis_type == "tran":
                 raise ValueError("Transient analysis not yet implemented.")
+                # TODO transient analysis - z-transform and quantization (floor function)
 
         return eqn_matrix, solved_dict, symbols
 
@@ -880,6 +893,7 @@ class AnalyseCircuit:
                 symbols.append(symb)
 
         elif self.method == "two_graph_node" and self.phases != "undefined":
+            # TODO switched currents, it's not working now
             sc_value_error = "Resistors, inductors, current sources, CCVSs and VCCSs aren't permitted in switched capacitor mode"
             num_of_phases = self.phases[0]
             symbols = []
@@ -1069,8 +1083,27 @@ class AnalyseCircuit:
                 symbols.append(symb)
 
         elif self.method == "modified_node" and self.phases != "undefined": # used by SCSI
-            if self.scsi == "siideal":
-                raise ValueError("Use modified nodal formulation method only for switched capacitor circuits")
+            """
+            Makes a matrix and a result vector with sizes that are dependent on number of phases, number of nodes and components.
+            Submatrices A,Y,Z are made for every phase and transition (so n^2 of submatrices of each kind).
+            Each distinct component is written into these submatrices by slightly different rules - more on them in the specific functions.
+            Afterwards, submatrices are written into the final matrix.
+            """
+            #TODO add switched currents
+            sc_value_error = "Resistors, inductors, current sources, CCVSs and VCCSs aren't permitted in switched capacitor mode"
+            for key in self.components:
+                c = self.components[key]
+                if c.type == "h":
+                    raise ValueError("Current controlled voltage sources aren't permitted in SC/SI mode")
+                if c.type == "l":
+                    raise ValueError("Inductors are not permitted in SC/SI mode")
+                if self.scsi == "scideal":
+                    if c.type in ["r", "i", "g"]:
+                        raise ValueError(sc_value_error)
+                else:
+                    if c.type == "v":
+                        pass
+                        #if any
 
             num_of_phases = self.phases[0]
             component_size = self.c_count * num_of_phases
@@ -1118,20 +1151,28 @@ class AnalyseCircuit:
                     for phase in range(num_of_phases):
                         self.SCSI_add_OpAmp(A_matrices, Y_matrices, Z_matrices, c, component_index, phase)
                         charge_symbols.append(sympy.Symbol("q({name})_in{phase}".format(name=c.name, phase=phase + 1)))
-                        charge_symbols.append(sympy.Symbol("q({name})_out{phase}".format(name=c.name, phase=phase + 1)))
+                        charge_symbols.append(sympy.Symbol("q({name})_{phase}".format(name=c.name, phase=phase + 1)))
                     component_index += 2
                 elif c.type == "e":
                     for phase in range(num_of_phases):
                         self.SCSI_add_VVT(A_matrices, Y_matrices, Z_matrices, c, component_index, phase)
                         charge_symbols.append(sympy.Symbol("q({name})_in{phase}".format(name=c.name, phase=phase + 1)))
-                        charge_symbols.append(sympy.Symbol("q({name})_out{phase}".format(name=c.name, phase=phase + 1)))
+                        charge_symbols.append(sympy.Symbol("q({name})_{phase}".format(name=c.name, phase=phase + 1)))
                     component_index += 2
                 elif c.type == "f":
                     for phase in range(num_of_phases):
                         self.SCSI_add_QQT(A_matrices, Y_matrices, Z_matrices, c, component_index, phase)
                         charge_symbols.append(sympy.Symbol("q({name})_in{phase}".format(name=c.name, phase=phase + 1)))
-                        charge_symbols.append(sympy.Symbol("q({name})_out{phase}".format(name=c.name, phase=phase + 1)))
+                        charge_symbols.append(sympy.Symbol("q({name})_{phase}".format(name=c.name, phase=phase + 1)))
                     component_index += 2
+                # TODO add current source and g, weird matrix operations in pracan
+                elif c.type == "i":
+                    for phase in range(num_of_phases):
+                        self.SCSI_add_current_source(A_matrices, Z_matrices, R, c, component_index, phase, num_of_phases)
+                        # charge_symbols.append(sympy.Symbol("q({name})_{phase}".format(name=c.name, phase=phase + 1)))
+                    component_index += 1
+                elif c.type == "g":
+                    pass
 
             for phase_y in range(num_of_phases):
                 for phase_x in range(num_of_phases):
@@ -1143,6 +1184,8 @@ class AnalyseCircuit:
             self.SCSI_matrix_z_symbol(M)
             equation_matrix = M.col_insert(component_size + node_size, R)
             symbols = self.SCSI_symbol_list_order(node_symbols, charge_symbols)
+
+            sympy.pprint(equation_matrix)
 
         return equation_matrix, symbols
 
@@ -1728,6 +1771,38 @@ class AnalyseCircuit:
         result[phase_offset + node_offset + component_index, 0] = val * self.SCSI_z_power_substitution(
           z_symbol_array[phase])
 
+    def SCSI_add_current_source(self, A, Z, result, c, component_index, phase, num_of_phases):
+        #TODO it isn't supposed to be added to the matrix, what?
+        N1 = c.node1
+        N2 = c.node2
+        if self.is_symbolic:
+            val = c.sym_value
+        else:
+            if self.analysis_type == "DC":
+                val = c.dc_value
+            elif self.analysis_type == "tran":
+                val = c.tran_value
+            else:
+                val = c.ac_value
+        Z[phase][phase][component_index, component_index] = 1
+        self.SCSI_incidence_matrix_generate(A, N1, N2, component_index, phase, phase)
+
+        phase_offset = self.c_count * phase
+        node_offset = self.node_count * (phase + 0)
+        phase_helper_array = []
+        z_symbol_array = []
+        temp = 0
+        for f in range(num_of_phases):
+            phase_helper_array.append(temp)
+            temp += self.phases[f + 1]
+            z_symbol_array.append(z ** sympy.sympify(phase_helper_array[f]))
+        result[phase_offset + node_offset + component_index, 0] = val * self.SCSI_z_power_substitution(
+          z_symbol_array[phase])
+
+    def SCSI_add_VCT(self):
+        #TODO changes the first submatrix, think about it
+        pass
+
     def SCSI_add_switch(self, A, Y, Z, c, component_index, phase):
         N1 = c.node1
         N2 = c.node2
@@ -1737,7 +1812,8 @@ class AnalyseCircuit:
         if phase == switch_phase:
             Y[phase][phase][component_index, component_index] = 1
         else:
-            Z[phase][phase][component_index, component_index] = -1
+            # tady má být 1, ale v pracanu je -1, ocividnej dopad na výsledky to nemá
+            Z[phase][phase][component_index, component_index] = 1
 
     def SCSI_add_OpAmp(self, A, Y, Z, c, component_index, phase):
         N1 = c.node1
@@ -2078,6 +2154,9 @@ class AnalyseCircuit:
                     M[n2i, n2v] += +g
 
     def SCSI_get_node_voltage(self, node, phase, force_z = False):
+        """
+        Returns node voltage of the specified node in specified phase.
+        """
         phase_string = str(phase)
         formatted_node = str(node) + "_" + phase_string
         formatted_voltage = sympy.symbols("v(" + str(node) + ")_" + phase_string)
@@ -2109,6 +2188,10 @@ class AnalyseCircuit:
             return value
 
     def SCSI_component_voltage(self, name, phase):
+        """
+        Input - name of the component and the particular phase we want the value for.
+        Returns the voltage of a component.
+        """
         value_dict = {}
         c = self.components[name]
         biquad_input_key = sympy.symbols(f"v({name}-in)_{phase}")
@@ -2141,68 +2224,89 @@ class AnalyseCircuit:
             else:
                 cv_short_value = self.SCSI_get_node_voltage(c_v.shorted_node, phase, force_z=True) # TODO: fix after bug #8 fix
             value_dict[biquad_input_key] = sympy.cancel(cv_node_value - cv_short_value)
-        if c.type in ["a", "e", "f", "g"]:
-            value_dict[sympy.symbols(f"v({name}-out)_{phase}")] = sympy.cancel(node1_value - node2_value)
-        else:
-            value_dict[sympy.symbols(f"v({name})_{phase}")] = sympy.cancel(node1_value - node2_value)
+        # if c.type in ["a", "e", "f", "g"]:
+        #     value_dict[sympy.symbols(f"v({name}-out)_{phase}")] = sympy.cancel(node1_value - node2_value)
+        # else:
+        value_dict[sympy.symbols(f"v({name})_{phase}")] = sympy.cancel(node1_value - node2_value)
         # if self.analysis_type == "tran":
         #     for entry in value_dict:
         #         value_dict[entry] = z_transform.IZT(value_dict[entry])
         return value_dict
 
     def SCSI_component_charge(self, name, phase):
+        """
+        Input - name of the component and the particular phase we want the value for.
+        Returns a charge (or a current if SI).
+        """
+        #TODO evaluate charges/currents for two_graph_node...somehow
+        #TODO modify this for modified_node method
+        value_dict = {}
         if self.scsi == "scideal":
             charge = sympy.symbols(f"q({name})_{phase}")
         else:
             charge = sympy.symbols(f"i({name})_{phase}")
-        value_dict = {}
-        c = self.components[name]
-        voltage_key = sympy.symbols(f"v({name})_{phase}")
-        if self.is_symbolic:
-            value = c.sym_value
+        if self.method == "modified_node":
+            value_dict = self.solved_dict[charge]
         else:
-            value = c.value
-        if c.type in ["c", "r"]:
-            if c.type == "r":
-                value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] / value)
-            if c.type == "c":
-                value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
-        elif c.type == "i":
+            c = self.components[name]
+            voltage_key = sympy.symbols(f"v({name})_{phase}")
             if self.is_symbolic:
                 value = c.sym_value
             else:
-                if self.analysis_type == "DC":
-                    value = c.dc_value
-                elif self.analysis_type == "tran":
-                    value = c.tran_value
+                value = c.value
+            if c.type in ["c", "r"]:
+                if c.type == "r":
+                    value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] / value)
+                if c.type == "c":
+                    value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
+            elif c.type == "i":
+                if self.is_symbolic:
+                    value = c.sym_value
                 else:
-                    value = c.ac_value
-            value_dict[charge] = sympy.symbols(value)
-            #value_dict[charge] = str(value)
-        elif c.type == "g":
-            value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
-        elif c.type == "f":
-            if self.scsi == "scideal":
-                control_charge = sympy.symbols(f"q({c.current_sensor})_{phase}")
+                    if self.analysis_type == "DC":
+                        value = c.dc_value
+                    elif self.analysis_type == "tran":
+                        value = c.tran_value
+                    else:
+                        value = c.ac_value
+                value_dict[charge] = sympy.symbols(value)
+                #value_dict[charge] = str(value)
+            elif c.type == "g":
+                value_dict[charge] = sympy.cancel(self.SCSI_component_voltage(name, phase)[voltage_key] * value)
+            elif c.type == "f":
+                if self.scsi == "scideal":
+                    control_charge = sympy.symbols(f"q({c.current_sensor})_{phase}")
+                else:
+                    control_charge = sympy.symbols(f"i({c.current_sensor})_{phase}")
+                value_dict[charge] = sympy.cancel(self.solved_dict[control_charge] * value)
             else:
-                control_charge = sympy.symbols(f"i({c.current_sensor})_{phase}")
-            value_dict[charge] = sympy.cancel(self.solved_dict[control_charge] * value)
-        else:
-            value_dict[charge] = charge
-        # if self.analysis_type == "tran":
-        #     for entry in value_dict:
-        #         value_dict[entry] = z_transform.IZT(value_dict[entry])
+                value_dict[charge] = charge
+            # if self.analysis_type == "tran":
+            #     for entry in value_dict:
+            #         value_dict[entry] = z_transform.IZT(value_dict[entry])
         return value_dict
 
     def SCSI_component_values(self, name):
+        """
+        Input - name of a component.
+        Returns a dictionary of all values of the component in all phases.
+        """
         num_of_phases = self.phases[0]
         value_dict = {}
         for phase in range(1, num_of_phases + 1):
             value_dict.update(self.SCSI_component_voltage(name, phase))
             value_dict.update(self.SCSI_component_charge(name, phase))
+            #TODO TypeError: 'Mul' object is not iterable
         return value_dict
 
     def SCSI_result_formatter(self, dict):
+        """
+        Input is a dictionary of values which aren't sorted by component and node quantities.
+        Returns a dictionary of lists - every component and node quantity has
+        more phase values.
+        """
+        #TODO repair this for modified_node
+        #TODO delete unimportant data - OpAmp input etc.
         temp = {}
         for key in dict:
             if list(str(key)).count("_") == 1:
