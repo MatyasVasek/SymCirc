@@ -63,7 +63,7 @@ class AnalyseCircuit:
         self.solved_dict: Dict[sympy.Symbol, sympy.Expr]
         self.symbols: List[sympy.Symbol]
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
-        self.symbol_dict: Dict[str, sympy.Symbol] = self.generate_symbol_dict()  # format: {<symbol_name> : <Symbol>}
+        self.symbol_dict: Dict[sympy.Symbol, str] = self.get_symbols()  # format: {<symbol_name> : <Symbol>}
 
     def SCSI_initial_values(self):
         if self.phases != "undefined" and self.analysis_type not in ["AC", "TF", "tran"]:
@@ -77,21 +77,27 @@ class AnalyseCircuit:
         """
         Returns the specified voltage
         """
-        symbol = self.symbol_dict[f"v({name})"]
+        symbol = self.get_symbols(invert_dict=True)[f"v({name})"]
         return self.solved_dict[symbol]
 
     def i(self, name: str) -> sympy.Expr:
         """
         Returns the specified current
         """
-        symbol = self.symbol_dict[f"i({name})"]
+        symbol = self.get_symbols(invert_dict=True)[f"i({name})"]
         return self.solved_dict[symbol]
 
-    def generate_symbol_dict(self) -> Dict[str, sympy.Symbol]:
+    def get_symbols(self, invert_dict=False) -> Dict[sympy.Symbol, str]:
         symbol_dict = {}
-        for symbol in self.symbols:
-            symbol_dict[symbol.name] = symbol
+        for expr in self.solved_dict.values():
+            free_symbols = expr.free_symbols
+            for symbol in free_symbols:
+                if invert_dict:
+                    symbol_dict[symbol.name] = symbol
+                else:
+                    symbol_dict[symbol] = symbol.name
         return symbol_dict
+
 
     def parse_phases(self, phases): # used by SCSI analysis
         frequency = 1
@@ -1626,8 +1632,8 @@ class AnalyseCircuit:
             solved_dict[expression] = solved_dict[expression].subs(self.symbol_dict)
 
     def SCSI_z_power_substitution(self, symbol):
-        dict_length = len(self.symbol_dict)
-        x = sympy.Symbol("x_{index}".format(index=dict_length))
+        dict_length = len(self.symbols)
+        x = sympy.Symbol(f"x_{dict_length}")
         self.symbol_dict[x] = symbol
         return x
 
