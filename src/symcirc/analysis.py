@@ -1380,8 +1380,10 @@ class AnalyseCircuit:
                 val = c.dc_value
             elif self.analysis_type == "tran":
                 val = c.tran_value
-            else:
+            elif self.analysis_type == "TF":
                 val = c.ac_value
+            elif self.analysis_type == "AC":
+                val = c.ac_value * c.ac_phase
 
         if self.method == "tableau":
             matrix[self.c_count + index, index] = 1
@@ -1400,8 +1402,10 @@ class AnalyseCircuit:
                 val = c.dc_value
             elif self.analysis_type == "tran":
                 val = c.tran_value
-            else:
+            elif self.analysis_type == "TF":
                 val = c.ac_value
+            elif self.analysis_type == "AC":
+                val = c.ac_value * c.ac_phase
         matrix[self.c_count + index, self.c_count + index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
         result[self.c_count + index, 0] = val
