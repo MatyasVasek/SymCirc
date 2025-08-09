@@ -98,67 +98,6 @@ class AnalyseCircuit:
                     symbol_dict[symbol] = symbol.name
         return symbol_dict
 
-
-    def parse_phases(self, phases): # used by SCSI analysis
-        frequency = 1
-        if phases != "undefined":
-            phase_definition = []
-            phase_def_syntax_error = \
-                    (
-                    "Invalid phase definition syntax, use 'P=integer', P=(integer,frequency),'P=[...]' or P=([...],frequency), \n"
-                    "where the integer is the number of phases "
-                    "and the list contains lengths of phases written as a fraction (fractions must add up to 1)")
-            if phases.startswith("P="):
-                phases = phases.replace("P=", "")
-                if phases.startswith("(") and phases.endswith(")"):
-                    phases = phases.replace("(", "")
-                    phases = phases.replace(")", "")
-                    if phases.startswith("[") and "]" in phases:
-                        phases = phases.replace("[", "")
-                        phases = phases.replace("]", "")
-                        phase_definition = sympy.sympify(phases.split(','))
-                        frequency = phase_definition[-1]
-                        del phase_definition[-1]
-                        phase_sum = sum(phase_definition)
-                        if phase_sum != 1:
-                            raise ValueError("The sum of phase lengths must be 1")
-                        else:
-                            phase_definition.insert(0, len(phase_definition))
-                    elif len(phases.split(',')) == 2:
-                        phases = sympy.sympify(phases.split(','))
-                        if int(phases[0]) < 2:
-                            raise ValueError("The number of phases can't be less than 2")
-                        else:
-                            phase_definition.append(phases[0])
-                            frequency = phases[-1]
-                            for i in range(phase_definition[0]):
-                                phase_definition.append(sympy.sympify("1/" + str(phase_definition[0])))
-                    else:
-                        raise SyntaxError(phase_def_syntax_error)
-                elif phases.startswith("[") and phases.endswith("]"):
-                    phases = phases.replace("[", "")
-                    phases = phases.replace("]", "")
-                    phase_definition = sympy.sympify(phases.split(','))
-                    phase_sum = sum(phase_definition)
-                    if phase_sum != 1:
-                        raise ValueError("The sum of phase lengths must be 1")
-                    else:
-                        phase_definition.insert(0, len(phase_definition))
-                elif "," not in phases:
-                    if int(phases) < 2:
-                        raise ValueError("The number of phases can't be less than 2")
-                    else:
-                        phase_definition.append(int(phases))
-                        for i in range(phase_definition[0]):
-                            phase_definition.append(sympy.sympify("1/" + str(phase_definition[0])))
-                else:
-                    raise SyntaxError(phase_def_syntax_error)
-
-            else:
-                raise SyntaxError(phase_def_syntax_error)
-            phases = phase_definition
-        return phases, frequency
-
     def component_voltage(self, name: str) -> sympy.Expr:
         """
         Old way to return a component voltage, will be deprecated soon
@@ -2206,4 +2145,64 @@ class AnalyseCircuit:
             phase = int(str(key).split("_")[1])
             temp[name][phase - 1] = dict[key]
         return temp
+
+    def parse_phases(self, phases): # used by SCSI analysis
+        frequency = 1
+        if phases != "undefined":
+            phase_definition = []
+            phase_def_syntax_error = \
+                    (
+                    "Invalid phase definition syntax, use 'P=integer', P=(integer,frequency),'P=[...]' or P=([...],frequency), \n"
+                    "where the integer is the number of phases "
+                    "and the list contains lengths of phases written as a fraction (fractions must add up to 1)")
+            if phases.startswith("P="):
+                phases = phases.replace("P=", "")
+                if phases.startswith("(") and phases.endswith(")"):
+                    phases = phases.replace("(", "")
+                    phases = phases.replace(")", "")
+                    if phases.startswith("[") and "]" in phases:
+                        phases = phases.replace("[", "")
+                        phases = phases.replace("]", "")
+                        phase_definition = sympy.sympify(phases.split(','))
+                        frequency = phase_definition[-1]
+                        del phase_definition[-1]
+                        phase_sum = sum(phase_definition)
+                        if phase_sum != 1:
+                            raise ValueError("The sum of phase lengths must be 1")
+                        else:
+                            phase_definition.insert(0, len(phase_definition))
+                    elif len(phases.split(',')) == 2:
+                        phases = sympy.sympify(phases.split(','))
+                        if int(phases[0]) < 2:
+                            raise ValueError("The number of phases can't be less than 2")
+                        else:
+                            phase_definition.append(phases[0])
+                            frequency = phases[-1]
+                            for i in range(phase_definition[0]):
+                                phase_definition.append(sympy.sympify("1/" + str(phase_definition[0])))
+                    else:
+                        raise SyntaxError(phase_def_syntax_error)
+                elif phases.startswith("[") and phases.endswith("]"):
+                    phases = phases.replace("[", "")
+                    phases = phases.replace("]", "")
+                    phase_definition = sympy.sympify(phases.split(','))
+                    phase_sum = sum(phase_definition)
+                    if phase_sum != 1:
+                        raise ValueError("The sum of phase lengths must be 1")
+                    else:
+                        phase_definition.insert(0, len(phase_definition))
+                elif "," not in phases:
+                    if int(phases) < 2:
+                        raise ValueError("The number of phases can't be less than 2")
+                    else:
+                        phase_definition.append(int(phases))
+                        for i in range(phase_definition[0]):
+                            phase_definition.append(sympy.sympify("1/" + str(phase_definition[0])))
+                else:
+                    raise SyntaxError(phase_def_syntax_error)
+
+            else:
+                raise SyntaxError(phase_def_syntax_error)
+            phases = phase_definition
+        return phases, frequency
 
