@@ -37,6 +37,7 @@ def convert_units(val, forced_numeric=False, local_dict=None):
     else:
         local = local_dict
     local.update(sympy.abc._clash)
+    local.update(global_dict)
     val = val.replace("{", "").replace("}", "")
     if len(val) > 3:
         if (val[-3:] in UNITS) and (val[-4].isnumeric()):
@@ -96,7 +97,7 @@ def tran_value(words, dc):
     freq = 1
     delay = 0
     damping = 1
-    omega = 2*sympy.pi*freq
+    omega = 2*pi*freq
     #tran = sympy.Symbol("N/A")
 
     for word in words:

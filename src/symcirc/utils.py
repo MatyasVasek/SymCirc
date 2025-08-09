@@ -10,7 +10,20 @@ f = sympy.symbols("f", real=True, positive=True)
 s = sympy.symbols("s", real=False)
 t = sympy.symbols("t", real=True, positive=True)
 z = sympy.symbols("z", real=True, positive=True)
-#j = sympy.symbols("j", real=False)
+
+global_dict = {"pi": pi,
+               "Pi": pi,
+               "PI": pi,
+               "pI": pi,
+               "f": f,
+               "s": s,
+               "t": t,
+               "z": z,
+               "oo": infinity,
+               "inf": infinity,
+               "Inf": infinity,
+               "i": j,
+               "j": j}
 
 def numer(H):
     N, _ = sympy.fraction(H)
@@ -20,8 +33,9 @@ def denom(H):
     _, D = sympy.fraction(H)
     return D
 
-def evalf(H):
-    return H.evalf()
+def evalf(H, subs:dict={}, precision:int=6):
+    subs_dict = {**subs, **global_dict}
+    return H.evalf(subs=subs_dict, n=precision)
 
 def load_file(netlist_addr):
     """
@@ -40,6 +54,7 @@ def to_latex(dictionary: Dict[str, sympy.Expr], symbol_names: Dict[sympy.Symbol,
     Python dict to latex converter.
 
     :param dict dictionary: arbitrary dictionary
+    :param symbol_names dictionary: contains desired representations of symbols to override default sympy interpretation
     :return str ret: string containing resulting latex code
     """
     ret = {}
@@ -77,6 +92,9 @@ def ypoints(func, xpoints, var):
 
 
 def evaluate(func, precision=6):
+    """
+    Deep numeric evaluation via recursion
+    """
     try:
         func = sympy.N(func, precision)
         arg_list = []
