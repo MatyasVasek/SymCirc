@@ -1,7 +1,7 @@
 from symcirc.component import *
 from symcirc import utils
 from symcirc import laplace
-from symcirc.utils import t, s, f, j
+from symcirc.utils import *
 import sys
 from sympy.parsing.sympy_parser import standard_transformations, convert_xor
 
@@ -114,7 +114,7 @@ def tran_value(words, dc):
             freq, _ = convert_units(words[index+2], forced_numeric=True)
             delay, _ = convert_units(words[index+3])
             damping, _ = convert_units(words[index+4])
-            omega = 2*sympy.pi*freq
+            omega = 2*pi*freq
         except IndexError:
             pass
         #tran = ((offset/s)+amp*sympy.exp(-s*delay)*2*pi*freq/((s+damping)**2+(2*pi*freq)**2))

@@ -1,7 +1,7 @@
 import sympy
 import time
 from sympy import exp, sin, cos, sqrt, factorial, DiracDelta, abc
-from symcirc.utils import s, t
+from symcirc.utils import s, t, pi
 
 
 def poles(F):
