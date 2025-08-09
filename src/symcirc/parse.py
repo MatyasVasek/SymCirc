@@ -73,21 +73,26 @@ def dc_value(words):
 
 
 def ac_value(words):
+    phase_shift = 0
     try:
         if words[5] in ["ac", "AC"]:
             ac_value, symbolic = convert_units(words[6])
             try:
                 if words[7] not in RESERVED:
-                    offset, _ = convert_units(words[7])
+                    phase_shift_deg, _ = convert_units(words[7])
+                    phase_shift = sympy.rad(phase_shift_deg)
                 else:
-                    offset = 0
+                    phase_shift = 0
             except IndexError:
-                offset = 0
+                phase_shift = 0
         else:
             ac_value = 0
     except IndexError:
         ac_value = 0
-    return ac_value
+
+    # phase_shift = sympy.exp(j*phase_shift)
+    phase_shift = evalf(cos(phase_shift) + j * sin(phase_shift))
+    return ac_value, phase_shift
 
 def tran_value(words, dc):
     use_DC_val = True
@@ -126,9 +131,9 @@ def value_enum(words, source=False):
     symbolic = False
     if source:
         dc = dc_value(words)
-        ac = ac_value(words)
+        ac, phase_shift = ac_value(words)
         tran = tran_value(words, dc)
-        return [dc, ac, tran], symbolic
+        return [dc, [ac, phase_shift], tran], symbolic
     else:
         # recalculate units
         try:
@@ -405,8 +410,8 @@ def parse(netlist, analysis_type):
             variant = "i"
             sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
             values, symbolic = value_enum(words, source=True)
-            c = CurrentSource(name, variant, node1, node2, sym_value=sym_value, dc_value=values[0], ac_value=values[1],
-                              tran_value=values[2])
+            c = CurrentSource(name, variant, node1, node2, sym_value=sym_value, dc_value=values[0], ac_value=values[1][0],
+                              ac_phase=values[1][1], tran_value=values[2])
             independent_sources.append(c)
 
         elif name[0] in ["v", "V", "u", "U"]:
@@ -415,7 +420,7 @@ def parse(netlist, analysis_type):
             values, symbolic = value_enum(words, source=True)
 
             c = VoltageSource(name, variant, node1, node2, sym_value=sym_value, position=matrix_expansion_coef,
-                              dc_value=values[0], ac_value=values[1], tran_value=values[2])
+                              dc_value=values[0], ac_value=values[1][0], ac_phase=values[1][1], tran_value=values[2])
             matrix_expansion_coef += 1
             independent_sources.append(c)
 
