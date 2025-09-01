@@ -14,12 +14,17 @@ if __name__ == '__main__':
     analysis_test = True
     #netlist = symcirc.utils.load_file("netlists\\symbulator\\NR11_13_7_tran.txt")
     #netlist = symcirc.utils.load_file("netlists\\geec_1685.txt")
-    netlist = symcirc.utils.load_file("netlists\\ic_test_1.txt")
-    #netlist = symcirc.utils.load_file("netlists\\DC_elem_10.txt")
+    #netlist = symcirc.utils.load_file("netlists\\ic_test_1.txt")
+    #netlist = symcirc.utils.load_file("netlists\\geec_355.txt")
+    #netlist = symcirc.utils.load_file("netlists\\geec_1536.txt")
+    #netlist = symcirc.utils.load_file("netlists\\geec_1529.txt")
+    netlist = symcirc.utils.load_file("netlists\\geec_1552.txt")
 
-    method = "two_graph_node"
-    #method = "tableau"
-    #method = "eliminated_tableau"
+    analysis = "TF"
+    symbolic = True
+
+    #method = "two_graph_node"
+    method = "tableau"
 
     if parser_test:
         data = symcirc.parse.parse(netlist)
@@ -29,19 +34,9 @@ if __name__ == '__main__':
         """n = utils.load_file(netlist)
         circuit = parse.unpack_subcircuit(n)"""
 
-        analysis = "tran"
         t0 = time.time()
-        circuit = symcirc.analysis.AnalyseCircuit(netlist, analysis, symbolic=False, precision=6, method=method, sympy_ilt=True)
+        circuit = symcirc.analysis.AnalyseCircuit(netlist, analysis, symbolic=symbolic, precision=6, method=method, sympy_ilt=True)
         print(time.time() - t0)
-        all = circuit.component_values()
-        t1 = time.time()
-        """
-        c = circuit.components["I1"]
-        F = circuit.component_voltage("C").subs(c.sym_value, c.tran_value)
-        print("F = {}".format(F))
-        f = residue_laplace(F)
-        print("f = {}".format(f))
-        """
 
     if test_prints:
         #print(circuit.components)
@@ -53,13 +48,15 @@ if __name__ == '__main__':
 
         print("run time: {}".format(t1 - t0))
         print(circuit.node_voltage_symbols)
+        print(circuit.solved_dict)
         print(f"Node voltages: {circuit.node_voltages()}")
         all = circuit.component_values()
         print("---------------------------------------------------------")
         print("All components: {}".format(all))
         print(f"Node voltages: {circuit.node_voltages()}")
         print(circuit.symbols)
-        #utils.latex_print(all)
+        sympy.pprint(all)
+        utils.latex_print(all)
         #utils.latex_print(circuit.node_voltages())
 
 

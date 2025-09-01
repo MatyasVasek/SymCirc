@@ -1,0 +1,9 @@
+Sumator circuit
+V1 1 0 DC x
+V2 2 0 DC y
+X1 1 2 sum sumator_mod
+
+.subckt sumator_mod in1 in2 outs PARAMS: K1=1 K2=1
+E1sum outs o2 in1 0 K1
+E2sum o2 0 in2 0 K2
+.ends sumator_mod

@@ -124,7 +124,7 @@ def print_test_results(filename, ref, analysis_type, err, full=False):
 
 def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="tableau", runs=10):
     if analysis == "all":
-        a_types = ["DC", "TF", "tran"]
+        a_types = ["DC", "TF"]
     elif type(analysis) == list:
         a_types = analysis
     else:

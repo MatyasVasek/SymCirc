@@ -1,0 +1,8 @@
+JFET
+Rz nodeo 0 20k
+Vi nodei 0 DC 0 AC 1 {0*Pi/180} SIN 0 1 10k 0 0
+Vc node1 0 DC 7
+RS node2 0 1k
+J1 node1 nodei node2 JFETn temp=27
+C2 node2 nodeo 10n
+.model JFETn njf beta=1.5e-3 vto=-2.3

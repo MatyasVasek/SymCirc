@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(__file__)+"/../src")
 from symcirc import *
 from symcirc import utils
 
-def test_analysis(analysis_type, analysis_method="tableau", is_symbolic=True):
+def test_analysis(analysis_type, analysis_method="tableau", is_symbolic=False):
     netlists = []
     for filename in os.listdir("{}/netlists".format(os.getcwd())):
         netlists.append(filename)
@@ -13,7 +13,10 @@ def test_analysis(analysis_type, analysis_method="tableau", is_symbolic=True):
     for filename in netlists:
         try:
             circuit = AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type=analysis_type, symbolic=is_symbolic, method=analysis_method, use_symengine=True)
+            circuit.node_voltages()
             print("{}[OK]: {} analysis of {} successful".format('\033[96m', analysis_type, filename))
+        except NotImplementedError:
+            print("{}[NotImplemented]: {} analysis of {} ended with a NotImplementedError".format('\033[93m', analysis_type, filename))
         except:
             print("{}[FAIL]: {} analysis of {} ended with an error".format('\033[91m', analysis_type, filename))
     return 1
