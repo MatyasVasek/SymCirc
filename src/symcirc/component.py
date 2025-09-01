@@ -239,6 +239,10 @@ class DiodeModelAC(SubcktModel):
         node_list = ["a", "k"]
         super().__init__(model_id, node_list, param_dict)
         self.elements = []
+        sanitized_param_dict = {}
+        for key in param_dict:
+            sanitized_param_dict[key.lower()] = param_dict[key]
+        param_dict = sanitized_param_dict
         params = param_dict.keys()
         if "gd" in params:
             self.elements.append(f"rd a k 1/{param_dict['gd']}")
@@ -251,12 +255,18 @@ class NPNModelAC(SubcktModel):
         node_list = ["c", "b", "e"]
         super().__init__(model_id, node_list, param_dict)
         self.elements = []
+
+        sanitized_param_dict = {}
+        for key in param_dict:
+            sanitized_param_dict[key.lower()] = param_dict[key]
+        param_dict = sanitized_param_dict
         params = param_dict.keys()
+
 
         if "gpi" in params:
             self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
         else:
-            self.elements.append(f"rpi b e")
+            self.elements.append(f"rpi b e 1/gpi")
 
         if "gm" in params:
             self.elements.append(f"gm c e b e {param_dict['gm']}")
@@ -276,12 +286,16 @@ class PNPModelAC(SubcktModel):
         node_list = ["c", "b", "e"]
         super().__init__(model_id, node_list, param_dict)
         self.elements = []
+        sanitized_param_dict = {}
+        for key in param_dict:
+            sanitized_param_dict[key.lower()] = param_dict[key]
+        param_dict = sanitized_param_dict
         params = param_dict.keys()
 
         if "gpi" in params:
             self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
         else:
-            self.elements.append(f"rpi b e")
+            self.elements.append(f"rpi b e 1/gpi")
 
         if "gm" in params:
             self.elements.append(f"gm c e e b {param_dict['gm']}")
@@ -296,11 +310,15 @@ class PNPModelAC(SubcktModel):
             self.elements.append(f"cpi b e {param_dict['CJE']}")
 
 
-class NMOSModelAC(SubcktModel):
+class NFETModelAC(SubcktModel):
     def __init__(self, model_id, param_dict):
         node_list = ["d", "g", "s", "b"]
         super().__init__(model_id, node_list, param_dict)
         self.elements = []
+        sanitized_param_dict = {}
+        for key in param_dict:
+            sanitized_param_dict[key.lower()] = param_dict[key]
+        param_dict = sanitized_param_dict
         params = param_dict.keys()
 
         if "gm" in params:
@@ -309,11 +327,15 @@ class NMOSModelAC(SubcktModel):
             self.elements.append("gm d s g s")
 
 
-class PMOSModelAC(SubcktModel):
+class PFETModelAC(SubcktModel):
     def __init__(self, model_id, param_dict):
         node_list = ["d", "g", "s", "b"]
         super().__init__(model_id, node_list, param_dict)
         self.elements = []
+        sanitized_param_dict = {}
+        for key in param_dict:
+            sanitized_param_dict[key.lower()] = param_dict[key]
+        param_dict = sanitized_param_dict
         params = param_dict.keys()
 
         if "gm" in params:
