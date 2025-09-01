@@ -1,4 +1,5 @@
 import sympy
+import random
 from sympy import expand, factor, simplify, limit, diff, solve, parse_expr
 from sympy import oo as infinity
 from sympy import log, exp, sin, cos, tan, cot
@@ -50,7 +51,7 @@ def load_file(netlist_addr):
     return netlist
 
 
-def to_latex(dictionary: Dict[str, sympy.Expr], symbol_names: Dict[sympy.Symbol, str]=None) -> Dict[str, str]:
+def to_latex(dictionary: Dict[str, sympy.Expr], symbol_names: Dict[str, sympy.Symbol]=None) -> Dict[str, str]:
     """
     Python dict to latex converter.
 
@@ -61,19 +62,21 @@ def to_latex(dictionary: Dict[str, sympy.Expr], symbol_names: Dict[sympy.Symbol,
     ret = {}
     for key in dictionary:
         if symbol_names:
-            ret.update({key: sympy.latex(dictionary[key], imaginary_unit="j", symbol_names=symbol_names)})
+            symbol_names_inversed = dict((v, k) for k, v in symbol_names.items())
+            ret.update({key: sympy.latex(dictionary[key], imaginary_unit="j", symbol_names=symbol_names_inversed)})
         else:
             ret.update({key: sympy.latex(dictionary[key], imaginary_unit="j")})
     return ret
 
 
-def latex_print(data: sympy.Expr, symbol_names: Dict[sympy.Symbol, str]=None):
+def latex_print(data: sympy.Expr, symbol_names: Dict[str, sympy.Symbol]=None):
     """
     Print data in latex code.
 
     :param str data: arbitrary string
     """
-    print("{}".format(sympy.latex(data), imaginary_unit="j", symbol_names=symbol_names))
+    latex_dict = to_latex({'expr': data}, symbol_names=symbol_names)
+    print(f"{latex_dict['expr']}")
 
 
 def xpoints(start, stop, points):
