@@ -191,25 +191,6 @@ def table_inverse_laplace_transform(F):
 
 
 if __name__ == "__main__":
-    L, R1, R2, C1= sympy.symbols('L, R1, R2, C1', real=True, positive=True)
-    omega = sympy.Symbol('omega', real=True)
-    print("--------------------")
-    pi = sympy.symbols("pi", real=True, positive=True)
-    a = sympy.Rational(1, 5)
-    #F = (s+a)/(s*(s+a) + 1)
-    #F = -2*pi*C1*R1*s/((s - 1)**2 + 4*pi**2)
-    #F = (-20*pi*(s-7))/((s - 7)**2 + 4*pi**2)
-    #F = 6 / (s - 32000*pi)**2
-    #F = (36000*pi*C*R1*R2*s/(s**2 + 1296000000*pi**2) + 36000*pi*R1/(s**2 + 1296000000*pi**2))/(C*R1*R2*s + R1 + R2)
-    F = (3*s)/(7*s**2+11*s+13)
-    time0 = time.time()
-    f = sympy.inverse_laplace_transform(F, s, t)
-    time1 = time.time()
-    print(time1 - time0)
-    print("f = " + str(f))
-    f = iLT(F)
-    time2 = time.time()
-    print(time2 - time1)
-    simp_f = sympy.simplify(f)
-    print("f = "+str(simp_f))
-    #print(sympy.simplify(inv_laplace(3*s/(5*s**2 + s + 5))))
+    F = sympy.parse_expr('100000000000/(s**3 + 10000*s**2 + 100000000000*s)')
+    s, t = sympy.symbols('s, t')
+    sympy.integrals.transforms.inverse_laplace_transform(F, s, t)
