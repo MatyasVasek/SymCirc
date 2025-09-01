@@ -23,7 +23,7 @@ OPERATORS = ["+", "-", "*", "/", "."]
 RESERVED = ["sin"]
 
 NETLIST_KEYCHARS = ["R", "r", "C", "c", "L", "l", "V", "v", "U", "u", "I", "i", "A", "a", "F", "f", "H", "h", "G", "g",
-                    "E", "e", "K", "k", "S", "s", "X", "x", "Q", "q", "M", "m", "D", "d", ".", "*"]
+                    "E", "e", "K", "k", "S", "s", "X", "x", "Q", "q", "M", "m", "D", "d", "J", "j", ".", "*"]
 
 def check_if_symbolic(val):
     return not val.is_number
@@ -147,13 +147,14 @@ def value_enum(words):
     return value, symbolic
 
 def nodes_per_element(type):
-    if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "d", "D", "s", "S"]:
+    type = type.lower()
+    if type in ["r", "l", "c", "v", "i", "f", "h", "d", "s"]:
         return 2
-    if type in ["f", "F", "h", "H", "q", "Q"]:
+    if type in ["f", "h", "q", "j"]:
         return 3
-    elif type in ["a", "A", "e", "E", "g", "G", "m", "M"]:
+    elif type in ["a", "e", "g", "m"]:
         return 4
-    elif type in ["k", "K"]:
+    elif type in ["k"]:
         return 0
 
 def parse_subcircuits(netlist, analysis_type):
@@ -190,37 +191,37 @@ def parse_subcircuits(netlist, analysis_type):
 
         elif words[0] in [".model", ".MODEL"]:
             model_id = words[1]
-            model_type = words[2]
+            model_type = words[2].lower()
             param_dict = {}
             param_dict["nr"] = 1
             for w in words[3:]:
                 key, val = w.split("=")
                 param_dict[key], _ = convert_units(val)
-            if model_type in ["npn", "NPN"]:
+            if model_type in ["npn"]:
                 if analysis_type not in ["ac", "AC", "tf", "TF"]:
                     raise NotImplementedError(
                         f"NPN model not implemented outside of AC or TF analysis.")
                 model = NPNModelAC(model_id, param_dict)
                 subckt_models[model_id] = model
-            elif model_type in ["pnp", "PNP"]:
+            elif model_type in ["pnp"]:
                 if analysis_type not in ["ac", "AC", "tf", "TF"]:
                     raise NotImplementedError(
                         f"PNP model not implemented outside of AC or TF analysis.")
                 model = PNPModelAC(model_id, param_dict)
                 subckt_models[model_id] = model
-            elif model_type in ["nmos", "NMOS"]:
+            elif model_type in ["nmos", "njf"]:
                 if analysis_type not in ["ac", "AC", "tf", "TF"]:
                     raise NotImplementedError(
-                        f"NMOS model not implemented outside of AC or TF analysis.")
-                model = NMOSModelAC(model_id, param_dict)
+                        f"NFET model not implemented outside of AC or TF analysis.")
+                model = NFETModelAC(model_id, param_dict)
                 subckt_models[model_id] = model
-            elif model_type in ["pmos", "PMOS"]:
+            elif model_type in ["pmos", "pjf"]:
                 if analysis_type not in ["ac", "AC", "tf", "TF"]:
                     raise NotImplementedError(
-                        f"PMOS model not implemented outside of AC or TF analysis.")
-                model = PMOSModelAC(model_id, param_dict)
+                        f"PFET model not implemented outside of AC or TF analysis.")
+                model = PFETModelAC(model_id, param_dict)
                 subckt_models[model_id] = model
-            elif model_type in ["d", "D"]:
+            elif model_type in ["d"]:
                 if analysis_type not in ["ac", "AC", "tf", "TF"]:
                     raise NotImplementedError(
                         f"Diode model not implemented outside of AC or TF analysis.")
@@ -257,7 +258,7 @@ def unpack(parsed_netlist, subckt_models):
     final_netlist = []
     for line in parsed_netlist:
         words = line.split()
-        if words[0][0] in ["x", "X", "q", "Q", "m", "M", "d", "D"]:
+        if words[0][0].lower() in ["x", "q", "m", "d", "j"]:
             loading_params = False
             nodes = []
             params = {}
@@ -293,8 +294,8 @@ def unpack(parsed_netlist, subckt_models):
                     raise NotImplementedError(
                         f"Keyword/Element '{split_elem[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
                 elif split_elem[0] in ["k", "K"]: # parse couplings
-                    split_elem[1] = f"{split_elem[1]}_({words[0]})"
-                    split_elem[2] = f"{split_elem[2]}_({words[0]})"
+                    split_elem[1] = f"{split_elem[1]}_{words[0]}"
+                    split_elem[2] = f"{split_elem[2]}_{words[0]}"
                     if split_elem[3][0] == "{":
                         try:
                             split_elem[3] = str(params[split_elem[3][1:-1]])
@@ -302,7 +303,7 @@ def unpack(parsed_netlist, subckt_models):
                             split_elem[3] = str(model.param_dict[split_elem[3][1:-1]])
                 else: # parse the rest
                     if split_elem[0][0] in ["f", "F", "h", "H"]: # correct subcircuit CC(C/V)S control voltage source (current sensor) name
-                        split_elem[3] = f"{split_elem[3]}_({words[0]})"
+                        split_elem[3] = f"{split_elem[3]}_{words[0]}"
                     node_count = nodes_per_element(split_elem[0][0]) # get expected node count
                     for i in range(1, node_count+1): # scan and connect subcircuit nodes with outside circuit nodes
                         if split_elem[i] in ["0", 0]:
@@ -311,7 +312,7 @@ def unpack(parsed_netlist, subckt_models):
                             try:
                                 split_elem[i] = node_dict[split_elem[i]]
                             except KeyError:
-                                split_elem[i] = f"{split_elem[i]}_({words[0]})"
+                                split_elem[i] = f"{split_elem[i]}_{words[0]}"
                     index = node_count+1
                     for e in split_elem[node_count+1:]: # substitute parameters
                         if e == "":
@@ -335,7 +336,7 @@ def unpack(parsed_netlist, subckt_models):
                         split_elem[index] = string_tmp
 
                         index += 1
-                split_elem[0] = f"{split_elem[0]}_({words[0]})"
+                split_elem[0] = f"{split_elem[0]}_{words[0]}"
                 final_netlist.append(" ".join(split_elem))
         else:
             final_netlist.append(line)
@@ -416,9 +417,6 @@ def parse(netlist, analysis_type):
             ac_num, ac_phase, ac_sym = ac_value(words)
             tran_num = tran_value(words, dc_num)
             tran_sym = dc_sym / s
-            #print(f"dc num, sym: {dc_num}, {dc_sym}")
-            #print(f"ac num, sym, phase: {ac_num}, {ac_sym}, {ac_phase}")
-            #print(f"tran num, sym: {tran_num}, {tran_sym}")
             c = CurrentSource(name, variant, node1, node2, position=matrix_expansion_coef,
                               dc_num=dc_num, dc_sym=dc_sym,
                               ac_num=ac_num, ac_sym=ac_sym, ac_phase=ac_phase,
