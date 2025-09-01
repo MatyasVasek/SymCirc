@@ -59,6 +59,7 @@ def convert_units(val, forced_numeric=False, local_dict=None):
 
 
 def dc_value(words):
+    symbolic = False
     try:
         if words[3] in ["dc", "DC"]:
             dc_value, symbolic = convert_units(words[4])
@@ -69,11 +70,17 @@ def dc_value(words):
             dc_value = sympy.Symbol(words[0], real=True)
     except IndexError:
         dc_value = 0
-    return dc_value
+
+    if symbolic:
+        dc_sym = dc_value
+    else:
+        dc_sym = sympy.Symbol(words[0], real=True)
+    return dc_value, dc_sym
 
 
 def ac_value(words):
     phase_shift = 0
+    symbolic = False
     try:
         if words[5] in ["ac", "AC"]:
             ac_value, symbolic = convert_units(words[6])
@@ -90,9 +97,13 @@ def ac_value(words):
     except IndexError:
         ac_value = 0
 
+    if symbolic:
+        ac_sym = dc_value
+    else:
+        ac_sym = sympy.Symbol(words[0], real=True)
     # phase_shift = sympy.exp(j*phase_shift)
     phase_shift = evalf(cos(phase_shift) + j * sin(phase_shift))
-    return ac_value, phase_shift
+    return ac_value, phase_shift, ac_sym
 
 def tran_value(words, dc):
     use_DC_val = True
@@ -112,7 +123,7 @@ def tran_value(words, dc):
         else:
             index += 1
     if use_DC_val:
-        tran = dc/s
+        tran = dc*(1/s)
     else:
         try:
             offset, _ = convert_units(words[index])
@@ -127,21 +138,13 @@ def tran_value(words, dc):
         tran = amp*((damping+s)*sympy.sin(delay)+omega*sympy.cos(delay))/(damping**2+2*damping*s+omega**2+s**2)
     return tran
 
-def value_enum(words, source=False):
-    symbolic = False
-    if source:
-        dc = dc_value(words)
-        ac, phase_shift = ac_value(words)
-        tran = tran_value(words, dc)
-        return [dc, [ac, phase_shift], tran], symbolic
-    else:
-        # recalculate units
-        try:
-            value, symbolic = convert_units(words[3])
-        except IndexError:
-            symbolic = True
-            value = sympy.Symbol(words[0], real=True) #value = sympy.parse_expr(words[0], local_dict=sympy.abc._clash, transformations=TRANSFORMS)
-        return value, symbolic
+def value_enum(words):
+    try:
+        value, symbolic = convert_units(words[3])
+    except IndexError:
+        symbolic = True
+        value = sympy.Symbol(words[0], real=True) #value = sympy.parse_expr(words[0], local_dict=sympy.abc._clash, transformations=TRANSFORMS)
+    return value, symbolic
 
 def nodes_per_element(type):
     if type in ["r", "R", "l", "L", "c", "C", "v", "V", "i", "I", "f", "F", "h", "H", "d", "D", "s", "S"]:
@@ -408,19 +411,34 @@ def parse(netlist, analysis_type):
 
         if name[0] in ["i", "I"]:
             variant = "i"
-            sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
-            values, symbolic = value_enum(words, source=True)
-            c = CurrentSource(name, variant, node1, node2, sym_value=sym_value, dc_value=values[0], ac_value=values[1][0],
-                              ac_phase=values[1][1], tran_value=values[2])
+            #sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
+            dc_num, dc_sym = dc_value(words)
+            ac_num, ac_phase, ac_sym = ac_value(words)
+            tran_num = tran_value(words, dc_num)
+            tran_sym = dc_sym / s
+            #print(f"dc num, sym: {dc_num}, {dc_sym}")
+            #print(f"ac num, sym, phase: {ac_num}, {ac_sym}, {ac_phase}")
+            #print(f"tran num, sym: {tran_num}, {tran_sym}")
+            c = CurrentSource(name, variant, node1, node2, position=matrix_expansion_coef,
+                              dc_num=dc_num, dc_sym=dc_sym,
+                              ac_num=ac_num, ac_sym=ac_sym, ac_phase=ac_phase,
+                              tran_num=tran_num, tran_sym=tran_sym)
             independent_sources.append(c)
 
         elif name[0] in ["v", "V", "u", "U"]:
             variant = "v"
-            sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
-            values, symbolic = value_enum(words, source=True)
+            #sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
 
-            c = VoltageSource(name, variant, node1, node2, sym_value=sym_value, position=matrix_expansion_coef,
-                              dc_value=values[0], ac_value=values[1][0], ac_phase=values[1][1], tran_value=values[2])
+            dc_num, dc_sym = dc_value(words)
+            ac_num, ac_phase, ac_sym = ac_value(words)
+            tran_num = tran_value(words, dc_num)
+            tran_sym = dc_sym/s
+
+            c = VoltageSource(name, variant, node1, node2, position=matrix_expansion_coef,
+                              dc_num=dc_num, dc_sym=dc_sym,
+                              ac_num=ac_num, ac_sym=ac_sym, ac_phase=ac_phase,
+                              tran_num=tran_num, tran_sym=tran_sym
+                              )
             matrix_expansion_coef += 1
             independent_sources.append(c)
 

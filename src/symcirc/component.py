@@ -88,17 +88,23 @@ class VoltageSource(Component):
         :param sympy_expression tran_value: tran value of the component
         :param int position: this element causes equation matrix expansion and needs the row/col index saved
     """
-    def __init__(self, name, type, node1, node2, sym_value, dc_value=None, ac_value=None, ac_phase=None, tran_value=None,
+    def __init__(self, name, type, node1, node2,
+                 dc_num, dc_sym,
+                 ac_num, ac_sym, ac_phase,
+                 tran_num, tran_sym,
                  position=None, shorted_nodes=None):
-        super().__init__(name, type, node1, node2, sym_value, value=dc_value)
+        super().__init__(name, type, node1, node2, sym_value=dc_sym, value=dc_num)
         if shorted_nodes is None:
             self.shorted_nodes = []
         else:
             self.shorted_nodes = shorted_nodes
-        self.dc_value = dc_value
-        self.ac_value = ac_value
+        self.dc_num = dc_num
+        self.dc_sym = dc_sym
+        self.ac_num = ac_num
+        self.ac_sym = ac_sym
         self.ac_phase = ac_phase
-        self.tran_value = tran_value
+        self.tran_num = tran_num
+        self.tran_sym = tran_sym
         self.position = position
         self.netlist_keywords = ["V", "v", "U", "u"]
 
@@ -117,12 +123,24 @@ class CurrentSource(Component):
         :param sympy_expression tran_value: tran value of the component
 
     """
-    def __init__(self, name, type, node1, node2, sym_value, dc_value=None, ac_value=None, ac_phase=None, tran_value=None):
-        super().__init__(name, type, node1, node2, sym_value, value=dc_value)
-        self.dc_value = dc_value
-        self.ac_value = ac_value
+    def __init__(self, name, type, node1, node2, dc_num, dc_sym,
+                 ac_num, ac_sym, ac_phase,
+                 tran_num, tran_sym,
+                 position=None, shorted_nodes=None):
+        super().__init__(name, type, node1, node2, sym_value = dc_sym, value=dc_num)
+        if shorted_nodes is None:
+            self.shorted_nodes = []
+        else:
+            self.shorted_nodes = shorted_nodes
+        self.dc_num = dc_num
+        self.dc_sym = dc_sym
+        self.ac_num = ac_num
+        self.ac_sym = ac_sym
         self.ac_phase = ac_phase
-        self.tran_value = tran_value
+        self.tran_num = tran_num
+        self.tran_sym = tran_sym
+        self.position = position
+
         self.netlist_keywords = ["I", "i"]
 
 

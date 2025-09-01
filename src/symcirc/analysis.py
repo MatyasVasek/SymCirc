@@ -4,7 +4,7 @@ import time
 import operator
 import sympy
 from typing import Dict, List
-from symcirc import parse, laplace, utils
+from symcirc import parse, laplace
 from symcirc.pole_zero import *
 from symcirc.component import Component, Coupling
 from symcirc.utils import *
@@ -114,12 +114,12 @@ class AnalyseCircuit:
                 c = self.components[name]
                 if self.is_symbolic:
                     if name[0] in ["c", "C"]:
-                        impedance = utils.s/c.sym_value
+                        impedance = s/c.sym_value
                     else:
                         impedance = c.sym_value
                 else:
                     if name[0] in ["c", "C"]:
-                        impedance = utils.s/c.value
+                        impedance = s/c.value
                     else:
                         impedance = c.value
                 ret = self.solved_dict[sympy.symbols(i)]*impedance
@@ -149,7 +149,7 @@ class AnalyseCircuit:
                 return sympy.Symbol(v)
             else:
                 try:
-                    ret = sympy.limit(ret, utils.s, 0)
+                    ret = sympy.limit(ret, s, 0)
                     return ret
                 except KeyError:
                     return ret
@@ -244,7 +244,7 @@ class AnalyseCircuit:
                 return sympy.Symbol(i)
             else:
                 try:
-                    ret = sympy.limit(ret, utils.s, 0)
+                    ret = sympy.limit(ret, s, 0)
                     return ret
                 except KeyError:
                     return ret
@@ -395,101 +395,33 @@ class AnalyseCircuit:
             solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
 
             if self.analysis_type == "DC":
-                if self.is_symbolic:
-                    for sym in symbols:
-                        try:
-                            solved_dict[sym] = sympy.limit(solved_dict[sym], utils.s, 0)
-                        except KeyError:
-                            pass
-                        except TypeError:
-                            pass
-                else:
-                    for sym in symbols:
-                        try:
-                            solved_dict[sym] = sympy.limit(solved_dict[sym], utils.s, 0)
-                            for name in self.components:
-                                c = self.components[name]
-                                if c.type in ["v", "i"]:
-                                    if c.dc_value:
-                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.dc_value)
-                                else:
-                                    if c.value:
-                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            #solved_dict[sym] = solved_dict[sym].evalf(self.precision)
-                        except KeyError:
-                            pass
+                for sym in symbols:
+                    try:
+                        solved_dict[sym] = sympy.limit(solved_dict[sym], s, 0)
+                    except KeyError:
+                        pass
+                    except TypeError:
+                        pass
 
             elif self.analysis_type == "AC":
                 if self.is_symbolic:
-                    i = 1
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = solved_dict[sym].subs(utils.s, 2 * pi * f * j)
+                            solved_dict[sym] = solved_dict[sym].subs(s, 2 * pi * f * j)
                         except KeyError:
                             pass
                 else:
                     for sym in symbols:
                         try:
-                            solved_dict[sym] = solved_dict[sym].subs(utils.s, 2 * pi * f * j)
-                            for name in self.components:
-                                c = self.components[name]
-                                if c.type in ["v", "i"]:
-                                    if c.ac_value:
-                                        solved_dict[sym] = evalf(solved_dict[sym], subs={c.sym_value: c.ac_value}, precision=self.precision)
-                                else:
-                                    if c.value:
-                                        solved_dict[sym] = evalf(solved_dict[sym], subs={c.sym_value: c.value}, precision=self.precision)
-                            #solved_dict[sym] = solved_dict[sym].evalf(self.precision)
+                            solved_dict[sym] = solved_dict[sym].subs(s, 2 * pi * f * j)
                         except KeyError:
                             pass
 
             elif self.analysis_type == "TF":
-                if not self.is_symbolic:
-                    for sym in symbols:
-                        try:
-                            for name in self.components:
-                                c = self.components[name]
-                                if c.type in ["v", "i"]:
-                                    if c.ac_value:
-                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.ac_value)
-                                else:
-                                    if c.value:
-                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            #solved_dict[sym] = solved_dict[sym].evalf(self.precision)
-                        except KeyError:
-                            pass
+                pass
 
             elif self.analysis_type == "tran":
-                if self.is_symbolic:
-                    for sym in symbols:
-                        try:
-                            for name in self.components:
-                                c = self.components[name]
-                                if c.type in ["i", "v"] and c.name[-3:] != "_IC":
-                                    solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
-
-                        except KeyError:
-                            pass
-                        try:
-                            for name in self.components:
-                                c = self.components[name]
-                            pass
-                        except KeyError:
-                            pass
-                else:
-                    for sym in symbols:
-                        try:
-                            for name in self.components:
-                                c = self.components[name]
-                                if c.type in ["v", "i"]:
-                                    if c.tran_value:
-                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.tran_value)
-                                else:
-                                    if c.value:
-                                        solved_dict[sym] = solved_dict[sym].subs(c.sym_value, c.value)
-                            #solved_dict[sym] = solved_dict[sym].evalf(self.precision)
-                        except KeyError:
-                            pass
+                pass
 
         else: # used by SCSI
             if self.analysis_type == "TF":
@@ -1283,9 +1215,9 @@ class AnalyseCircuit:
         if c.type == "r":
             y = 1 / val
         if c.type == "l":
-            y = 1 / (val*utils.s)
+            y = 1 / (val*s)
         if c.type == "c":
-            y = utils.s * val
+            y = s * val
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
         n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
@@ -1354,9 +1286,9 @@ class AnalyseCircuit:
             z_b = -val
         elif c.type == "l":
             y_b = 1
-            z_b = -utils.s * val
+            z_b = -s * val
         elif c.type == "c":
-            y_b = utils.s * val
+            y_b = s * val
             z_b = -1
 
         if self.method == "tableau":
@@ -1374,16 +1306,23 @@ class AnalyseCircuit:
         N1 = c.node1
         N2 = c.node2
         if self.is_symbolic:
-            val = c.sym_value
+            if self.analysis_type == "DC":
+                val = c.dc_sym
+            elif self.analysis_type == "tran":
+                val = c.tran_sym
+            elif self.analysis_type == "TF":
+                val = c.ac_sym
+            elif self.analysis_type == "AC":
+                val = c.ac_sym
         else:
             if self.analysis_type == "DC":
-                val = c.dc_value
+                val = c.dc_num
             elif self.analysis_type == "tran":
-                val = c.tran_value
+                val = c.tran_num
             elif self.analysis_type == "TF":
-                val = c.ac_value
+                val = c.ac_num
             elif self.analysis_type == "AC":
-                val = c.ac_value * c.ac_phase
+                val = c.ac_num * c.ac_phase
 
         if self.method == "tableau":
             matrix[self.c_count + index, index] = 1
@@ -1396,16 +1335,24 @@ class AnalyseCircuit:
         N1 = c.node1
         N2 = c.node2
         if self.is_symbolic:
-            val = c.sym_value
+            if self.analysis_type == "DC":
+                val = c.dc_sym
+            elif self.analysis_type == "tran":
+                val = c.tran_sym
+            elif self.analysis_type == "TF":
+                val = c.ac_sym
+            elif self.analysis_type == "AC":
+                val = c.ac_sym
         else:
             if self.analysis_type == "DC":
-                val = c.dc_value
+                val = c.dc_num
             elif self.analysis_type == "tran":
-                val = c.tran_value
+                val = c.tran_num
             elif self.analysis_type == "TF":
-                val = c.ac_value
+                val = c.ac_num
             elif self.analysis_type == "AC":
-                val = c.ac_value * c.ac_phase
+                val = c.ac_num * c.ac_phase
+
         matrix[self.c_count + index, self.c_count + index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
         result[self.c_count + index, 0] = val
@@ -1517,8 +1464,8 @@ class AnalyseCircuit:
             coupling_coeff = c.value
             M = coupling_coeff * sympy.sqrt(L1 * L2)
 
-        matrix[self.c_count + L2_index, self.c_count + L1_index] += -utils.s*M
-        matrix[self.c_count + L1_index, self.c_count + L2_index] += -utils.s*M
+        matrix[self.c_count + L2_index, self.c_count + L1_index] += -s*M
+        matrix[self.c_count + L1_index, self.c_count + L2_index] += -s*M
         if c_L1.init_cond != None:
             vi_vector[self.c_count + L2_index, 0] += -M*c_L1.init_cond
         if c_L2.init_cond != None:
