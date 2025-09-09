@@ -725,10 +725,10 @@ class AnalyseCircuit:
                 if c.type in ["r", "c"]:
                     self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
                 if c.type == "v":
-                    self._add_V_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index_row, i_graph_collapses, v_graph_collapses)
+                    self._add_voltage_source_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index_row, i_graph_collapses, v_graph_collapses)
                     index_row += 1
                 if c.type == "i":
-                    self._add_I_tgn(M, S, v_graph_nodes, i_graph_nodes, c, i_graph_collapses)
+                    self._add_current_source_tgn(M, S, v_graph_nodes, i_graph_nodes, c, i_graph_collapses)
                 if c.type == "g":
                     self._add_VCT_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
                 if c.type == "e":
@@ -1159,18 +1159,10 @@ class AnalyseCircuit:
         if n4v is not None:
             M[row, n4v] += -1
 
-    def _add_V_tgn(self, M, S, v_nodes, i_nodes, c, index, i_graph_collapses, v_graph_collapses):
+    def _add_voltage_source_tgn(self, M, S, v_nodes, i_nodes, c, index, i_graph_collapses, v_graph_collapses):
         node1 = c.node1
         node2 = c.node2
-        if self.analysis_type == "tran":
-            val = c.tran_value
-        elif self.is_symbolic:
-            val = c.sym_value
-        else:
-            if self.analysis_type == "DC":
-                val = c.dc_value
-            else:
-                val = c.ac_value
+        val = self._choose_source_val(c)
 
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
@@ -1182,18 +1174,11 @@ class AnalyseCircuit:
             M[row, n2v] += -1
         S[row, 0] += val
 
-    def _add_I_tgn(self, M, S, v_nodes, i_nodes, c, i_graph_collapses):
+    def _add_current_source_tgn(self, M, S, v_nodes, i_nodes, c, i_graph_collapses):
         node1 = c.node1
         node2 = c.node2
-        if self.analysis_type == "tran":
-            val = c.tran_value
-        elif self.is_symbolic:
-            val = c.sym_value
-        else:
-            if self.analysis_type == "DC":
-                val = c.dc_value
-            else:
-                val = c.ac_value
+        val = self._choose_source_val(c)
+
         n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
         n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
 
@@ -1288,29 +1273,32 @@ class AnalyseCircuit:
             y_b = s * val
             z_b = -1
 
-        if self.method == "tableau":
-            matrix[self.c_count+index, index] += y_b
-            matrix[self.c_count+index, self.c_count+index] += z_b
-            self._incidence_matrix_write(N1, N2, matrix, index)
-            if c.type == "l" and self.analysis_type == "tran":
-                vi_vector[self.c_count + index, 0] += -val*c.init_cond
-            if c.type == "c" and self.analysis_type == "tran":
-                vi_vector[self.c_count + index, 0] += val*c.init_cond
+        matrix[self.c_count+index, index] += y_b
+        matrix[self.c_count+index, self.c_count+index] += z_b
+        self._incidence_matrix_write(N1, N2, matrix, index)
+        if c.type == "l" and self.analysis_type == "tran":
+            vi_vector[self.c_count + index, 0] += -val*c.init_cond
+        if c.type == "c" and self.analysis_type == "tran":
+            vi_vector[self.c_count + index, 0] += val*c.init_cond
 
         return matrix
 
-    def _add_voltage_source(self, matrix, result, c, index):
-        N1 = c.node1
-        N2 = c.node2
+    def _choose_source_val(self, c):
         if self.is_symbolic:
             if self.analysis_type == "DC":
                 val = c.dc_sym
             elif self.analysis_type == "tran":
                 val = c.tran_sym
             elif self.analysis_type == "TF":
-                val = c.ac_sym
+                if c.ac_num == 0:
+                    val = 0
+                else:
+                    val = c.ac_sym
             elif self.analysis_type == "AC":
-                val = c.ac_sym
+                if c.ac_num == 0:
+                    val = 0
+                else:
+                    val = c.ac_sym
         else:
             if self.analysis_type == "DC":
                 val = c.dc_num
@@ -1320,36 +1308,23 @@ class AnalyseCircuit:
                 val = c.ac_num
             elif self.analysis_type == "AC":
                 val = c.ac_num * c.ac_phase
+        return val
 
-        if self.method == "tableau":
-            matrix[self.c_count + index, index] = 1
-            self._incidence_matrix_write(N1, N2, matrix, index)
-            result[self.c_count + index, 0] = val
 
+    def _add_voltage_source(self, matrix, result, c, index):
+        N1 = c.node1
+        N2 = c.node2
+        val = self._choose_source_val(c)
+
+        matrix[self.c_count + index, index] = 1
+        self._incidence_matrix_write(N1, N2, matrix, index)
+        result[self.c_count + index, 0] = val
         return matrix
 
     def _add_current_source(self, matrix, result, c, index):
         N1 = c.node1
         N2 = c.node2
-        if self.is_symbolic:
-            if self.analysis_type == "DC":
-                val = c.dc_sym
-            elif self.analysis_type == "tran":
-                val = c.tran_sym
-            elif self.analysis_type == "TF":
-                val = c.ac_sym
-            elif self.analysis_type == "AC":
-                val = c.ac_sym
-        else:
-            if self.analysis_type == "DC":
-                val = c.dc_num
-            elif self.analysis_type == "tran":
-                val = c.tran_num
-            elif self.analysis_type == "TF":
-                val = c.ac_num
-            elif self.analysis_type == "AC":
-                val = c.ac_num * c.ac_phase
-
+        val = self._choose_source_val(c)
         matrix[self.c_count + index, self.c_count + index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
         result[self.c_count + index, 0] = val

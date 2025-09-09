@@ -98,7 +98,7 @@ def ac_value(words):
         ac_value = 0
 
     if symbolic:
-        ac_sym = dc_value
+        ac_sym = ac_value
     else:
         ac_sym = sympy.Symbol(words[0], real=True)
     # phase_shift = sympy.exp(j*phase_shift)
