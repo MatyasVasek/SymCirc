@@ -194,6 +194,12 @@ def parse_subcircuits(netlist, analysis_type):
             model_type = words[2].lower()
             param_dict = {}
             param_dict["nr"] = 1
+
+            # strip optional spice model brackets
+            words[3] = words[3].replace("(", "")
+            words[-1] = words[-1].replace(")", "")
+
+            # parse arguments
             for w in words[3:]:
                 key, val = w.split("=")
                 param_dict[key], _ = convert_units(val)
