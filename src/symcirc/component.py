@@ -266,7 +266,7 @@ class NPNModelAC(SubcktModel):
         if "gpi" in params:
             self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
         else:
-            self.elements.append(f"rpi b e 1/gpi")
+            self.elements.append(f"rpi b e")
 
         if "gm" in params:
             self.elements.append(f"gm c e b e {param_dict['gm']}")

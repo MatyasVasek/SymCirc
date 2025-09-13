@@ -342,11 +342,25 @@ def unpack(parsed_netlist, subckt_models):
                         split_elem[index] = string_tmp
 
                         index += 1
-                split_elem[0] = f"{split_elem[0]}_{words[0]}"
+
+                device_name = words[0]
+                split_elem = append_dev_name(split_elem, device_name)
                 final_netlist.append(" ".join(split_elem))
         else:
             final_netlist.append(line)
     return final_netlist
+
+def append_dev_name(split_elem, device_name):
+    if len(split_elem) == 3:
+        if split_elem[0] == "rpi":
+            split_elem.append(f"1/gpi_{device_name}")
+        elif split_elem[0] == "rd":
+            split_elem.append(f"1/gd_{device_name}")
+        elif split_elem[0] == "ro":
+            split_elem.append(f"1/go_{device_name}")
+
+    split_elem[0] = f"{split_elem[0]}_{device_name}"
+    return split_elem
 
 def preparse(netist_lines):
     preparsed_netlist_lines = [netist_lines[0]]
