@@ -1,4 +1,5 @@
 import sympy
+from __init__ import *
 
 
 class Component:
@@ -12,13 +13,28 @@ class Component:
     :param sympy_expression sym_value: first node id
     :param sympy_expression value: first node id
     """
-    def __init__(self, name=None, type=None, node1=None, node2=None, sym_value=None, value=None):
+    def __init__(self, name=None, node1=None, node2=None, sym_value=None, value=None):
         self.name = name
-        self.type = type
         self.node1 = node1
         self.node2 = node2
-        self.sym_value = sym_value
-        self.value = value
+
+        if sym_value is None:
+            self.sym_value = sympy.Symbol(name)
+        else:
+            self.sym_value = sym_value
+
+        if value is None:
+            self.value = 0
+        else:
+            self.value = value
+
+    def nodes(self):
+        ret = set()
+        if self.node1 is not None:
+            ret.add(self.node1)
+        if self.node2 is not None:
+            ret.add(self.node2)
+        return ret
 
 
 class Resistor(Component):
@@ -32,9 +48,10 @@ class Resistor(Component):
         :param sympy_expression sym_value: a sympy expression used in symbolic
         :param sympy_expression value: a numeric value used in semisymbolic
     """
-    def __init__(self, name, type, node1, node2, sym_value, value):
-        super().__init__(name, type, node1, node2, sym_value, value)
+    def __init__(self, name, node1, node2, sym_value=None, value=None):
+        super().__init__(name, node1, node2, sym_value, value)
         self.netlist_keywords = ["R", "r"]
+        self.type = "r"
 
 
 class Capacitor(Component):
@@ -49,10 +66,11 @@ class Capacitor(Component):
         :param sympy_expression value: first node id
         :param int init_cond: initial condition
     """
-    def __init__(self, name, type, node1, node2, sym_value, value, init_cond=0):
-        super().__init__(name, type, node1, node2, sym_value, value)
+    def __init__(self, name, node1, node2, sym_value=None, value=None, init_cond=0):
+        super().__init__(name, node1, node2, sym_value, value)
         self.init_cond = init_cond
         self.netlist_keywords = ["C", "c"]
+        self.type = "c"
 
 
 class Inductor(Component):
@@ -67,11 +85,12 @@ class Inductor(Component):
         :param sympy_expression value: numeric value of the component
         :param int init_cond: initial condition
     """
-    def __init__(self, name, type, node1, node2, sym_value, value, init_cond=0, coupling=None):
-        super().__init__(name, type, node1, node2, sym_value, value)
+    def __init__(self, name, node1, node2, sym_value=None, value=None, init_cond=0, coupling=None):
+        super().__init__(name, node1, node2, sym_value, value)
         self.init_cond = init_cond
         self.coupling = coupling
         self.netlist_keywords = ["L", "l"]
+        self.type = "l"
 
 
 class VoltageSource(Component):
@@ -88,25 +107,42 @@ class VoltageSource(Component):
         :param sympy_expression tran_value: tran value of the component
         :param int position: this element causes equation matrix expansion and needs the row/col index saved
     """
-    def __init__(self, name, type, node1, node2,
-                 dc_num, dc_sym,
-                 ac_num, ac_sym, ac_phase,
-                 tran_num, tran_sym,
+    def __init__(self, name, node1, node2,
+                 dc_num=0, dc_sym=None,
+                 ac_num=0, ac_sym=None, ac_phase=0,
+                 tran_num=0, tran_sym=None,
                  position=None, shorted_nodes=None):
-        super().__init__(name, type, node1, node2, sym_value=dc_sym, value=dc_num)
+        super().__init__(name, node1, node2, sym_value=dc_sym, value=dc_num)
         if shorted_nodes is None:
             self.shorted_nodes = []
         else:
             self.shorted_nodes = shorted_nodes
+
+        symbol = sympy.Symbol(name)
+
         self.dc_num = dc_num
-        self.dc_sym = dc_sym
+        if dc_sym is None:
+            self.dc_sym = symbol
+        else:
+            self.dc_sym = dc_sym
+
         self.ac_num = ac_num
-        self.ac_sym = ac_sym
+        if ac_sym is None:
+            self.ac_sym = symbol
+        else:
+            self.ac_sym = ac_sym
         self.ac_phase = ac_phase
+
         self.tran_num = tran_num
-        self.tran_sym = tran_sym
+
+        if tran_sym is None:
+            self.tran_sym = symbol/s
+        else:
+            self.tran_sym = tran_sym
+
         self.position = position
         self.netlist_keywords = ["V", "v", "U", "u"]
+        self.type = "v"
 
 
 class CurrentSource(Component):
@@ -123,11 +159,12 @@ class CurrentSource(Component):
         :param sympy_expression tran_value: tran value of the component
 
     """
-    def __init__(self, name, type, node1, node2, dc_num, dc_sym,
-                 ac_num, ac_sym, ac_phase,
-                 tran_num, tran_sym,
+    def __init__(self, name, node1, node2,
+                 dc_num=0, dc_sym=None,
+                 ac_num=0, ac_sym=None, ac_phase=0,
+                 tran_num=0, tran_sym=None,
                  position=None, shorted_nodes=None):
-        super().__init__(name, type, node1, node2, sym_value = dc_sym, value=dc_num)
+        super().__init__(name, node1, node2, sym_value = dc_sym, value=dc_num)
         if shorted_nodes is None:
             self.shorted_nodes = []
         else:
@@ -142,6 +179,7 @@ class CurrentSource(Component):
         self.position = position
 
         self.netlist_keywords = ["I", "i"]
+        self.type = "i"
 
 
 class OperationalAmplifier(Component):
@@ -157,12 +195,16 @@ class OperationalAmplifier(Component):
         :param sympy_expression sym_value: symbolic value of the component
         :param int position: this element causes equation matrix expansion and needs the row/col index saved
     """
-    def __init__(self, name, type, node1, node2, node3, node4, sym_value, position = None):
-        super().__init__(name, type, node1, node2, sym_value)
+    def __init__(self, name, node1, node2, node3, node4, sym_value, position = None):
+        super().__init__(name, node1, node2, sym_value)
         self.node3 = node3
         self.node4 = node4
         self.position = position
         self.netlist_keywords = ["A", "a"]
+        self.type = "a"
+
+    def nodes(self):
+        return {self.node1, self.node2, self.node3, self.node4}
 
 
 class CurrentControlledSource(Component):
@@ -180,9 +222,10 @@ class CurrentControlledSource(Component):
 
     """
     def __init__(self, name, type, node1, node2, sym_value, current_sensor, position, value=None):
-        super().__init__(name, type, node1, node2, sym_value, value)
+        super().__init__(name, node1, node2, sym_value, value)
         self.current_sensor = current_sensor
         self.position = position
+        self.type = type
         self.netlist_keywords = ["F", "f", "H", "h"]
 
 
@@ -202,21 +245,27 @@ class VoltageControlledSource(Component):
 
     """
     def __init__(self, name, type, node1, node2, node3, node4, sym_value, position=None, value=None):
-        super().__init__(name, type, node1, node2, sym_value, value)
+        super().__init__(name, node1, node2, sym_value, value)
         self.node3 = node3
         self.node4 = node4
         self.position = position
+        self.type = type
         self.netlist_keywords = ["G", "g", "E", "e"]
+
+    def nodes(self):
+        return {self.node1, self.node2, self.node3, self.node4}
 
 
 class Coupling(Component):
-    def __init__(self, name, type, L1, L2, sym_value, value):
-        super().__init__(name, type, sym_value, value)
+    def __init__(self, name, L1, L2, sym_value, value):
+        super().__init__(name, None, None, sym_value, value)
         self.L1 = L1
         self.L2 = L2
         self.sym_value = sym_value
         self.value = value
         self.netlist_keywords = ["K", "k"]
+        self.type = "k"
+
 
 class Subcircuit():
     def __init__(self, name, model_id, node_list, param_dict):
@@ -225,6 +274,8 @@ class Subcircuit():
         self.node_list = node_list
         self.param_dict = param_dict
         self.netlist_keywords = ["X", "x"]
+        self.type = "x"
+
 
 class SubcktModel():
     def __init__(self, model_id, node_list, param_dict):
@@ -350,6 +401,7 @@ class PeriodicSwitch(Component):
         super().__init__(name, type, node1, node2)
         self.phase = phase
         self.netlist_keywords = ["S", "s"]
+
 
 class Short(Component):
     pass
