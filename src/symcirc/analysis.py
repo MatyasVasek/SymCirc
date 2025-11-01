@@ -751,6 +751,12 @@ class AnalyseCircuit:
 
             equation_matrix = M.col_insert(m_size, S)
 
+            #Experiment with simplification inside matrix - seems like a huge performance upgrade in tgn method!
+            for i in range(m_size**2):
+                expr = equation_matrix[i]
+                if expr != 0:
+                    equation_matrix[i] = sympy.cancel(expr)
+
             for node in v_graph_nodes:
                 symbols.append(sympy.Symbol(f"v({node})"))
             for symb in symbols_to_append:
