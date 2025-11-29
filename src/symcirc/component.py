@@ -227,6 +227,9 @@ class CurrentControlledSource(Component):
         self.type = type
         self.netlist_keywords = ["F", "f", "H", "h"]
 
+    def nodes(self):
+        return {self.node1, self.node2, self.node3, self.node4}
+
 
 class VoltageControlledSource(Component):
     """

@@ -533,11 +533,7 @@ class Analysis:
             if c.type == "f":  # CCT/CCCS
                 node1 = c.node1
                 node2 = c.node2
-                if c.node3 is None:
-                    c_v = self.circuit.components[c.current_sensor]
-                    node3 = c_v.shorted_node
-                else:
-                    node3 = c.node3
+                node3 = c.node3
                 node4 = c.node4
                 self.graph_append(node1, v_graph_nodes)
                 self.graph_append(node2, v_graph_nodes)
@@ -554,11 +550,7 @@ class Analysis:
             if c.type == "h":  # CVT/CCVS
                 node1 = c.node1
                 node2 = c.node2
-                if c.node3 is None:
-                    c_v = self.circuit.components[c.current_sensor]
-                    node3 = c_v.shorted_node
-                else:
-                    node3 = c.node3
+                node3 = c.node3
                 node4 = c.node4
                 self.graph_append(node1, v_graph_nodes)
                 self.graph_append(node2, v_graph_nodes)
@@ -704,12 +696,7 @@ class Analysis:
 
         node1 = c.node1
         node2 = c.node2
-        if c.node3 is None:
-            c_v = self.circuit.components[c.current_sensor]
-            node3 = c_v.shorted_node
-            c.node3 = node3
-        else:
-            node3 = c.node3
+        node3 = c.node3
         node4 = c.node4
 
         c_v = self.circuit.components[c.current_sensor]
@@ -741,12 +728,7 @@ class Analysis:
             f_gain = c.value
         node1 = c.node1
         node2 = c.node2
-        if c.node3 is None:
-            c_v = self.circuit.components[c.current_sensor]
-            node3 = c_v.shorted_node
-            c.node3 = node3
-        else:
-            node3 = c.node3
+        node3 = c.node3
         node4 = c.node4
 
         n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
@@ -984,12 +966,7 @@ class Analysis:
     def _add_CCT(self, matrix, c, index):  # current to current transformer
         N1 = c.node1
         N2 = c.node2
-        if c.node3 is None:
-            c_v = self.circuit.components[c.current_sensor]
-            N3 = c_v.shorted_node
-            c.node3 = N3
-        else:
-            N3 = c.node3
+        N3 = c.node3
         N4 = c.node4
         if self.is_symbolic:
             val = c.sym_value
@@ -1005,12 +982,7 @@ class Analysis:
     def _add_CVT(self, matrix, c, index):  # Current to voltage transformer
         N1 = c.node1
         N2 = c.node2
-        if c.node3 is None:
-            c_v = self.circuit.components[c.current_sensor]
-            N3 = c_v.shorted_node
-            c.node3 = N3
-        else:
-            N3 = c.node3
+        N3 = c.node3
         N4 = c.node4
 
         if self.is_symbolic:

@@ -617,10 +617,15 @@ def parse(netlist):
     for key in add_short:
         c_s = components[key]
         new_node = None
+
+        shorted_node = c_s.node1
         for c_name in add_short[key]:
+            c = components[c_name]
+            if c.node3 is None:
+                c.node3 = shorted_node
             new_node = f"*ctrl{c_s.name}{c_name}"
             nodes.append(new_node)
-        c_s.shorted_node = c_s.node1
+
         c_s.node1 = new_node
 
     for couple in couplings:
