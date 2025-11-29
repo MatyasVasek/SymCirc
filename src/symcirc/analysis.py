@@ -197,19 +197,57 @@ class Analysis:
             if n1 == "0":
                 vn1 = 0
             else:
-                vn1 = self.get_node_voltage(n1)
+                vn1 = self.get_node_voltage(n1, force_s_domain=True)
             if n2 == "0":
                 vn2 = 0
             else:
-                vn2 = self.get_node_voltage(n2)
+                vn2 = self.get_node_voltage(n2, force_s_domain=True)
+
             ret = sympy.cancel((vn1 - vn2))
+        if ret is None:
+            ret = sympy.Symbol(v, )
         return ret
 
     def component_current(self, name: str) -> sympy.Symbol:
         """Has to be implemented in child class"""
-        pass
+        ret = None
+        i = f"i({name})"
+        i_symbol = sympy.symbols(i)
 
-    def get_node_voltage(self, node: str, force_s_domain: bool=False) -> Union[sympy.Expr, None]:
+        if self.method == "tableau":
+            ret = self.solved_dict[i_symbol]
+
+        if self.method == "two_graph_node":
+            if i_symbol in self.solved_dict:
+                return self.solved_dict[i_symbol]
+
+            c = self.circuit.components[name]
+            if c.type in ["r", "l", "c"]:
+                n1 = c.node1
+                n2 = c.node2
+                if n1 == "0":
+                    vn1 = 0
+                else:
+                    vn1 = self.get_node_voltage(n1, force_s_domain=True)
+                if n2 == "0":
+                    vn2 = 0
+                else:
+                    vn2 = self.get_node_voltage(n2, force_s_domain=True)
+
+                if self.is_symbolic:
+                    val = c.sym_value
+                else:
+                    val = c.value
+
+                if c.type == "r":
+                    ret = sympy.cancel((vn1 - vn2) / val)
+                if c.type == "l":
+                    ret = sympy.cancel((vn1 - vn2) / (val * s))
+                if c.type == "c":
+                    ret = sympy.cancel((vn1 - vn2) * val * s)
+        return ret
+
+    def get_node_voltage(self, node: str, force_s_domain=False) -> Union[sympy.Expr, None]:
         """Has to be implemented in child class"""
         func = None
         try:
@@ -1056,52 +1094,13 @@ class DC(Analysis):
             val = c.dc_num
         return val
 
-    def component_voltage(self, name: str) -> sympy.Expr:
-        """
-        Old way to return a component voltage, will be deprecated soon
-        """
-        ret = super().component_voltage(name)
-        v = f"v({name})"
-        if ret is None:
-            ret = sympy.Symbol(v)
-        return ret
-
     def component_current(self, name: str) -> sympy.Symbol:
         """
         Old way to return a component current, will be deprecated soon
         """
-        ret = None
-        i = f"i({name})"
-        if self.method == "tableau":
-            ret = self.solved_dict[sympy.symbols(i)]
-        elif self.method == "two_graph_node":
-            c = self.circuit.components[name]
-            if c.type in ["r", "l", "c"]:
-                n1 = c.node1
-                n2 = c.node2
-                if n1 == "0":
-                    vn1 = 0
-                else:
-                    vn1 = self.get_node_voltage(n1)
-                if n2 == "0":
-                    vn2 = 0
-                else:
-                    vn2 = self.get_node_voltage(n2)
-
-                if self.is_symbolic:
-                    val = c.sym_value
-                else:
-                    val = c.value
-
-                if c.type == "r":
-                    ret = sympy.cancel((vn1 - vn2) / val)
-                if c.type == "l":
-                    ret = infinity
-                if c.type == "c":
-                    ret = 0
-
-        if ret is None:
-            ret =  sympy.Symbol(i)
+        ret = super().component_current(name)
+        if ret is not None:
+            ret = sympy.limit(ret, s, 0)
         return ret
 
 
@@ -1124,93 +1123,6 @@ class TF(Analysis):
         else:
             val = c.ac_num
         return val
-
-    def component_voltage(self, name: str) -> sympy.Expr:
-        """
-        Old way to return a component voltage, will be deprecated soon
-        """
-        ret = None
-        v = f"v({name})"
-
-        if self.method == "tableau":
-            ret = self.solved_dict[sympy.symbols(v)]
-
-        elif self.method == "two_graph_node":
-            c = self.circuit.components[name]
-            n1 = c.node1
-            n2 = c.node2
-            if n1 == "0":
-                vn1 = 0
-            else:
-                vn1 = self.get_node_voltage(n1, force_s_domain=True)
-            if n2 == "0":
-                vn2 = 0
-            else:
-                vn2 = self.get_node_voltage(n2, force_s_domain=True)
-            ret = sympy.cancel((vn1 - vn2))
-
-        if ret is None:
-            return sympy.Symbol(v)
-        else:
-            return ret
-
-    def get_node_voltage(self, node: str, force_s_domain: bool=False) -> Union[sympy.Expr, None]:
-        """
-        Old way to return a node voltage, will be deprecated soon
-        """
-        func = None
-        try:
-            func = self.solved_dict[self.node_voltage_symbols[self.node_dict[node]]]
-        except KeyError:
-            for identity in self.node_voltage_identities:
-                if node in identity:
-                    if "0" in identity:
-                        return sympy.Expr(0)
-                    else:
-                        for n in identity:
-                            try:
-                                func = self.solved_dict[self.node_voltage_symbols[self.node_dict[n]]]
-                            except:
-                                pass
-        return func
-
-    def component_current(self, name: str) -> sympy.Symbol:
-        """
-        Old way to return a component current, will be deprecated soon
-        """
-        ret = None
-        i = f"i({name})"
-        if self.method == "tableau":
-            ret = self.solved_dict[sympy.symbols(i)]
-        elif self.method == "two_graph_node":
-            c = self.circuit.components[name]
-            if c.type in ["r", "l", "c"]:
-                n1 = c.node1
-                n2 = c.node2
-                if n1 == "0":
-                    vn1 = 0
-                else:
-                    vn1 = self.get_node_voltage(n1)
-                if n2 == "0":
-                    vn2 = 0
-                else:
-                    vn2 = self.get_node_voltage(n2)
-
-                if self.is_symbolic:
-                    val = c.sym_value
-                else:
-                    val = c.value
-
-                if c.type == "r":
-                    ret = sympy.cancel((vn1 - vn2) / val)
-                if c.type == "l":
-                    ret = sympy.cancel((vn1 - vn2) / (val * s))
-                if c.type == "c":
-                    ret = sympy.cancel((vn1 - vn2) * val* s)
-        if ret is None:
-            return sympy.Symbol(i)
-        else:
-            return ret
 
 class AC(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
@@ -1246,91 +1158,14 @@ class AC(Analysis):
             val = c.ac_num * c.ac_phase
         return val
 
-    def component_voltage(self, name: str) -> sympy.Expr:
-        """
-        Old way to return a component voltage, will be deprecated soon
-        """
-        ret = None
-        v = f"v({name})"
-
-        if self.method == "tableau":
-            ret = self.solved_dict[sympy.symbols(v)]
-
-        elif self.method == "two_graph_node":
-            c = self.circuit.components[name]
-            n1 = c.node1
-            n2 = c.node2
-            if n1 == "0":
-                vn1 = 0
-            else:
-                vn1 = self.get_node_voltage(n1)
-            if n2 == "0":
-                vn2 = 0
-            else:
-                vn2 = self.get_node_voltage(n2)
-            ret = sympy.cancel((vn1 - vn2))
-        if ret is None:
-            return sympy.Symbol(v)
-        else:
-            return ret
-
-    def get_node_voltage(self, node: str, force_s_domain: bool=False) -> Union[sympy.Expr, None]:
-        """
-        Old way to return a node voltage, will be deprecated soon
-        """
-        func = None
-        try:
-            func = self.solved_dict[self.node_voltage_symbols[self.node_dict[node]]]
-        except KeyError:
-            for identity in self.node_voltage_identities:
-                if node in identity:
-                    if "0" in identity:
-                        return sympy.Expr(0)
-                    else:
-                        for n in identity:
-                            try:
-                                func = self.solved_dict[self.node_voltage_symbols[self.node_dict[n]]]
-                            except:
-                                pass
-        return func
-
     def component_current(self, name: str) -> sympy.Symbol:
         """
         Old way to return a component current, will be deprecated soon
         """
-        ret = None
-        i = f"i({name})"
-        if self.method == "tableau":
-            ret = self.solved_dict[sympy.symbols(i)]
-        elif self.method == "two_graph_node":
-            c = self.circuit.components[name]
-            if c.type in ["r", "l", "c"]:
-                n1 = c.node1
-                n2 = c.node2
-                if n1 == "0":
-                    vn1 = 0
-                else:
-                    vn1 = self.get_node_voltage(n1)
-                if n2 == "0":
-                    vn2 = 0
-                else:
-                    vn2 = self.get_node_voltage(n2)
-
-                if self.is_symbolic:
-                    val = c.sym_value
-                else:
-                    val = c.value
-
-                if c.type == "r":
-                    ret = sympy.cancel((vn1 - vn2) / val)
-                if c.type == "l":
-                    ret = sympy.cancel((vn1 - vn2) / (val * 2 * pi * f * j))
-                if c.type == "c":
-                    ret = sympy.cancel((vn1 - vn2) * (val * 2 * pi * f * j))
-        if ret is None:
-            return sympy.Symbol(i)
-        else:
-            return ret
+        ret = super().component_current(name)
+        if ret is not None:
+            ret = ret.subs(s, 2*pi*f*j)
+        return ret
 
 class TRAN(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
@@ -1338,12 +1173,12 @@ class TRAN(Analysis):
                  use_symengine: bool = False):
         super().__init__(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
 
-    def get_node_voltage(self, node: str, force_s_domain: bool=False) -> Union[sympy.Expr, None]:
+    def get_node_voltage(self, node: str, force_s_domain=False) -> Union[sympy.Expr, None]:
         """
         Old way to return a node voltage, will be deprecated soon
         """
-        func = super().get_node_voltage(node, force_s_domain)
-        if func is None:
+        func = super().get_node_voltage(node)
+        if func is None or force_s_domain:
             return func
         else:
             res = laplace.iLT(func, self.sympy_ilt)
@@ -1374,28 +1209,20 @@ class TRAN(Analysis):
         Old way to return a component voltage, will be deprecated soon
         """
         ret = super().component_voltage(name)
-        v = f"v({name})"
-
-        if ret is None:
-            return laplace.iLT(sympy.Symbol(v), self.sympy_ilt)
-        else:
+        if ret is not None:
             ret = laplace.iLT(ret, self.sympy_ilt)
             ret = sympy.factor_terms(ret)
-            return ret
+        return ret
 
     def component_current(self, name: str) -> sympy.Symbol:
         """
         Old way to return a component current, will be deprecated soon
         """
         ret = super().component_current(name)
-        i = f"i({name})"
-
-        if ret is None:
-            return laplace.iLT(sympy.Symbol(i), self.sympy_ilt)
-        else:
+        if ret is not None:
             ret = laplace.iLT(ret, self.sympy_ilt)
             ret = sympy.factor_terms(ret)
-            return ret
+        return ret
 
 
 def AnalyseCircuit(netlist: str, analysis_type: str = "DC", method: str = "tableau",
