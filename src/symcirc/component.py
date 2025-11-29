@@ -1,6 +1,5 @@
 import sympy
-from __init__ import *
-
+from symcirc.utils import s
 
 class Component:
     """
