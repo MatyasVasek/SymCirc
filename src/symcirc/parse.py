@@ -102,7 +102,7 @@ def ac_value(words):
     else:
         ac_sym = sympy.Symbol(words[0], real=True)
     # phase_shift = sympy.exp(j*phase_shift)
-    phase_shift = evalf(cos(phase_shift) + j * sin(phase_shift))
+    phase_shift = sympy.simplify(cos(phase_shift) + j * sin(phase_shift))
     return ac_value, phase_shift, ac_sym
 
 def tran_value(words, dc):
