@@ -1,5 +1,5 @@
 import os
-import copy
+import copy, time
 from typing import List, Set, Dict, Union
 
 from sympy import Symbol
@@ -331,8 +331,16 @@ class Analysis:
           :return list symbols: list of all used sympy.symbol objects
         """
         eqn_matrix, symbols = self._build_system_eqn()
+        t0 = time.time()
+        '''solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
+        for i in solved_dict:
+            solved_dict[i] = solved_dict[i].cancel()
+        print(f"LU solve time: {time.time() - t0}")
+        print(solved_dict)'''
+        #t0 = time.time()
         solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-
+        #print(f"Gauss solve time: {time.time()-t0}")
+        #print(solved_dict)
         return eqn_matrix, solved_dict, symbols
 
     def _build_system_eqn(self):
@@ -622,6 +630,12 @@ class Analysis:
             symbols.append(sympy.Symbol(f"v({node})"))
         for symb in symbols_to_append:
             symbols.append(symb)
+
+        # TODO: experiment with simplification inside matrix - seems like a huge performance upgrade in tgn method!
+        for i in range(m_size ** 2):
+            expr = equation_matrix[i]
+            if expr != 0:
+                equation_matrix[i] = sympy.cancel(expr)
 
         return equation_matrix, symbols
 
