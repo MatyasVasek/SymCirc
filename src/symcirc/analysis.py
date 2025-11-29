@@ -1149,11 +1149,10 @@ class TF(Analysis):
                 vn2 = self.get_node_voltage(n2, force_s_domain=True)
             ret = sympy.cancel((vn1 - vn2))
 
+        if ret is None:
+            return sympy.Symbol(v)
         else:
-            if ret is None:
-                return sympy.Symbol(v)
-            else:
-                return ret
+            return ret
 
     def get_node_voltage(self, node: str, force_s_domain: bool=False) -> Union[sympy.Expr, None]:
         """
