@@ -29,7 +29,7 @@ def check_if_symbolic(val):
     return not val.is_number
 
 
-def convert_units(val, forced_numeric=False, local_dict=None):
+def convert_units(val, forced_numeric=False, local_dict=None, return_rational=True):
     ret = None
     symbolic = True
     if local_dict is None:
@@ -41,20 +41,23 @@ def convert_units(val, forced_numeric=False, local_dict=None):
     val = val.replace("{", "").replace("}", "")
     if len(val) > 3:
         if (val[-3:] in UNITS) and (val[-4].isnumeric()):
-            ret = sympy.Rational(sympy.parse_expr(val[:-3], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-3:]])
+            ret = sympy.parse_expr(val[:-3], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-3:]]
     if len(val) > 1:
         if ret is None:
             if (val[-1] in UNITS) and (val[-2].isnumeric()):
-                ret = sympy.Rational(sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]])
+                ret = sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]]
     if ret is None:
-        try:
-            ret = sympy.Rational(sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS))
-        except TypeError:
-            ret = sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS)
+        ret = sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS)
     if forced_numeric:
         symbolic = False
     else:
         symbolic = check_if_symbolic(ret)
+
+    if return_rational:
+        try:
+            ret = sympy.Rational(ret)
+        except:
+            pass
     return ret, symbolic
 
 
