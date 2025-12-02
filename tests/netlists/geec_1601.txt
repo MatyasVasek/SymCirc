@@ -1,0 +1,12 @@
+GEEC circuit 1601
+RC node3 node1 2.1k
+RB node3 node2 1.55Meg
+C1 nodei node2 1u
+C2 node1 nodeo 1u
+Rz nodeo 0 1Meg
+Vi node4 0 DC 0 AC 1 {0*Pi/180} SIN 0 10m 10k 0 0
+VN node3 0 DC 10
+Q1 node1 node2 0 NPNmodel
+Cz nodeo 0 1p
+Rs node4 nodei 100
+.model NPNmodel npn bf=300  is=1.5e-14 nr=0 rb=0.6 cje=13e-12 cjc=4e-12 vaf=80

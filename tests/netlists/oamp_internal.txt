@@ -1,0 +1,26 @@
+OAMP IMTERNAL MODEL
+V3 node1 0 DC 15
+V4 0 node2 DC 15
+E1 nodes nodei2 nodei1 nodes 1
+
+Vd nodei1 nodes DC 0 AC 0.5 {0*Pi/180} SIN 0 10u 10k 0 0
+Vs nodes 0 DC 0 AC 0 {0*Pi/180} SIN 0 0 10k 0 0
+Q1 node4 nodei2 node3 PNPmodel
+Q2 node5 nodei1 node3 PNPmodel
+I1 node1 node3 DC 13u AC 0 {0*Pi/180}
+Q3 node4 node4 node2 NPNmodel
+Q4 node5 node4 node2 NPNmodel2
+Q5 node1 node5 node6 NPNmodel
+Q6 node9 node6 node2 NPNmodel3
+I2 node1 node7 DC 250u AC 0 {0*Pi/180}
+D1 node7 node8 Dmod
+D2 node8 node9 Dmod
+Q7 node1 node7 nodeo NPNmodel
+Q8 node2 node9 nodeo PNPmodel2
+R1 nodeo 0 2k
+.model PNPmodel pnp bf=80 nr=0 VAF=100
+.model NPNmodel npn bf=80 nr=0
+.model NPNmodel2 npn bf=80 nr=0 VAF=100
+.model NPNmodel3 npn bf=80 nr=0 VAF=50
+.model Dmod d IS=1e-16
+.model PNPmodel2 pnp bf=80 nr=0
