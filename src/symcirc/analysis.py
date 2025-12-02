@@ -84,18 +84,18 @@ class Circuit:
         return len(self._scan_nodes()) - 1
 
     def analyse(self, analysis_type:str = "tf", method: str = "tableau",
-                 symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True,
+                 symbolic: bool = True, auto_eval: bool = False, precision: int = 6, sympy_ilt: bool = True,
                  use_symengine: bool = False):
 
         analysis_type = analysis_type.lower()
         if analysis_type == "dc":
-            analysis = DC(self, method, symbolic, precision, sympy_ilt, use_symengine)
+            analysis = DC(self, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
         elif analysis_type == "ac":
-            analysis = AC(self, method, symbolic, precision, sympy_ilt, use_symengine)
+            analysis = AC(self, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
         elif analysis_type == "tf":
-            analysis = TF(self, method, symbolic, precision, sympy_ilt, use_symengine)
+            analysis = TF(self, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
         elif analysis_type == "tran":
-            analysis = TRAN(self, method, symbolic, precision, sympy_ilt, use_symengine)
+            analysis = TRAN(self, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
         else:
             raise ValueError(f"Nonexistent analysis type: {analysis_type}")
         return analysis
@@ -130,7 +130,7 @@ class Analysis:
     :raise ValueError: If the analysis_type argument is invalid.
     """
     def __init__(self, circuit: Circuit, method: str = "tableau",
-                 symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True,
+                 symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
                  use_symengine: bool = False):
 
         if use_symengine:
@@ -141,6 +141,7 @@ class Analysis:
             raise ValueError(f"Nonexistent analysis method: {method}")
 
         self.is_symbolic: bool = symbolic
+        self.auto_eval = auto_eval
         self.precision: int = precision
         self.method: str = method
         self.sympy_ilt: bool = sympy_ilt
@@ -379,6 +380,9 @@ class Analysis:
         solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
         #print(f"Gauss solve time: {time.time()-t0}")
         #print(solved_dict)
+        if self.auto_eval:
+            solved_dict = {key: evalf(func, precision=self.precision) for key, func in solved_dict.items()}
+
         return eqn_matrix, solved_dict, symbols
 
     def _build_system_eqn(self):
@@ -1044,9 +1048,9 @@ class Analysis:
 
 class DC(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
-                 symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True,
+                 symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
                  use_symengine: bool = False):
-        super().__init__(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
+        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
 
     def _analyse(self):
         eqn_matrix, solved_dict, symbols = super()._analyse()
@@ -1078,9 +1082,9 @@ class DC(Analysis):
 
 class TF(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
-                 symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True,
+                 symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
                  use_symengine: bool = False):
-        super().__init__(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
+        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
 
     def _analyse(self):
         eqn_matrix, solved_dict, symbols = super()._analyse()
@@ -1098,9 +1102,9 @@ class TF(Analysis):
 
 class AC(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
-                 symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True,
+                 symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
                  use_symengine: bool = False):
-        super().__init__(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
+        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
 
     def _analyse(self):
         eqn_matrix, solved_dict, symbols = super()._analyse()
@@ -1141,9 +1145,9 @@ class AC(Analysis):
 
 class TRAN(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
-                 symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True,
+                 symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
                  use_symengine: bool = False):
-        super().__init__(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
+        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
 
     def get_node_voltage(self, node: str, force_s_domain=False) -> Union[sympy.Expr, None]:
         """
@@ -1204,13 +1208,13 @@ def AnalyseCircuit(netlist: str, analysis_type: str = "DC", method: str = "table
     circuit = Circuit(netlist, operating_points)
     analysis_type = analysis_type.lower()
     if analysis_type == "dc":
-        analysis = DC(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
+        analysis = DC(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
     elif analysis_type == "ac":
-        analysis = AC(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
+        analysis = AC(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
     elif analysis_type == "tf":
-        analysis = TF(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
+        analysis = TF(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
     elif analysis_type == "tran":
-        analysis = TRAN(circuit, method, symbolic, precision, sympy_ilt, use_symengine)
+        analysis = TRAN(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
     else:
         raise ValueError(f"Nonexistent analysis type: {analysis_type}")
     return analysis
