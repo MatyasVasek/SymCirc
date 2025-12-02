@@ -37,7 +37,7 @@ def denom(H):
 
 def evalf(H, subs:dict={}, precision:int=6):
     subs_dict = {**subs, **global_dict}
-    return H.evalf(subs=subs_dict, n=precision)
+    return factor(H.evalf(subs=subs_dict, n=precision))
 
 def load_file(netlist_addr):
     """
