@@ -315,23 +315,29 @@ class NPNModelAC(SubcktModel):
         param_dict = sanitized_param_dict
         params = param_dict.keys()
 
-
+        # Resistors
         if "gpi" in params:
             self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
         else:
             self.elements.append(f"rpi b e 1/gpi")
+        if "go" in params:
+            self.elements.append(f"ro c e 1/{param_dict['go']}")
+        if "gx" in params:
+            self.elements.append(f"ro b e 1/{param_dict['gx']}")
 
+        # VCCS
         if "gm" in params:
             self.elements.append(f"gm c e b e {param_dict['gm']}")
         else:
             self.elements.append(f"gm c e b e")
 
-        if "vaf" in params:
-            self.elements.append(f"ro c e")
-        if "CJC" in params:
-            self.elements.append(f"cmu b c {param_dict['CJC']}")
-        if "CJE" in params:
-            self.elements.append(f"cpi b e {param_dict['CJE']}")
+        # Parasitic caps
+        if "cjc" in params:
+            self.elements.append(f"cmu b c {param_dict['cjc']}")
+        if "cje" in params:
+            self.elements.append(f"cpi b e {param_dict['cje']}")
+
+        print(self.elements)
 
 
 class PNPModelAC(SubcktModel):
@@ -345,22 +351,27 @@ class PNPModelAC(SubcktModel):
         param_dict = sanitized_param_dict
         params = param_dict.keys()
 
+        # Resistors
         if "gpi" in params:
             self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
         else:
             self.elements.append(f"rpi b e 1/gpi")
+        if "go" in params:
+            self.elements.append(f"ro c e 1/{param_dict['go']}")
+        if "gx" in params:
+            self.elements.append(f"ro b e 1/{param_dict['gx']}")
 
+        # VCCS
         if "gm" in params:
             self.elements.append(f"gm c e e b {param_dict['gm']}")
         else:
             self.elements.append(f"gm c e b e")
 
-        if "vaf" in params:
-            self.elements.append(f"ro c e")
-        if "CJC" in params:
-            self.elements.append(f"cmu b c {param_dict['CJC']}")
-        if "CJE" in params:
-            self.elements.append(f"cpi b e {param_dict['CJE']}")
+        # Parasitic caps
+        if "cjc" in params:
+            self.elements.append(f"cmu b c {param_dict['cjc']}")
+        if "cje" in params:
+            self.elements.append(f"cpi b e {param_dict['cje']}")
 
 
 class NFETModelAC(SubcktModel):
@@ -374,10 +385,36 @@ class NFETModelAC(SubcktModel):
         param_dict = sanitized_param_dict
         params = param_dict.keys()
 
+        # VCCS
         if "gm" in params:
             self.elements.append(f"gm d s g s {param_dict['gm']}")
         else:
             self.elements.append("gm d s g s")
+
+        if "gmb" in params:  # body-effect VCCS
+            self.elements.append(f"gmb d s b s {param_dict['gmb']}")
+
+        # Parasitic caps
+        if "cbd" in params:  # parasitic cap bulk-drain
+            self.elements.append(f"cbd b d {param_dict['cbd']}")
+        if "cbs" in params:  # parasitic cap bulk-source
+            self.elements.append(f"cbs b s {param_dict['cbs']}")
+        if "cgb" in params:  # parasitic cap gate-bulk
+            self.elements.append(f"cgb g b {param_dict['cgb']}")
+        if "cgs" in params:  # parasitic cap gate-source
+            self.elements.append(f"cgs g s {param_dict['cgs']}")
+        if "cgd" in params:  # parasitic cap gate-drain
+            self.elements.append(f"cgd g d {param_dict['cgd']}")
+        if "cds" in params:  # parasitic cap drain-source
+            self.elements.append(f"cds d s {param_dict['cds']}")
+
+        # Parasitic res
+        if "gds" in params:  # parasitic res drain-source
+            self.elements.append(f"rds d s 1/{param_dict['gds']}")
+        if "gbs" in params:  # parasitic res bulk-source
+            self.elements.append(f"rbs b s 1/{param_dict['gbs']}")
+        if "gbd" in params:  # parasitic res bulk-drain
+            self.elements.append(f"rbd b d 1/{param_dict['gbd']}")
 
 
 class PFETModelAC(SubcktModel):
@@ -391,10 +428,36 @@ class PFETModelAC(SubcktModel):
         param_dict = sanitized_param_dict
         params = param_dict.keys()
 
-        if "gm" in params:
+        # VCCS
+        if "gm" in params:  # main VCCS
             self.elements.append(f"gm s d g s {param_dict['gm']}")
         else:
             self.elements.append("gm s d g s")
+
+        if "gmb" in params: # body-effect VCCS
+            self.elements.append(f"gmb s d b s {param_dict['gmb']}")
+
+        # Parasitic caps
+        if "cbd" in params:  # parasitic cap bulk-drain
+            self.elements.append(f"cbd b d {param_dict['cbd']}")
+        if "cbs" in params:  # parasitic cap bulk-source
+            self.elements.append(f"cbs b s {param_dict['cbs']}")
+        if "cgb" in params:  # parasitic cap gate-bulk
+            self.elements.append(f"cgb g b {param_dict['cgb']}")
+        if "cgs" in params:  # parasitic cap gate-source
+            self.elements.append(f"cgs g s {param_dict['cgs']}")
+        if "cgd" in params:  # parasitic cap gate-drain
+            self.elements.append(f"cgd g d {param_dict['cgd']}")
+        if "cds" in params:  # parasitic cap drain-source
+            self.elements.append(f"cds d s {param_dict['cds']}")
+
+        # Parasitic res
+        if "gds" in params:  # parasitic res drain-source
+            self.elements.append(f"rds d s 1/{param_dict['gds']}")
+        if "gbs" in params:  # parasitic res bulk-source
+            self.elements.append(f"rbs b s 1/{param_dict['gbs']}")
+        if "gbd" in params:  # parasitic res bulk-drain
+            self.elements.append(f"rbd b d 1/{param_dict['gbd']}")
 
 
 class PeriodicSwitch(Component):

@@ -10,9 +10,9 @@ from symcirc.utils import *
 
 
 class Circuit:
-    def __init__(self, netlist):
+    def __init__(self, netlist, operating_points=None):
         self.netlist = netlist
-        self.components, self.couplings = parse.parse(netlist)
+        self.components, self.couplings = parse.parse(netlist, operating_points)
 
     def get(self, component_name: str) -> Component:
         return self.components[component_name]
@@ -1198,10 +1198,10 @@ class TRAN(Analysis):
 
 
 def AnalyseCircuit(netlist: str, analysis_type: str = "DC", method: str = "tableau",
-                 symbolic: bool = True, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False) -> Analysis:
+                 symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
+                 use_symengine: bool = False, operating_points: dict[str, dict[str, float]]|None = None) -> Analysis:
 
-    circuit = Circuit(netlist)
+    circuit = Circuit(netlist, operating_points)
     analysis_type = analysis_type.lower()
     if analysis_type == "dc":
         analysis = DC(circuit, method, symbolic, precision, sympy_ilt, use_symengine)

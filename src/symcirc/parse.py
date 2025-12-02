@@ -160,7 +160,7 @@ def nodes_per_element(type):
     elif type in ["k"]:
         return 0
 
-def parse_subcircuits(netlist):
+def parse_subcircuits(netlist, operating_points):
     subckt_models = {}
     in_model = False
     subckt_model_id = ""
@@ -195,17 +195,18 @@ def parse_subcircuits(netlist):
         elif words[0] in [".model", ".MODEL"]:
             model_id = words[1]
             model_type = words[2].lower()
-            param_dict = {}
-            param_dict["nr"] = 1
-
             # strip optional spice model brackets
             words[3] = words[3].replace("(", "")
             words[-1] = words[-1].replace(")", "")
-
             # parse arguments
+            param_dict = {}
+            if operating_points is not None and model_id in operating_points:
+                param_dict = operating_points[model_id]
+
+            param_dict["nr"] = 1
             for w in words[3:]:
                 key, val = w.split("=")
-                param_dict[key], _ = convert_units(val)
+                param_dict[key], _ = convert_units(val, return_rational=False)
             if model_type in ["npn"]:
                 #if analysis_type not in ["ac", "AC", "tf", "TF"]:
                 #    raise NotImplementedError(
@@ -248,12 +249,10 @@ def parse_subcircuits(netlist):
 
         elif in_model:
             current_model.elements.append(line)
-
         else:
             parsed_netlist.append(line)
 
     final_netlist = unpack(parsed_netlist, subckt_models)
-
     return final_netlist
 
 
@@ -340,7 +339,6 @@ def unpack(parsed_netlist, subckt_models):
                         tmp_elem = tmp_elem.replace("}", "")
                         local.update(params)
                         tmp_elem, _ = convert_units(tmp_elem, local_dict=local)
-
                         string_tmp = str(tmp_elem).replace(" ", "")
                         split_elem[index] = string_tmp
 
@@ -369,7 +367,7 @@ def preparse(netist_lines):
                 preparsed_netlist_lines.append(preparsed_line)
     return preparsed_netlist_lines
 
-def parse(netlist):
+def parse(netlist, operating_points=None):
     """
     Translates
     :param str netlist: netlist in a string format
@@ -401,7 +399,7 @@ def parse(netlist):
     SCSI_components = []
     add_short = {}
     matrix_expansion_coef = 0
-    parsed_netlist = parse_subcircuits(parsed_netlist)
+    parsed_netlist = parse_subcircuits(parsed_netlist, operating_points)
 
     for line in parsed_netlist:
         words = line.split()
