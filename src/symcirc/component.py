@@ -319,9 +319,12 @@ class NPNModelAC(SubcktModel):
         if "gpi" in params:
             self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
         else:
-            self.elements.append(f"rpi b e 1/gpi")
+            self.elements.append(f"rpi b e")
         if "go" in params:
             self.elements.append(f"ro c e 1/{param_dict['go']}")
+        elif "vaf" in params:
+            self.elements.append(f"ro c e")
+
         if "gx" in params:
             self.elements.append(f"ro b e 1/{param_dict['gx']}")
 
@@ -336,8 +339,6 @@ class NPNModelAC(SubcktModel):
             self.elements.append(f"cmu b c {param_dict['cjc']}")
         if "cje" in params:
             self.elements.append(f"cpi b e {param_dict['cje']}")
-
-        print(self.elements)
 
 
 class PNPModelAC(SubcktModel):
@@ -355,9 +356,12 @@ class PNPModelAC(SubcktModel):
         if "gpi" in params:
             self.elements.append(f"rpi b e 1/{param_dict['gpi']}")
         else:
-            self.elements.append(f"rpi b e 1/gpi")
+            self.elements.append(f"rpi b e")
         if "go" in params:
             self.elements.append(f"ro c e 1/{param_dict['go']}")
+        elif "vaf" in params:
+            self.elements.append(f"ro c e")
+
         if "gx" in params:
             self.elements.append(f"ro b e 1/{param_dict['gx']}")
 
