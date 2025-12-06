@@ -162,15 +162,18 @@ class Analysis:
         """
         Returns the specified voltage
         """
-        symbol = self.get_symbols()[f"v({name})"]
-        return self.solved_dict[symbol]
+        return self.component_voltage(name)
 
     def i(self, name: str) -> sympy.Expr:
         """
         Returns the specified current
         """
-        symbol = self.get_symbols()[f"i({name})"]
-        return self.solved_dict[symbol]
+        return self.component_current(name)
+
+    def get_all_results(self):
+        results = self.node_voltages()
+        results.update(self.component_values("all"))
+        return results
 
     def get_symbols(self) -> Dict[str, sympy.Symbol]:
         symbol_dict = {}
