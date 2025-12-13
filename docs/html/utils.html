@@ -5,14 +5,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>utils.py &#8212; SymCirc 0.0.4 documentation</title>
+    <title>utils.py &#8212; SymCirc 0.1.9 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b3523f8e" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=ae2dc491"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=a4622379"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Netlists" href="netlists.html" />
+    <link rel="prev" title="laplace.py" href="laplace.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -168,15 +170,43 @@ x_log (bool): if True, return logarithmically spaced points</p>
 
 
 <h3>Navigation</h3>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">analysis.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parse.html">parse.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="component.html">component.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laplace.html">laplace.py</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">utils.py</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.arg"><code class="docutils literal notranslate"><span class="pre">arg()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.denom"><code class="docutils literal notranslate"><span class="pre">denom()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.evalf"><code class="docutils literal notranslate"><span class="pre">evalf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.evaluate"><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.gauss_points"><code class="docutils literal notranslate"><span class="pre">gauss_points()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.latex_print"><code class="docutils literal notranslate"><span class="pre">latex_print()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.load_file"><code class="docutils literal notranslate"><span class="pre">load_file()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.mag"><code class="docutils literal notranslate"><span class="pre">mag()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.numer"><code class="docutils literal notranslate"><span class="pre">numer()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.plot"><code class="docutils literal notranslate"><span class="pre">plot()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.plot_bode"><code class="docutils literal notranslate"><span class="pre">plot_bode()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.plot_mag"><code class="docutils literal notranslate"><span class="pre">plot_mag()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.plot_phase"><code class="docutils literal notranslate"><span class="pre">plot_phase()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.to_latex"><code class="docutils literal notranslate"><span class="pre">to_latex()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.xpoints"><code class="docutils literal notranslate"><span class="pre">xpoints()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.utils.ypoints"><code class="docutils literal notranslate"><span class="pre">ypoints()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="netlists.html">Netlists</a></li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="laplace.html" title="previous chapter">laplace.py</a></li>
+      <li>Next: <a href="netlists.html" title="next chapter">Netlists</a></li>
   </ul></li>
 </ul>
 </div>
@@ -203,7 +233,7 @@ x_log (bool): if True, return logarithmically spaced points</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2022, Matyas Vasek.
+      &copy;2025, Matyas Vasek.
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>

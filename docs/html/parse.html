@@ -5,14 +5,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>parse.py &#8212; SymCirc 0.0.4 documentation</title>
+    <title>parse.py &#8212; SymCirc 0.1.9 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b3523f8e" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=ae2dc491"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=a4622379"></script>
     <script src="_static/doctools.js?v=888ff710"></script>
     <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="component.py" href="component.html" />
+    <link rel="prev" title="analysis.py" href="analysis.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -149,15 +151,39 @@ Elements inside a subcircuit inherit it’s name in the following format: Elemen
 
 
 <h3>Navigation</h3>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">analysis.py</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">parse.py</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.ac_value"><code class="docutils literal notranslate"><span class="pre">ac_value()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.append_dev_name"><code class="docutils literal notranslate"><span class="pre">append_dev_name()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.check_if_symbolic"><code class="docutils literal notranslate"><span class="pre">check_if_symbolic()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.convert_units"><code class="docutils literal notranslate"><span class="pre">convert_units()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.dc_value"><code class="docutils literal notranslate"><span class="pre">dc_value()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.nodes_per_element"><code class="docutils literal notranslate"><span class="pre">nodes_per_element()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.parse"><code class="docutils literal notranslate"><span class="pre">parse()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.parse_subcircuits"><code class="docutils literal notranslate"><span class="pre">parse_subcircuits()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.preparse"><code class="docutils literal notranslate"><span class="pre">preparse()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.tran_value"><code class="docutils literal notranslate"><span class="pre">tran_value()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.unpack"><code class="docutils literal notranslate"><span class="pre">unpack()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symcirc.parse.value_enum"><code class="docutils literal notranslate"><span class="pre">value_enum()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="component.html">component.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laplace.html">laplace.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="netlists.html">Netlists</a></li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="analysis.html" title="previous chapter">analysis.py</a></li>
+      <li>Next: <a href="component.html" title="next chapter">component.py</a></li>
   </ul></li>
 </ul>
 </div>
@@ -184,7 +210,7 @@ Elements inside a subcircuit inherit it’s name in the following format: Elemen
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2022, Matyas Vasek.
+      &copy;2025, Matyas Vasek.
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>

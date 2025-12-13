@@ -18,11 +18,11 @@ sys.path.insert(0, os.path.dirname(__file__)+"/../../src/")
 # -- Project information -----------------------------------------------------
 
 project = 'SymCirc'
-copyright = '2022, Matyas Vasek'
+copyright = '2025, Matyas Vasek'
 author = 'Matyas Vasek'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.4'
+release = '0.1.9'
 
 
 # -- General configuration ---------------------------------------------------

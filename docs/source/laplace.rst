@@ -1,5 +1,5 @@
 laplace.py
-^^^^^^^^
+^^^^^^^^^^
 
 .. automodule:: symcirc.laplace
     :members:
