@@ -78,7 +78,7 @@ def numeric_test(filename, analysis_type, precision=6, test_data_creation=False,
                     if res_key not in reference_dict:
                         msg = "{} is not in reference file".format(res_key)
                         err.update("not_in_ref", msg)
-                    elif result_dict[res_key] == reference_dict[res_key]:
+                    elif result_dict[res_key].equals(reference_dict[res_key]):
                         pass
                     elif ratio > 0.98 or ratio < 1.02:
                         pass

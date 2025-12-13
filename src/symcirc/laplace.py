@@ -80,32 +80,31 @@ def split_parts(f):
 
     return part_list
 
-
 def separate_s(f):
     f = sympy.Poly(f, s)
     coeff = f.all_coeffs()
     return coeff
 
-
 def iLT(F, sympy_ilt=True):
     if sympy_ilt:
-        return sympy.integrals.transforms.inverse_laplace_transform(F, s, t, plane=None)
+        try:
+            return sympy.integrals.transforms.inverse_laplace_transform(F, s, t, plane=None)
+        except:
+            return symcirc_iLT(F)
     else:
-        f = 0
-        F = sympy.apart(F, s)
-        part_list = split_parts(F)
-        #print(part_list)
-        for Func in part_list:
-            #print("Func: {}".format(Func))
-            func = table_inverse_laplace_transform(Func)
-            #print("TABLE LAPLACE: {}".format(func))
-            #func = residue_laplace(F)
-            #print("func: {}".format(func))
-            if func is None:
-                func = residue_laplace(F)
-                #print("RESIDUE LAPLACE: {}".format(func))
-            f += func
-        return f
+        return symcirc_iLT(F)
+
+
+def symcirc_iLT(F):
+    f = 0
+    F = sympy.apart(F, s)
+    part_list = split_parts(F)
+    for Func in part_list:
+        func = table_inverse_laplace_transform(Func)
+        if func is None:
+            func = residue_laplace(F)
+        f += func
+    return f
 
 
 def table_inverse_laplace_transform(F):
