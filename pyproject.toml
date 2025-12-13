@@ -4,3 +4,10 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.coverage.run]
+source = ["symcirc"]
+omit = ["tests/*", "tests/**"]
+
+[tool.coverage.report]
+omit = ["tests/*", "tests/**"]
