@@ -1,11 +1,11 @@
 # SymCirc
 [![pypi version](https://img.shields.io/pypi/v/symcirc.svg)](https://pypi.python.org/pypi/symcirc)
 [![Downloads](https://static.pepy.tech/badge/symcirc)](https://pepy.tech/project/symcirc)
-[![Downloads](https://static.pepy.tech/badge/symcirc/month)](https://pepy.tech/project/symcirc) 
 [![Powered by SymPy](https://img.shields.io/badge/powered%20by-SymPy-Green.svg?style=flat&colorA=gray&colorB=green)](https://www.sympy.org/)
-![Tests](https://github.com/MatyasVasek/SymCirc/actions/workflows/tests.yml/badge.svg)[![codecov](https://codecov.io/gh/MatyasVasek/SymCirc/branch/main/graph/badge.svg)](  https://codecov.io/gh/MatyasVasek/SymCirc)
+![Tests](https://github.com/MatyasVasek/SymCirc/actions/workflows/tests.yml/badge.svg)
+[![codecov](https://codecov.io/gh/MatyasVasek/SymCirc/branch/main/graph/badge.svg)](  https://codecov.io/gh/MatyasVasek/SymCirc)
 
-A lightweight python library for symbolic circuit analysis.
+A lightweight python package for symbolic circuit analysis.
 
 ## Documentation
 
@@ -15,7 +15,7 @@ Documentation is available on [GitHub Pages](https://matyasvasek.github.io/SymCi
 
 **SymCirc** currently offers symbolic and semisymbolic **DC**, **AC** and **transient** small signal circuit analysis.
 It supports the following ideal circuit elements: **resistors, inductors, capacitors, independent sources, controlled sources, ideal operational amplifiers and coupled inductors**.
-**BJT, MOS and diode** have models implemented only for AC and TF analysis, DC models will be implemented in the future.
+**BJT, MOS and diode** have models implemented only for AC and TF analysis.
 Transient simulation allows for initial conditions of capacitors and standard/coupled inductors.
 
 
@@ -34,14 +34,17 @@ To achieve better performance install the [gmpy2](https://gmpy2.readthedocs.io/e
 ### symengine
 [SymEngine](https://symengine.org) is an optional symbolic core for **SymPy**. To use the **SymEngine** core, run your script with the environment variable ```USE_SYMENGINE=1```, or run **AnalyseCircuit** with an optional argument ```use_symengine=True```
 Example: ```symcirc.AnalyseCircuit(netlist, use_symengine=True)```
+### numpy and matplotlib
+For bode plots and other graphing utilities.
 ## Build
 
 Or you can build with this command:
 ```
 python setup.py sdist bdist_wheel
 ```
-
-## Simulation example
+## Examples
+See [examples](tests/netlists) for more insight into circuit analysis with SymCirc.
+## Basic simulation example
 
 ``` python
 from symcirc import *
@@ -98,6 +101,7 @@ There are many example netlists available in the [netlists](tests/netlists) fold
 * nano: n
 * pico: p
 * femto: f
+
 
 
 
