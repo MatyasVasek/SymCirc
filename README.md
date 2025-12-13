@@ -43,7 +43,7 @@ Or you can build with this command:
 python setup.py sdist bdist_wheel
 ```
 ## Examples
-See [examples](tests/netlists) for more insight into circuit analysis with SymCirc.
+See [examples](examples) for more insight into circuit analysis with SymCirc.
 ## Basic simulation example
 
 ``` python
