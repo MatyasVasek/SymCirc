@@ -1,6 +1,6 @@
 import os
 import copy, time
-from typing import List, Set, Dict, Union
+from typing import List, Set, Dict, Union, Any
 
 from sympy import Symbol
 
@@ -10,7 +10,18 @@ from symcirc.utils import *
 
 
 class Circuit:
-    def __init__(self, netlist, operating_points=None):
+    """
+    When initialized it parses the input netlist, and translates it into a list of components as defined
+    in 'symcirc.component'. This class implements methods for further circuit manipulation before analysis.
+
+    :param netlist: string in netlist format which contains the circuit description.
+        Note: If you intend to load from a file, use the utils.load_file() function.
+    :param operating_points: Use to pass numeric or symbolic operating point values
+        for linearized components, if no values are specified the default model with symbolic values is used.
+        Example: operating_points = {"Q1": {"gm": 74.5e-3, "gpi": 232e-6, "gmu": 1e-9, "go": 22.5e-6, "gx": 1.66}}
+            The Q1 bjt will use these values in the model and expand the basic model accordingly.
+    """
+    def __init__(self, netlist: str, operating_points: dict[str: dict[str, Any]]=None):
         self.netlist = netlist
         self.components, self.couplings = parse.parse(netlist, operating_points)
 
@@ -23,18 +34,26 @@ class Circuit:
         else:
             self.components[component.name] = component
 
-    def remove(self, component_name: str) -> None:
+    def delete(self, component_name: str) -> None:
         if component_name in self.components:
             del self.components[component_name]
         else:
             raise(ValueError("Component doesn't exists"))
 
-    def change(self, component_name: str, parameter: str, new_value) -> None:
+    def pop(self, component_name: str) -> Component|None:
         if component_name in self.components:
-            c = self.components[component_name]
-            setattr(c, parameter, new_value)
+            return self.components.pop(component_name)
         else:
             raise(ValueError("Component doesn't exists"))
+
+    def change(self, component_name: str, parameter: str, new_value) -> None:
+        if component_name not in self.components:
+            raise ValueError("Component doesn't exist")
+        c = self.components[component_name]
+        if hasattr(c, parameter):
+            setattr(c, parameter, new_value)
+        else:
+            raise AttributeError(f"Component '{component_name}' has no attribute '{parameter}'")
 
     def _scan_nodes(self) -> Set[str]:
         node_set = set()
@@ -99,21 +118,6 @@ class Circuit:
         else:
             raise ValueError(f"Nonexistent analysis type: {analysis_type}")
         return analysis
-
-    def dc(self):
-        pass
-
-    def ac(self):
-        pass
-
-    def tf(self):
-        pass
-
-    def tran(self):
-        pass
-
-    def pz(self):
-        pass
 
 
 class Analysis:
@@ -252,7 +256,6 @@ class Analysis:
         return ret
 
     def get_node_voltage(self, node: str, force_s_domain=False) -> Union[sympy.Expr, None]:
-        """Has to be implemented in child class"""
         func = None
         try:
             func = self.solved_dict[self.node_voltage_symbols[self.node_dict[node]]]
@@ -260,7 +263,7 @@ class Analysis:
             for identity in self.node_voltage_identities:
                 if node in identity:
                     if "0" in identity:
-                        return sympy.Expr(0)
+                        return 0
                     else:
                         for n in identity:
                             try:
@@ -383,8 +386,9 @@ class Analysis:
         solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
         #print(f"Gauss solve time: {time.time()-t0}")
         #print(solved_dict)
-        if self.auto_eval:
-            solved_dict = {key: evalf(func, precision=self.precision) for key, func in solved_dict.items()}
+        # TODO: auto_eval implementation in expression retrieval; not directly here, causes issues with laplace
+        #if self.auto_eval:
+        #    solved_dict = {key: evalf(func, precision=self.precision) for key, func in solved_dict.items()}
 
         return eqn_matrix, solved_dict, symbols
 
@@ -1134,7 +1138,7 @@ class AC(Analysis):
             else:
                 val = c.ac_sym
         else:
-            val = c.ac_num * c.ac_phase
+            val = c.ac_num * sympy.exp(j*c.ac_phase)
         return val
 
     def component_current(self, name: str) -> sympy.Symbol:
