@@ -7,8 +7,8 @@ from symcirc import *
 from symcirc import utils
 
 import pytest
-
-NETLIST_DIR = f"{os.getcwd()}/netlists"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+NETLIST_DIR = f"{BASE_DIR}/netlists"
 ANALYSIS_TYPES = ["DC", "TF", "AC", "tran"]
 ANALYSIS_METHODS = ["tableau", "two_graph_node"]
 
