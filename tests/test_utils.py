@@ -1,7 +1,6 @@
 from logging import warning
 
-import matplotlib.pyplot as plt
-import numpy, sympy
+import sympy
 import sys, os
 
 # project root path
@@ -9,6 +8,8 @@ sys.path.append(os.path.dirname(__file__)+"/../src/")
 from symcirc import utils
 
 def plot(func, var, start, stop, points, title="", x_log=False):
+    import numpy
+    import matplotlib.pyplot as plt
     x = utils.xpoints(start, stop, points, log=x_log)
     y = utils.ypoints(func, x, var)
     arrx = numpy.array(x)
@@ -35,6 +36,7 @@ def arg(func, deg=False):
     return func
 
 def plot_mag(func, var, start, stop, points, title="Mag Plot"):
+    import matplotlib.pyplot as plt
     func = mag(func, decibel=True)
     plt.xscale("log")
     plt.xlabel("f (Hz)")
@@ -44,6 +46,7 @@ def plot_mag(func, var, start, stop, points, title="Mag Plot"):
     plot(func, var, start, stop, points, title, x_log=True)
 
 def plot_phase(func, var, start, stop, points, title="Phase Plot"):
+    import matplotlib.pyplot as plt
     func = arg(utils.evalf(func))
     plt.xscale("log")
     plt.xlabel("f (Hz)")
@@ -53,6 +56,8 @@ def plot_phase(func, var, start, stop, points, title="Phase Plot"):
     plot(func, var, start, stop, points, title, x_log=True)
 
 def plot_bode(func, var, start, stop, points=500, title="Bode Plot"):
+    import numpy
+    import matplotlib.pyplot as plt
     # Evaluate magnitude and phase
     func_arg = arg(func, deg=True)  # phase in radians
     func_mag = mag(func, decibel=True)  # magnitude in dB
