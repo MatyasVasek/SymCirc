@@ -1,0 +1,11 @@
+GEEC circuit #241
+V1 node1 0 DC 20 AC 1 {0*Pi/180}
+X1 node1 node4 SUstate1
+R1 node4 node2 2k
+R2 node2 0 2k
+R3 node2 node3 1k
+R4 node3 0 1k
+C node2 node3 1u ic=2
+I1 0 node3 DC 4m AC 0 {0*Pi/180}
+.subckt SUstate1 1 2
+.ends SUstate1
