@@ -1,0 +1,23 @@
+﻿symcirc.CurrentControlledSource
+===============================
+
+.. currentmodule:: symcirc
+
+.. autoclass:: CurrentControlledSource
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CurrentControlledSource.__init__
+      ~CurrentControlledSource.nodes
+   
+   
+
+   
+   
+   

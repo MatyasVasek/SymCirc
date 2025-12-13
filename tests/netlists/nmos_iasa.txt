@@ -1,0 +1,5 @@
+Nmos test iasa
+M1 node1 node2 0 0 NMOSmodel L=10u W=160u
+V1 node2 0 DC 100m AC 1
+V2 node1 0 DC 1 AC 1
+.model NMOSmodel NMOS VTO=1.9 KP=0.0016

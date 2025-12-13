@@ -36,7 +36,7 @@ def denom(H):
     _, D = sympy.fraction(H)
     return D
 
-def evalf(H, subs:dict={}, precision:int=6):
+def evalf(H, subs:Dict={}, precision:int=6):
     subs_dict = {**subs, **global_dict}
     return factor(H.evalf(subs=subs_dict, n=precision))
 

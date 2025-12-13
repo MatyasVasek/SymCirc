@@ -1,0 +1,23 @@
+﻿symcirc.SubcktModel
+===================
+
+.. currentmodule:: symcirc
+
+.. autoclass:: SubcktModel
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SubcktModel.__init__
+      ~SubcktModel.build_instance
+   
+   
+
+   
+   
+   

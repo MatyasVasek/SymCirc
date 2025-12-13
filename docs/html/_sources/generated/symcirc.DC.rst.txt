@@ -1,0 +1,36 @@
+﻿symcirc.DC
+==========
+
+.. currentmodule:: symcirc
+
+.. autoclass:: DC
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~DC.__init__
+      ~DC.all_component_values
+      ~DC.component_current
+      ~DC.component_values
+      ~DC.component_voltage
+      ~DC.get_all_results
+      ~DC.get_node_voltage
+      ~DC.get_node_voltage_symbol
+      ~DC.get_symbols
+      ~DC.graph_append
+      ~DC.i
+      ~DC.index_tgn
+      ~DC.node_voltages
+      ~DC.transfer_function
+      ~DC.v
+   
+   
+
+   
+   
+   

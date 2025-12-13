@@ -24,10 +24,17 @@ Contents
 --------
 
 .. toctree::
-
    usage
+   quickstart
+   examples
    api
-   documentation
+   analysis
+   parse
+   component
+   laplace
+   utils
+   netlists
+
 
 
 

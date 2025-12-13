@@ -1,0 +1,23 @@
+﻿symcirc.VoltageSource
+=====================
+
+.. currentmodule:: symcirc
+
+.. autoclass:: VoltageSource
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~VoltageSource.__init__
+      ~VoltageSource.nodes
+   
+   
+
+   
+   
+   

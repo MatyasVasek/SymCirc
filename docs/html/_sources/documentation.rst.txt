@@ -4,32 +4,34 @@ Documentation
 analysis.py
 ^^^^^^^^^^^
 
-.. autoclass:: symcirc.AnalyseCircuit
+.. automodule:: symcirc.analysis
     :members:
-
-component.py
-^^^^^^^^^^^^
-
-.. autoclass:: symcirc.component.Component
-.. autoclass:: symcirc.component.Capacitor
-.. autoclass:: symcirc.component.Inductor
-.. autoclass:: symcirc.component.VoltageSource
-.. autoclass:: symcirc.component.CurrentSource
-.. autoclass:: symcirc.component.OperationalAmplifier
-.. autoclass:: symcirc.component.VoltageControlledSource
-.. autoclass:: symcirc.component.CurrentControlledSource
+    :undoc-members:
+    :show-inheritance:
 
 utils.py
 ^^^^^^^^
 
-.. autofunction:: symcirc.utils.load_file
-.. autofunction:: symcirc.utils.to_latex
-.. autofunction:: symcirc.utils.latex_print
+.. automodule:: symcirc.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 parse.py
 ^^^^^^^^
 
-.. autofunction:: symcirc.parse.parse
+.. automodule:: symcirc.parse
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+laplace.py
+^^^^^^^^
+
+.. automodule:: symcirc.laplace
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 
 

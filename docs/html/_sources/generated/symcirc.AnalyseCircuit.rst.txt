@@ -1,0 +1,6 @@
+﻿symcirc.AnalyseCircuit
+======================
+
+.. currentmodule:: symcirc
+
+.. autofunction:: AnalyseCircuit

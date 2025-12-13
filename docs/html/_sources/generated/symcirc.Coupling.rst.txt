@@ -1,0 +1,23 @@
+﻿symcirc.Coupling
+================
+
+.. currentmodule:: symcirc
+
+.. autoclass:: Coupling
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Coupling.__init__
+      ~Coupling.nodes
+   
+   
+
+   
+   
+   

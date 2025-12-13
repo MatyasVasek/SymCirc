@@ -1,0 +1,32 @@
+﻿symcirc.Circuit
+===============
+
+.. currentmodule:: symcirc
+
+.. autoclass:: Circuit
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Circuit.__init__
+      ~Circuit.add
+      ~Circuit.analyse
+      ~Circuit.change
+      ~Circuit.count_components
+      ~Circuit.count_nodes
+      ~Circuit.delete
+      ~Circuit.get
+      ~Circuit.get_node_dict
+      ~Circuit.get_node_symbols
+      ~Circuit.pop
+   
+   
+
+   
+   
+   

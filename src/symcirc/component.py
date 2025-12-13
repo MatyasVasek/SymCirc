@@ -13,7 +13,7 @@ class Component:
     :param sym_value: symbolic value
     :param value: numeric value
     """
-    def __init__(self, name:str=None, node1:str=None, node2:str=None, sym_value:sympy.Symbol|sympy.Expr=None, value:float=None):
+    def __init__(self, name:str=None, node1:str=None, node2:str=None, sym_value:Union[sympy.Symbol, sympy.Expr]=None, value:float=None):
         self.name = name
         self.node1 = node1
         self.node2 = node2
@@ -60,7 +60,7 @@ class Resistor(Component):
         :param sym_value: symbolic value
         :param value: numeric value used in semisymbolic analyes
     """
-    def __init__(self, name:str, node1:str, node2:str, sym_value:sympy.Symbol|sympy.Expr=None, value:float=None):
+    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None, value:float=None):
         super().__init__(name, node1, node2, sym_value, value)
         self.netlist_keywords = ["R", "r"]
         self.type = "r"
@@ -77,8 +77,8 @@ class Capacitor(Component):
         :param value: numeric value used in semisymbolic analyes
         :param init_cond: initial condition in volts
     """
-    def __init__(self, name:str, node1:str, node2:str, sym_value:sympy.Symbol|sympy.Expr=None, value:float=None,
-                 init_cond:sympy.Symbol|sympy.Expr=0):
+    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None, value:float=None,
+                 init_cond:Union[sympy.Symbol, sympy.Expr]=0):
         super().__init__(name, node1, node2, sym_value, value)
         self.init_cond = init_cond
         self.netlist_keywords = ["C", "c"]
@@ -97,8 +97,8 @@ class Inductor(Component):
         :param init_cond: initial condition in amps
         :param coupling: a coupling object defining the couple
     """
-    def __init__(self, name:str, node1:str, node2:str, sym_value:sympy.Symbol|sympy.Expr=None, value:float=None,
-                 init_cond:sympy.Symbol|sympy.Expr=0, coupling:Coupling|None=None):
+    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None, value:float=None,
+                 init_cond:Union[sympy.Symbol, sympy.Expr]=0, coupling:Union[Coupling, None]=None):
         super().__init__(name, node1, node2, sym_value, value)
         self.init_cond = init_cond
         self.coupling = coupling
@@ -122,9 +122,9 @@ class VoltageSource(Component):
         :param tran_sym: symbolic transient value
     """
     def __init__(self, name:str, node1:str, node2:str,
-                 dc_num: float=0, dc_sym: sympy.Symbol|sympy.Expr=None,
-                 ac_num: float=0, ac_sym: sympy.Symbol|sympy.Expr=None, ac_phase: sympy.Symbol|sympy.Expr=0,
-                 tran_num: float=0, tran_sym: sympy.Symbol|sympy.Expr=None):
+                 dc_num: float=0, dc_sym: Union[sympy.Symbol, sympy.Expr]=None,
+                 ac_num: float=0, ac_sym: Union[sympy.Symbol, sympy.Expr]=None, ac_phase: Union[sympy.Symbol, sympy.Expr]=0,
+                 tran_num: float=0, tran_sym: Union[sympy.Symbol, sympy.Expr]=None):
         super().__init__(name, node1, node2, sym_value=dc_sym, value=dc_num)
 
         symbol = sympy.Symbol(name)
@@ -169,9 +169,9 @@ class CurrentSource(Component):
         :param tran_sym: symbolic transient value
     """
     def __init__(self, name:str, node1:str, node2:str,
-                 dc_num: float=0, dc_sym: sympy.Symbol|sympy.Expr=None,
-                 ac_num: float=0, ac_sym: sympy.Symbol|sympy.Expr=None, ac_phase: float=0,
-                 tran_num: float=0, tran_sym: sympy.Symbol|sympy.Expr=None):
+                 dc_num: float=0, dc_sym: Union[sympy.Symbol, sympy.Expr]=None,
+                 ac_num: float=0, ac_sym: Union[sympy.Symbol, sympy.Expr]=None, ac_phase: float=0,
+                 tran_num: float=0, tran_sym: Union[sympy.Symbol, sympy.Expr]=None):
 
         super().__init__(name, node1, node2, sym_value = dc_sym, value=dc_num)
         self.dc_num = dc_num
@@ -223,7 +223,7 @@ class CurrentControlledSource(Component):
         :param value: numeric value of the component
     """
     def __init__(self, name:str, type:str, node1:str, node2:str, current_sensor:str,
-                 sym_value:sympy.Symbol|sympy.Expr, value: float=None):
+                 sym_value:Union[sympy.Symbol, sympy.Expr], value: float=None):
         super().__init__(name, node1, node2, sym_value, value)
         self.current_sensor = current_sensor
         self.type = type
@@ -247,7 +247,7 @@ class VoltageControlledSource(Component):
         :param value: numeric value of the component
     """
     def __init__(self, name:str, type:str, node1:str, node2:str, node3:str, node4:str,
-                 sym_value:sympy.Symbol|sympy.Expr, value:float=None):
+                 sym_value:Union[sympy.Symbol, sympy.Expr], value:float=None):
         super().__init__(name, node1, node2, sym_value, value)
         self.node3 = node3
         self.node4 = node4
@@ -266,13 +266,13 @@ class SubcktModel:
         :param node_list: subcircuit interface node list
         :param param_dict: subcircuit parameters dictionary
     """
-    def __init__(self, model_id:str, node_list:List[str], param_dict:Dict[str, sympy.Symbol|sympy.Expr]):
+    def __init__(self, model_id:str, node_list:List[str], param_dict:Dict[str, Union[sympy.Symbol, sympy.Expr]]):
         self.model_id = model_id
         self.node_list = node_list
         self.param_dict = self._sanitize_param_dict(param_dict)
         self.elements = []
 
-    def build_instance(self, operational_point: Any) -> List[str]:
+    def build_instance(self, operational_point) -> List[str]:
         return self.elements
 
     @staticmethod
@@ -289,7 +289,7 @@ class DiodeModelAC(SubcktModel):
         node_list = ["a", "k"]
         super().__init__(model_id, node_list, param_dict)
 
-    def build_instance(self, op: dict[str: Any] = None):
+    def build_instance(self, op: Dict[str, Any] = None):
         elements = []
         if op is not None:
             param_dict = {**self.param_dict, **self._sanitize_param_dict(op)}
@@ -310,7 +310,7 @@ class NPNModelAC(SubcktModel):
         node_list = ["c", "b", "e"]
         super().__init__(model_id, node_list, param_dict)
 
-    def build_instance(self, op:dict[str: Any]=None):
+    def build_instance(self, op:Dict[str, Any]=None):
         elements = []
         if op is not None:
             param_dict = {**self.param_dict, **self._sanitize_param_dict(op)}
@@ -351,7 +351,7 @@ class PNPModelAC(SubcktModel):
         node_list = ["c", "b", "e"]
         super().__init__(model_id, node_list, param_dict)
 
-    def build_instance(self, op: dict[str: Any] = None):
+    def build_instance(self, op: Dict[str, Any] = None):
         elements = []
         if op is not None:
             param_dict = {**self.param_dict, **self._sanitize_param_dict(op)}
@@ -391,7 +391,7 @@ class NFETModelAC(SubcktModel):
         node_list = ["d", "g", "s", "b"]
         super().__init__(model_id, node_list, param_dict)
 
-    def build_instance(self, op: dict[str: Any] = None):
+    def build_instance(self, op: Dict[str, Any] = None):
         elements = []
         if op is not None:
             param_dict = {**self.param_dict, **self._sanitize_param_dict(op)}
@@ -439,7 +439,7 @@ class PFETModelAC(SubcktModel):
         node_list = ["d", "g", "s", "b"]
         super().__init__(model_id, node_list, param_dict)
 
-    def build_instance(self, op: dict[str: Any] = None):
+    def build_instance(self, op: Dict[str, Any] = None):
         elements = []
         if op is not None:
             param_dict = {**self.param_dict, **self._sanitize_param_dict(op)}

@@ -1,0 +1,36 @@
+﻿symcirc.TRAN
+============
+
+.. currentmodule:: symcirc
+
+.. autoclass:: TRAN
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TRAN.__init__
+      ~TRAN.all_component_values
+      ~TRAN.component_current
+      ~TRAN.component_values
+      ~TRAN.component_voltage
+      ~TRAN.get_all_results
+      ~TRAN.get_node_voltage
+      ~TRAN.get_node_voltage_symbol
+      ~TRAN.get_symbols
+      ~TRAN.graph_append
+      ~TRAN.i
+      ~TRAN.index_tgn
+      ~TRAN.node_voltages
+      ~TRAN.transfer_function
+      ~TRAN.v
+   
+   
+
+   
+   
+   

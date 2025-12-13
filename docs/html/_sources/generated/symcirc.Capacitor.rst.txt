@@ -1,0 +1,23 @@
+﻿symcirc.Capacitor
+=================
+
+.. currentmodule:: symcirc
+
+.. autoclass:: Capacitor
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Capacitor.__init__
+      ~Capacitor.nodes
+   
+   
+
+   
+   
+   

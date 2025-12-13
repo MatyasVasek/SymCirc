@@ -93,9 +93,10 @@ def _det_recursive(mat, memo):
 
 
 if __name__ == '__main__':
-    netlist = utils.load_file("..\\..\\tests\\netlists\\RC_6cascade.txt")
+    netlist = utils.load_file("..\\..\\tests\\netlists\\AC5.txt")
     t1 = time.time()
     circuit = AnalyseCircuit(netlist, "TF", symbolic=True, precision=6, method="two_graph_node", sympy_ilt=True)
+    print(circuit.solved_dict)
     M = circuit.eqn_matrix
     print(f"Gauss solve time: {time.time()-t1}")
     t2 = time.time()

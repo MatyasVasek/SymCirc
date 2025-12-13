@@ -21,7 +21,7 @@ class Circuit:
         Example: operating_points = {"Q1": {"gm": 74.5e-3, "gpi": 232e-6, "gmu": 1e-9, "go": 22.5e-6, "gx": 1.66}}
             The Q1 bjt will use these values in the model and expand the basic model accordingly.
     """
-    def __init__(self, netlist: str, operating_points: dict[str: dict[str, Any]]=None):
+    def __init__(self, netlist: str, operating_points: Dict[str, Dict[str, Any]]=None):
         self.netlist = netlist
         self.components, self.couplings = parse.parse(netlist, operating_points)
 
@@ -40,7 +40,7 @@ class Circuit:
         else:
             raise(ValueError("Component doesn't exists"))
 
-    def pop(self, component_name: str) -> Component|None:
+    def pop(self, component_name: str) -> Component:
         if component_name in self.components:
             return self.components.pop(component_name)
         else:
@@ -1210,7 +1210,7 @@ class TRAN(Analysis):
 
 def AnalyseCircuit(netlist: str, analysis_type: str = "DC", method: str = "tableau",
                  symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False, operating_points: dict[str, dict[str, float]]|None = None) -> Analysis:
+                 use_symengine: bool = False, operating_points: Union[Dict[str, Dict[str, float]], None] = None) -> Analysis:
 
     circuit = Circuit(netlist, operating_points)
     analysis_type = analysis_type.lower()

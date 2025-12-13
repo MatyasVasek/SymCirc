@@ -1,0 +1,36 @@
+﻿symcirc.TF
+==========
+
+.. currentmodule:: symcirc
+
+.. autoclass:: TF
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TF.__init__
+      ~TF.all_component_values
+      ~TF.component_current
+      ~TF.component_values
+      ~TF.component_voltage
+      ~TF.get_all_results
+      ~TF.get_node_voltage
+      ~TF.get_node_voltage_symbol
+      ~TF.get_symbols
+      ~TF.graph_append
+      ~TF.i
+      ~TF.index_tgn
+      ~TF.node_voltages
+      ~TF.transfer_function
+      ~TF.v
+   
+   
+
+   
+   
+   

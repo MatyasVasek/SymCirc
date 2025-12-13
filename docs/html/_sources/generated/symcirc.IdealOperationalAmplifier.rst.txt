@@ -1,0 +1,23 @@
+﻿symcirc.IdealOperationalAmplifier
+=================================
+
+.. currentmodule:: symcirc
+
+.. autoclass:: IdealOperationalAmplifier
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~IdealOperationalAmplifier.__init__
+      ~IdealOperationalAmplifier.nodes
+   
+   
+
+   
+   
+   

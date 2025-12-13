@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>symcirc.utils &#8212; SymCirc 0.0.4 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b3523f8e" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=039e1c02" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=ae2dc491"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Documentation" href="../analysis.html" />
+    <link rel="prev" title="symcirc.solvers" href="symcirc.solvers.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-symcirc.utils">
+<span id="symcirc-utils"></span><h1>symcirc.utils<a class="headerlink" href="#module-symcirc.utils" title="Permalink to this heading">¶</a></h1>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.arg" title="symcirc.utils.arg"><code class="xref py py-obj docutils literal notranslate"><span class="pre">arg</span></code></a>(func[, deg])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.denom" title="symcirc.utils.denom"><code class="xref py py-obj docutils literal notranslate"><span class="pre">denom</span></code></a>(H)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.evalf" title="symcirc.utils.evalf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evalf</span></code></a>(H[, subs, precision])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.evaluate" title="symcirc.utils.evaluate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code></a>(func[, precision])</p></td>
+<td><p>Deep numeric evaluation via recursion</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.gauss_points" title="symcirc.utils.gauss_points"><code class="xref py py-obj docutils literal notranslate"><span class="pre">gauss_points</span></code></a>(mean, sd, points)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.latex_print" title="symcirc.utils.latex_print"><code class="xref py py-obj docutils literal notranslate"><span class="pre">latex_print</span></code></a>(data[, symbol_names])</p></td>
+<td><p>Print data in latex code.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.load_file" title="symcirc.utils.load_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_file</span></code></a>(netlist_addr)</p></td>
+<td><p>File to string netlist converter, provided for user convenience.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.mag" title="symcirc.utils.mag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mag</span></code></a>(func[, decibel])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.numer" title="symcirc.utils.numer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numer</span></code></a>(H)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.plot" title="symcirc.utils.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code></a>(func, var, start, stop, points[, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.plot_bode" title="symcirc.utils.plot_bode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_bode</span></code></a>(func, var, start, stop[, points, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.plot_mag" title="symcirc.utils.plot_mag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_mag</span></code></a>(func, var, start, stop, points[, title])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.plot_phase" title="symcirc.utils.plot_phase"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_phase</span></code></a>(func, var, start, stop, points[, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.to_latex" title="symcirc.utils.to_latex"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_latex</span></code></a>(dictionary[, symbol_names])</p></td>
+<td><p>Python dict to latex converter.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.xpoints" title="symcirc.utils.xpoints"><code class="xref py py-obj docutils literal notranslate"><span class="pre">xpoints</span></code></a>(start, stop, points[, log])</p></td>
+<td><p>Generate a list of points between start and stop.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../utils.html#symcirc.utils.ypoints" title="symcirc.utils.ypoints"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ypoints</span></code></a>(func, xpoints, var)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">SymCirc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="symcirc.html">symcirc</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="symcirc.analysis.html">symcirc.analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symcirc.component.html">symcirc.component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symcirc.laplace.html">symcirc.laplace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symcirc.parse.html">symcirc.parse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symcirc.pole_zero.html">symcirc.pole_zero</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symcirc.solvers.html">symcirc.solvers</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">symcirc.utils</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../parse.html">parse.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../component.html">component.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../laplace.html">laplace.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">utils.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../netlists.html">Netlists</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../api.html">API</a><ul>
+  <li><a href="symcirc.html">symcirc</a><ul>
+      <li>Previous: <a href="symcirc.solvers.html" title="previous chapter">symcirc.solvers</a></li>
+      <li>Next: <a href="../analysis.html" title="next chapter">Documentation</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Matyas Vasek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/generated/symcirc.utils.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,23 @@
+﻿symcirc.Inductor
+================
+
+.. currentmodule:: symcirc
+
+.. autoclass:: Inductor
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Inductor.__init__
+      ~Inductor.nodes
+   
+   
+
+   
+   
+   

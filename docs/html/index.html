@@ -1,18 +1,16 @@
-
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Welcome to SymCirc’s documentation! &#8212; SymCirc 0.0.4 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/doctools.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b3523f8e" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=ae2dc491"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Usage" href="usage.html" />
@@ -33,7 +31,7 @@
           <div class="body" role="main">
             
   <section id="welcome-to-symcirc-s-documentation">
-<h1>Welcome to SymCirc’s documentation!<a class="headerlink" href="#welcome-to-symcirc-s-documentation" title="Permalink to this headline">¶</a></h1>
+<h1>Welcome to SymCirc’s documentation!<a class="headerlink" href="#welcome-to-symcirc-s-documentation" title="Permalink to this heading">¶</a></h1>
 <p><strong>SymCirc</strong> is a Python library for symbolic circuit analysis. It can do DC, AC and transient analysis
 of small signal circuits and output a human readable result.</p>
 <p>Check out the <a class="reference internal" href="usage.html"><span class="doc">Usage</span></a> section for further information, including how to
@@ -45,27 +43,186 @@ of small signal circuits and output a human readable result.</p>
 <div class="toctree-wrapper compound">
 </div>
 <section id="contents">
-<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this heading">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage.html#installation">Installation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="documentation.html#analysis-py">analysis.py</a></li>
-<li class="toctree-l2"><a class="reference internal" href="documentation.html#component-py">component.py</a></li>
-<li class="toctree-l2"><a class="reference internal" href="documentation.html#utils-py">utils.py</a></li>
-<li class="toctree-l2"><a class="reference internal" href="documentation.html#parse-py">parse.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="generated/symcirc.html">symcirc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/symcirc.analysis.html">symcirc.analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/symcirc.component.html">symcirc.component</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/symcirc.laplace.html">symcirc.laplace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/symcirc.parse.html">symcirc.parse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/symcirc.pole_zero.html">symcirc.pole_zero</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/symcirc.solvers.html">symcirc.solvers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/symcirc.utils.html">symcirc.utils</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#module-symcirc.analysis">analysis.py</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#symcirc.analysis.AC"><code class="docutils literal notranslate"><span class="pre">AC</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.AC.component_current"><code class="docutils literal notranslate"><span class="pre">AC.component_current()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#symcirc.analysis.AnalyseCircuit"><code class="docutils literal notranslate"><span class="pre">AnalyseCircuit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis"><code class="docutils literal notranslate"><span class="pre">Analysis</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.all_component_values"><code class="docutils literal notranslate"><span class="pre">Analysis.all_component_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.component_current"><code class="docutils literal notranslate"><span class="pre">Analysis.component_current()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.component_values"><code class="docutils literal notranslate"><span class="pre">Analysis.component_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.component_voltage"><code class="docutils literal notranslate"><span class="pre">Analysis.component_voltage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.get_all_results"><code class="docutils literal notranslate"><span class="pre">Analysis.get_all_results()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.get_node_voltage"><code class="docutils literal notranslate"><span class="pre">Analysis.get_node_voltage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.get_node_voltage_symbol"><code class="docutils literal notranslate"><span class="pre">Analysis.get_node_voltage_symbol()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.get_symbols"><code class="docutils literal notranslate"><span class="pre">Analysis.get_symbols()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.graph_append"><code class="docutils literal notranslate"><span class="pre">Analysis.graph_append()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.i"><code class="docutils literal notranslate"><span class="pre">Analysis.i()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.index_tgn"><code class="docutils literal notranslate"><span class="pre">Analysis.index_tgn()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.node_voltages"><code class="docutils literal notranslate"><span class="pre">Analysis.node_voltages()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.transfer_function"><code class="docutils literal notranslate"><span class="pre">Analysis.transfer_function()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Analysis.v"><code class="docutils literal notranslate"><span class="pre">Analysis.v()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit"><code class="docutils literal notranslate"><span class="pre">Circuit</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.add"><code class="docutils literal notranslate"><span class="pre">Circuit.add()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.analyse"><code class="docutils literal notranslate"><span class="pre">Circuit.analyse()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.change"><code class="docutils literal notranslate"><span class="pre">Circuit.change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.count_components"><code class="docutils literal notranslate"><span class="pre">Circuit.count_components()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.count_nodes"><code class="docutils literal notranslate"><span class="pre">Circuit.count_nodes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.delete"><code class="docutils literal notranslate"><span class="pre">Circuit.delete()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.get"><code class="docutils literal notranslate"><span class="pre">Circuit.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.get_node_dict"><code class="docutils literal notranslate"><span class="pre">Circuit.get_node_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.get_node_symbols"><code class="docutils literal notranslate"><span class="pre">Circuit.get_node_symbols()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.Circuit.pop"><code class="docutils literal notranslate"><span class="pre">Circuit.pop()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#symcirc.analysis.DC"><code class="docutils literal notranslate"><span class="pre">DC</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.DC.component_current"><code class="docutils literal notranslate"><span class="pre">DC.component_current()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#symcirc.analysis.TF"><code class="docutils literal notranslate"><span class="pre">TF</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#symcirc.analysis.TRAN"><code class="docutils literal notranslate"><span class="pre">TRAN</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.TRAN.component_current"><code class="docutils literal notranslate"><span class="pre">TRAN.component_current()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.TRAN.component_voltage"><code class="docutils literal notranslate"><span class="pre">TRAN.component_voltage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="analysis.html#symcirc.analysis.TRAN.get_node_voltage"><code class="docutils literal notranslate"><span class="pre">TRAN.get_node_voltage()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="parse.html">parse.py</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.ac_value"><code class="docutils literal notranslate"><span class="pre">ac_value()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.append_dev_name"><code class="docutils literal notranslate"><span class="pre">append_dev_name()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.check_if_symbolic"><code class="docutils literal notranslate"><span class="pre">check_if_symbolic()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.convert_units"><code class="docutils literal notranslate"><span class="pre">convert_units()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.dc_value"><code class="docutils literal notranslate"><span class="pre">dc_value()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.nodes_per_element"><code class="docutils literal notranslate"><span class="pre">nodes_per_element()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.parse"><code class="docutils literal notranslate"><span class="pre">parse()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.parse_subcircuits"><code class="docutils literal notranslate"><span class="pre">parse_subcircuits()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.preparse"><code class="docutils literal notranslate"><span class="pre">preparse()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.tran_value"><code class="docutils literal notranslate"><span class="pre">tran_value()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.unpack"><code class="docutils literal notranslate"><span class="pre">unpack()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="parse.html#symcirc.parse.value_enum"><code class="docutils literal notranslate"><span class="pre">value_enum()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="component.html">component.py</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.Capacitor"><code class="docutils literal notranslate"><span class="pre">Capacitor</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.Component"><code class="docutils literal notranslate"><span class="pre">Component</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.Component.nodes"><code class="docutils literal notranslate"><span class="pre">Component.nodes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.Coupling"><code class="docutils literal notranslate"><span class="pre">Coupling</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.CurrentControlledSource"><code class="docutils literal notranslate"><span class="pre">CurrentControlledSource</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.CurrentControlledSource.nodes"><code class="docutils literal notranslate"><span class="pre">CurrentControlledSource.nodes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.CurrentSource"><code class="docutils literal notranslate"><span class="pre">CurrentSource</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.DiodeModelAC"><code class="docutils literal notranslate"><span class="pre">DiodeModelAC</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.DiodeModelAC.build_instance"><code class="docutils literal notranslate"><span class="pre">DiodeModelAC.build_instance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.IdealOperationalAmplifier"><code class="docutils literal notranslate"><span class="pre">IdealOperationalAmplifier</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.IdealOperationalAmplifier.nodes"><code class="docutils literal notranslate"><span class="pre">IdealOperationalAmplifier.nodes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.Inductor"><code class="docutils literal notranslate"><span class="pre">Inductor</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.NFETModelAC"><code class="docutils literal notranslate"><span class="pre">NFETModelAC</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.NFETModelAC.build_instance"><code class="docutils literal notranslate"><span class="pre">NFETModelAC.build_instance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.NPNModelAC"><code class="docutils literal notranslate"><span class="pre">NPNModelAC</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.NPNModelAC.build_instance"><code class="docutils literal notranslate"><span class="pre">NPNModelAC.build_instance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.PFETModelAC"><code class="docutils literal notranslate"><span class="pre">PFETModelAC</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.PFETModelAC.build_instance"><code class="docutils literal notranslate"><span class="pre">PFETModelAC.build_instance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.PNPModelAC"><code class="docutils literal notranslate"><span class="pre">PNPModelAC</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.PNPModelAC.build_instance"><code class="docutils literal notranslate"><span class="pre">PNPModelAC.build_instance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.PeriodicSwitch"><code class="docutils literal notranslate"><span class="pre">PeriodicSwitch</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.Resistor"><code class="docutils literal notranslate"><span class="pre">Resistor</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.Short"><code class="docutils literal notranslate"><span class="pre">Short</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.SubcktModel"><code class="docutils literal notranslate"><span class="pre">SubcktModel</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.SubcktModel.build_instance"><code class="docutils literal notranslate"><span class="pre">SubcktModel.build_instance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.VoltageControlledSource"><code class="docutils literal notranslate"><span class="pre">VoltageControlledSource</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="component.html#symcirc.component.VoltageControlledSource.nodes"><code class="docutils literal notranslate"><span class="pre">VoltageControlledSource.nodes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="component.html#symcirc.component.VoltageSource"><code class="docutils literal notranslate"><span class="pre">VoltageSource</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="laplace.html">laplace.py</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.iLT"><code class="docutils literal notranslate"><span class="pre">iLT()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.laplace"><code class="docutils literal notranslate"><span class="pre">laplace()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.latex_print"><code class="docutils literal notranslate"><span class="pre">latex_print()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.poles"><code class="docutils literal notranslate"><span class="pre">poles()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.residue"><code class="docutils literal notranslate"><span class="pre">residue()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.residue_laplace"><code class="docutils literal notranslate"><span class="pre">residue_laplace()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.separate_s"><code class="docutils literal notranslate"><span class="pre">separate_s()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.split_parts"><code class="docutils literal notranslate"><span class="pre">split_parts()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.symcirc_iLT"><code class="docutils literal notranslate"><span class="pre">symcirc_iLT()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.table_inverse_laplace_transform"><code class="docutils literal notranslate"><span class="pre">table_inverse_laplace_transform()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="laplace.html#symcirc.laplace.visualise"><code class="docutils literal notranslate"><span class="pre">visualise()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils.py</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.arg"><code class="docutils literal notranslate"><span class="pre">arg()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.denom"><code class="docutils literal notranslate"><span class="pre">denom()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.evalf"><code class="docutils literal notranslate"><span class="pre">evalf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.evaluate"><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.gauss_points"><code class="docutils literal notranslate"><span class="pre">gauss_points()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.latex_print"><code class="docutils literal notranslate"><span class="pre">latex_print()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.load_file"><code class="docutils literal notranslate"><span class="pre">load_file()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.mag"><code class="docutils literal notranslate"><span class="pre">mag()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.numer"><code class="docutils literal notranslate"><span class="pre">numer()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.plot"><code class="docutils literal notranslate"><span class="pre">plot()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.plot_bode"><code class="docutils literal notranslate"><span class="pre">plot_bode()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.plot_mag"><code class="docutils literal notranslate"><span class="pre">plot_mag()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.plot_phase"><code class="docutils literal notranslate"><span class="pre">plot_phase()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.to_latex"><code class="docutils literal notranslate"><span class="pre">to_latex()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.xpoints"><code class="docutils literal notranslate"><span class="pre">xpoints()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#symcirc.utils.ypoints"><code class="docutils literal notranslate"><span class="pre">ypoints()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="netlists.html">Netlists</a></li>
 </ul>
 </div>
 </section>
 </section>
 <section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading">¶</a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
@@ -92,8 +249,15 @@ of small signal circuits and output a human readable result.</p>
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parse.html">parse.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="component.html">component.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="laplace.html">laplace.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="netlists.html">Netlists</a></li>
 </ul>
 
 <div class="relations">
@@ -113,7 +277,7 @@ of small signal circuits and output a human readable result.</p>
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -130,8 +294,8 @@ of small signal circuits and output a human readable result.</p>
       &copy;2022, Matyas Vasek.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.5.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
       <a href="_sources/index.rst.txt"
