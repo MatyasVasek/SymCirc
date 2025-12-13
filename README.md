@@ -3,6 +3,7 @@
 [![Downloads](https://static.pepy.tech/badge/symcirc)](https://pepy.tech/project/symcirc)
 [![Downloads](https://static.pepy.tech/badge/symcirc/month)](https://pepy.tech/project/symcirc) 
 [![Powered by SymPy](https://img.shields.io/badge/powered%20by-SymPy-Green.svg?style=flat&colorA=gray&colorB=green)](https://www.sympy.org/)
+![Tests](https://github.com/MatyasVasek/SymCirc/actions/workflows/tests.yml/badge.svg)[![codecov](https://codecov.io/gh/MatyasVasek/SymCirc/branch/main/graph/badge.svg)](  https://codecov.io/gh/MatyasVasek/SymCirc)
 
 A lightweight python library for symbolic circuit analysis.
 
@@ -97,5 +98,6 @@ There are many example netlists available in the [netlists](tests/netlists) fold
 * nano: n
 * pico: p
 * femto: f
+
 
 
