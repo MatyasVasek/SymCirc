@@ -31,7 +31,7 @@ class Bcolors:
 def analysis(analysis_type, analysis_method="tableau", is_symbolic=False):
     error_dict = {}
     netlists = []
-    for filename in os.listdir("{}/netlists".format(os.getcwd())):
+    for filename in os.listdir(NETLIST_DIR):
         netlists.append(filename)
 
     timeout = 20
@@ -51,7 +51,7 @@ def analysis(analysis_type, analysis_method="tableau", is_symbolic=False):
     return error_dict
 
 def analyze(filename, analysis_type, is_symbolic, analysis_method):
-    analysis = AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type=analysis_type,
+    analysis = AnalyseCircuit(utils.load_file(f"{NETLIST_DIR}/{filename}"), analysis_type=analysis_type,
                               symbolic=is_symbolic, method=analysis_method, use_symengine=True)
     analysis.get_all_results()
 
