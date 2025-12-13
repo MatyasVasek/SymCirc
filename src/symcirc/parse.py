@@ -29,7 +29,7 @@ def check_if_symbolic(val):
     return not val.is_number
 
 
-def convert_units(val, forced_numeric=False, local_dict=None, return_rational=True):
+def convert_units(val, forced_numeric=False, local_dict=None):
     ret = None
     symbolic = True
     if local_dict is None:
@@ -53,11 +53,10 @@ def convert_units(val, forced_numeric=False, local_dict=None, return_rational=Tr
     else:
         symbolic = check_if_symbolic(ret)
 
-    if return_rational:
-        try:
-            ret = sympy.Rational(ret)
-        except:
-            pass
+    try:
+        ret = sympy.Rational(ret)
+    except:
+        pass
     return ret, symbolic
 
 
@@ -89,8 +88,7 @@ def ac_value(words):
             ac_value, symbolic = convert_units(words[6])
             try:
                 if words[7] not in RESERVED:
-                    phase_shift_deg, _ = convert_units(words[7])
-                    phase_shift = sympy.rad(phase_shift_deg)
+                    phase_shift, _ = convert_units(words[7])
                 else:
                     phase_shift = 0
             except IndexError:
@@ -104,11 +102,6 @@ def ac_value(words):
         ac_sym = ac_value
     else:
         ac_sym = sympy.Symbol(words[0], real=True)
-    # phase_shift = sympy.exp(j*phase_shift)
-    if phase_shift != 0:
-        phase_shift = sympy.simplify(cos(phase_shift) + j * sin(phase_shift))
-    else:
-        phase_shift = 1
     return ac_value, phase_shift, ac_sym
 
 def tran_value(words, dc):
@@ -202,14 +195,11 @@ def parse_subcircuits(netlist, operating_points):
             words[3] = words[3].replace("(", "")
             words[-1] = words[-1].replace(")", "")
             # parse arguments
-            param_dict = {}
-            if operating_points is not None and model_id in operating_points:
-                param_dict = operating_points[model_id]
 
-            param_dict["nr"] = 1
+            param_dict = {"nr": 1}
             for w in words[3:]:
                 key, val = w.split("=")
-                param_dict[key], _ = convert_units(val, return_rational=False)
+                param_dict[key], _ = convert_units(val)
             if model_type in ["npn"]:
                 #if analysis_type not in ["ac", "AC", "tf", "TF"]:
                 #    raise NotImplementedError(
@@ -255,11 +245,11 @@ def parse_subcircuits(netlist, operating_points):
         else:
             parsed_netlist.append(line)
 
-    final_netlist = unpack(parsed_netlist, subckt_models)
+    final_netlist = unpack(parsed_netlist, subckt_models, operating_points)
     return final_netlist
 
 
-def unpack(parsed_netlist, subckt_models):
+def unpack(parsed_netlist, subckt_models, operating_points):
     """
     Identifies all subcircuits, unpacks them and returns a unpacked netlist
     Elements inside a subcircuit inherit it's name in the following format: ElementName_SubcircuitName
@@ -269,7 +259,8 @@ def unpack(parsed_netlist, subckt_models):
     final_netlist = []
     for line in parsed_netlist:
         words = line.split()
-        if words[0][0].lower() in ["x", "q", "m", "d", "j"]:
+        name = words[0]
+        if name[0].lower() in ["x", "q", "m", "d", "j"]:
             loading_params = False
             nodes = []
             params = {}
@@ -279,7 +270,7 @@ def unpack(parsed_netlist, subckt_models):
                     if model:
                         loading_params = True
                     else:
-                        raise NotImplementedError(f"Model of element '{words[0]}' is not present in the netlist.")
+                        raise NotImplementedError(f"Model of element '{name}' is not present in the netlist.")
 
                 elif not loading_params:
                     try:
@@ -299,7 +290,13 @@ def unpack(parsed_netlist, subckt_models):
                 node_dict[model.node_list[node_index]] = node
                 node_index += 1
 
-            for elem in model.elements:
+            if operating_points is not None and name in operating_points:
+                op = operating_points[name]
+            else:
+                op = None
+
+            elements = model.build_instance(op)
+            for elem in elements:
                 split_elem = elem.split(" ")
                 if split_elem[0][0] not in NETLIST_KEYCHARS: # filter unsupported elements and syntax errors
                     raise NotImplementedError(
@@ -415,7 +412,6 @@ def parse(netlist, operating_points=None):
     couplings = []
     SCSI_components = []
     add_short = {}
-    matrix_expansion_coef = 0
     parsed_netlist = parse_subcircuits(parsed_netlist, operating_points)
 
     for line in parsed_netlist:
@@ -440,7 +436,7 @@ def parse(netlist, operating_points=None):
             ac_num, ac_phase, ac_sym = ac_value(words)
             tran_num = tran_value(words, dc_num)
             tran_sym = dc_sym / s
-            c = CurrentSource(name, node1, node2, position=matrix_expansion_coef,
+            c = CurrentSource(name, node1, node2,
                               dc_num=dc_num, dc_sym=dc_sym,
                               ac_num=ac_num, ac_sym=ac_sym, ac_phase=ac_phase,
                               tran_num=tran_num, tran_sym=tran_sym)
@@ -454,12 +450,10 @@ def parse(netlist, operating_points=None):
             tran_num = tran_value(words, dc_num)
             tran_sym = dc_sym/s
 
-            c = VoltageSource(name, node1, node2, position=matrix_expansion_coef,
+            c = VoltageSource(name, node1, node2,
                               dc_num=dc_num, dc_sym=dc_sym,
                               ac_num=ac_num, ac_sym=ac_sym, ac_phase=ac_phase,
-                              tran_num=tran_num, tran_sym=tran_sym
-                              )
-            matrix_expansion_coef += 1
+                              tran_num=tran_num, tran_sym=tran_sym)
             independent_sources.append(c)
 
         elif name[0] in ["r", "R"]:
@@ -508,14 +502,7 @@ def parse(netlist, operating_points=None):
                 nodes.append(node3)
             if node4 not in nodes:
                 nodes.append(node4)
-            value, symbolic = None, None #convert_units(words[5])
-            if symbolic:
-                sym_value = value  # sympy.Symbol(value, real=True)
-            else:
-                sym_value = sympy.Symbol(name, real=True)
-            c = OperationalAmplifier(name, node1, node2, node3, node4, sym_value,
-                                     matrix_expansion_coef)
-            matrix_expansion_coef += 1
+            c = IdealOperationalAmplifier(name, node1, node2, node3, node4)
             operational_amplifiers.append(c)
 
         elif name[0] in ["e", "E"]:  # VVT (VCVS)
@@ -538,9 +525,7 @@ def parse(netlist, operating_points=None):
             else:
                 sym_value = sympy.Symbol(name, real=True)
 
-            c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value,
-                          position=matrix_expansion_coef)
-            matrix_expansion_coef += 1
+            c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
             controlled_sources.append(c)
 
         elif name[0] in ["g", "G"]:  # VCT (VCCS)
@@ -576,9 +561,7 @@ def parse(netlist, operating_points=None):
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
                 sym_value = sympy.Symbol(name, real=True)
-            c = CurrentControlledSource(name, variant, node1, node2, current_sensor=v_c, value=value, sym_value=sym_value,
-                          position=matrix_expansion_coef)
-            matrix_expansion_coef += 1
+            c = CurrentControlledSource(name, variant, node1, node2, current_sensor=v_c, value=value, sym_value=sym_value,)
             try:
                 add_short[v_c].append(name)
                 c.node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
@@ -602,9 +585,7 @@ def parse(netlist, operating_points=None):
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
                 sym_value = sympy.Symbol(name, real=True)
-            c = CurrentControlledSource(name, variant, node1, node2, current_sensor=v_c, value=value, sym_value=sym_value,
-                          position=matrix_expansion_coef)
-            matrix_expansion_coef += 1
+            c = CurrentControlledSource(name, variant, node1, node2, current_sensor=v_c, value=value, sym_value=sym_value)
             try:
                 add_short[v_c].append(name)
                 c.node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
