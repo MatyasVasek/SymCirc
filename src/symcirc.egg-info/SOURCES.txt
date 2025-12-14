@@ -8,6 +8,7 @@ src/symcirc/component.py
 src/symcirc/laplace.py
 src/symcirc/parse.py
 src/symcirc/pole_zero.py
+src/symcirc/solvers.py
 src/symcirc/utils.py
 src/symcirc.egg-info/PKG-INFO
 src/symcirc.egg-info/SOURCES.txt
