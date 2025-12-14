@@ -5,6 +5,7 @@ from sympy import oo as infinity
 from sympy import log, exp, sin, cos, tan, cot
 from sympy import I as j
 from sympy import pi
+from sympy import pprint
 
 from typing import Dict
 from logging import warning
