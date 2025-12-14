@@ -10,37 +10,37 @@ Elements
 --------
 
 * **Resistor**:
-  ``RXXX N+ N-`` *RESISTANCE*
+  ``RXXX N+ N- RES``
 
 * **Capacitor**:
-  ``CXXX N+ N-`` *CAPACITY* ``IC=<INIT_VOLTAGE>``
+  ``CXXX N+ N- CAP IC=<INIT_VOLTAGE>``
 
 * **Inductor**:
-  ``LXXX N+ N-`` *INDUCTANCE* ``IC=<INIT_CURRENT>``
+  ``LXXX N+ N- IND IC=<INIT_CURRENT>``
 
 * **Coupling**:
   ``KXXX LYYY LZZZ K``
 
 * **Voltage source**:
-  ``VXXX N+ N-`` *dc VOLTAGE ac AMPLITUDE <PHASE>*
+  ``VXXX N+ N- dc VOLTAGE ac AMPLITUDE <PHASE>``
 
 * **Current source**:
-  ``IXXX N+ N-`` *dc CURRENT ac AMPLITUDE <PHASE>*
+  ``IXXX N+ N- dc CURRENT ac AMPLITUDE <PHASE>``
 
 * **IOAMP**:
   ``AXXX Nout1 Nout2 Nin+ Nin-``
 
 * **VCVS**:
-  ``EXXX N1 N2 Ncontrol+ Ncontrol-`` *GAIN*
+  ``EXXX N1 N2 Ncontrol+ Ncontrol- GAIN``
 
 * **CCCS**:
-  ``FXXX N1 N2 VSENSE`` *GAIN*
+  ``FXXX N1 N2 VSENSE GAIN``
 
 * **VCCS**:
-  ``GXXX N1 N2 Ncontrol+ Ncontrol-`` *GAIN*
+  ``GXXX N1 N2 Ncontrol+ Ncontrol- GAIN``
 
 * **CCVS**:
-  ``HXXX N1 N2 VSENSE`` *GAIN*
+  ``HXXX N1 N2 VSENSE GAIN``
 
 Units
 -----
