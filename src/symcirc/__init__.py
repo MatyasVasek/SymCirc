@@ -4,7 +4,7 @@ from symcirc.analysis import AnalyseCircuit, Circuit, DC, AC, TF, TRAN
 from symcirc.utils import *
 from symcirc.component import *
 
-
+'''
 __all__ = [
     # analysis
     "AnalyseCircuit",
@@ -13,8 +13,6 @@ __all__ = [
     "AC",
     "TF",
     "TRAN",
-
-    # utils (explicitly list what you want public)
 
     # components
     "Component",
@@ -27,4 +25,27 @@ __all__ = [
     "CurrentControlledSource",
     "Coupling",
     "SubcktModel",
-]
+
+    # utils
+    "numer",
+    "denom",
+    "evalf",
+    "load_file",
+    "to_latex",
+    "latex_print",
+    "xpoints",
+    "ypoints",
+    "evaluate",
+    "gauss_points",
+    "plot",
+    "mag",
+    "arg",
+    "plot_mag",
+    "plot_phase",
+    "plot_bode",
+    "f", "s", "t", "z", "j", "infinity", "pi",
+    "global_dict",
+    "log", "exp", "sin", "cos", "tan", "cot",
+    "expand", "factor", "simplify", "limit", "diff", "solve", "parse_expr",
+
+]'''
