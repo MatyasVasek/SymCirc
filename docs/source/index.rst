@@ -14,7 +14,7 @@ Check out the :doc:`usage` section for further information, including how to
 
 .. note::
 
-   This project is my bachelor thesis and is under development.
+   This project was initially my bachelor thesis and is still under development as my master's thesis now.
 
 .. toctree::
    :maxdepth: 2

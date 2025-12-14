@@ -22,7 +22,7 @@ copyright = '2025, Matyas Vasek'
 author = 'Matyas Vasek'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.9'
+release = '0.2.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -39,6 +39,11 @@ extensions = [
 ]
 autosummary_generate = True
 
+autodoc_typehints = "description"
+autodoc_typehints_format = "short"
+python_use_unqualified_type_names = True
+highlight_language = "python3"
+pygments_style = "default"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -54,7 +59,9 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'furo'
+#html_theme = 'sphinx_rtd_theme'
+#html_theme = "pydata_sphinx_theme"
 
 
 # Add any paths that contain custom static files (such as style sheets) here,

@@ -1,5 +1,5 @@
 analysis.py
-^^^^^^^^^^^
+-----------
 
 .. automodule:: symcirc.analysis
     :members:

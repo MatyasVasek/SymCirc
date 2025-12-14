@@ -1,5 +1,5 @@
 parse.py
-^^^^^^^^
+--------
 
 .. automodule:: symcirc.parse
     :members:

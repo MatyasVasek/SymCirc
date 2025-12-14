@@ -1,5 +1,5 @@
 utils.py
-^^^^^^^^
+--------
 
 .. automodule:: symcirc.utils
     :members:

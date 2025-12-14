@@ -1,5 +1,5 @@
 component.py
-^^^^^^^^^^^^
+------------
 
 .. automodule:: symcirc.component
     :members:
