@@ -81,7 +81,7 @@ def dc_value(words):
 
 
 def ac_value(words):
-    phase_shift = 0
+    phase_rad = 0
     symbolic = False
     try:
         if words[5] in ["ac", "AC"]:
