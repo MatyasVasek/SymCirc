@@ -9,7 +9,7 @@ import test_utils
 
 
 if __name__ == '__main__':
-    plots = False
+    plots = True
     test_prints = True
     parser_test = False
     analysis_test = True
@@ -22,8 +22,8 @@ if __name__ == '__main__':
     netlist = symcirc.utils.load_file("netlists\\RC_6cascade.txt")
     #netlist = symcirc.utils.load_file("netlists\\geec_1529.txt")
 
-    analysis_type = "tran"
-    symbolic = True
+    analysis_type = "AC"
+    symbolic = False
 
     method = "two_graph_node"
     #method = "tableau"
@@ -47,8 +47,8 @@ if __name__ == '__main__':
 
         M = analysis.eqn_matrix
         t2 = time.time()
-        sol = symcirc.solver_DDD_symengine.cramer_ddd_solve(M)
-        print(f"Cramer+DDD solve time: {time.time() - t2}")
+        #sol = symcirc.solver_DDD_symengine.cramer_ddd_solve(M)
+        #print(f"Cramer+DDD solve time: {time.time() - t2}")
         #print(sol)
 
     if test_prints:
@@ -105,7 +105,7 @@ if __name__ == '__main__':
                     test_utils.plot(func, utils.t, 0, 2, 10000, title=symbol_eqn)
                 elif analysis_type.lower() == "ac":
                     #test_utils.plot_mag(func, utils.f, 1, 1000000, 100000, title=f"Magnitude plot of {symbol_eqn}")
-                    test_utils.plot_phase(func, utils.f, 1, 1000000, 10000, title=f"Phase plot of {symbol_eqn})")
+                    #test_utils.plot_phase(func, utils.f, 1, 1000000, 10000, title=f"Phase plot of {symbol_eqn})")
                     test_utils.plot_bode(func, utils.f, 1, 1000000, 10000, title=f"Bode plot of {symbol_eqn}")
                 else:
                     test_utils.plot(func, utils.s, 0, 0.01, 10000, title=symbol_eqn)
