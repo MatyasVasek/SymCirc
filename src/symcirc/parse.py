@@ -88,11 +88,12 @@ def ac_value(words):
             ac_value, symbolic = convert_units(words[6])
             try:
                 if words[7] not in RESERVED:
-                    phase_shift, _ = convert_units(words[7])
+                    phase_deg, _ = convert_units(words[7])
+                    phase_rad = sympy.rad(phase_deg)
                 else:
-                    phase_shift = 0
+                    phase_rad = 0
             except IndexError:
-                phase_shift = 0
+                phase_rad = 0
         else:
             ac_value = 0
     except IndexError:
@@ -102,7 +103,7 @@ def ac_value(words):
         ac_sym = ac_value
     else:
         ac_sym = sympy.Symbol(words[0], real=True)
-    return ac_value, phase_shift, ac_sym
+    return ac_value, phase_rad, ac_sym
 
 def tran_value(words, dc):
     use_DC_val = True
