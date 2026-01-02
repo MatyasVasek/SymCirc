@@ -1,0 +1,14 @@
+GEEC circuit #1800
+V1 node1 0 DC 1 AC 1 0
+R1 node1 node2 1k
+x1 node2 node5 node3 node4 TRc PARAMS: L1c=14m L2c=14m Kc=0.996
+X1 node5 node4 node3 SWstate2
+X2 0 node3 node4 SWstate2
+.subckt TRc i1 i2 o1 o2 PARAMS: L1c=1 R1c=1m L2c=1 R2c=1m Kc=1
+L1 i1 i2 {L1c}
+L2 o1 o2 {L2c}
+K L1 L2 {Kc}
+.ends TRc
+.subckt SWstate2 1 2 3
+Visw 1 3 dc 0
+.ends SWstate2
