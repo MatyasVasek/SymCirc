@@ -384,6 +384,9 @@ class Analysis:
         print(solved_dict)'''
         #t0 = time.time()
         solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
+        # TODO: check for methods of necessity detection
+        for key in solved_dict:
+            solved_dict[key] = solved_dict[key].factor()
         #print(f"Gauss solve time: {time.time()-t0}")
         #print(solved_dict)
         # TODO: auto_eval implementation in expression retrieval; not directly here, causes issues with laplace
