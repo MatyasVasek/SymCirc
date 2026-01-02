@@ -132,16 +132,45 @@ def gauss_points(mean, sd, points):
         res.append(random.gauss(mean, sd))
     return res
 
-def plot(func, var, start, stop, points, title="", x_log=False):
+
+def plot(func, var, start, stop, points, title="", x_label="x_axis", y_label="y_axis",
+         x_log=False, param_list=None, param_symbol=None) -> "matplotlib.figure":
     import matplotlib.pyplot as plt
     from numpy import array
-    x = xpoints(start, stop, points, log=x_log)
-    y = ypoints(func, x, var)
-    arrx = array(x)
-    arry = array(y)
-    plt.plot(arrx, arry)
+
+    fig, ax = plt.subplots()
+    if x_log:
+        ax.set_xscale("log")
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.tick_params(axis='y')
+    ax.grid(which='both', color='gray', alpha=0.7)
+
+    if param_list is not None:
+        i = 0
+        for param_val in param_list:
+            func_temp = func.subs(param_symbol, param_val)
+            x = xpoints(start, stop, points, log=x_log)
+            y = ypoints(func_temp, x, var)
+            arrx = array(x)
+            arry = array(y)
+            ax.plot(arrx, arry, label=f'{param_symbol}={param_val}')
+            i+=1
+    else:
+        x = xpoints(start, stop, points, log=x_log)
+        y = ypoints(func, x, var)
+        arrx = array(x)
+        arry = array(y)
+        ax.plot(arrx, arry)
+
+    # Title
+    ax.legend(loc="upper left")
     plt.title(title)
+    fig.tight_layout()
     plt.show()
+
+    return fig
+
 
 def mag(func, decibel=False):
     if func != 0:
@@ -180,38 +209,60 @@ def plot_phase(func, var, start, stop, points, title="Phase Plot"):
     plt.grid(which='both', color='gray', alpha=0.7)
     plot(func, var, start, stop, points, title, x_log=True)
 
-def plot_bode(func, var, start, stop, points=500, title="Bode Plot"):
-    import matplotlib.pyplot as plt
-    from numpy import array
+def bode(func, start, stop, points=500):
     # Evaluate magnitude and phase
     func_arg = arg(func, deg=True)  # phase in radians
     func_mag = mag(func, decibel=True)  # magnitude in dB
 
     # Frequency points (log scale)
     x = xpoints(start, stop, points, log=True)
-    y_mag = ypoints(func_mag, x, var)
-    y_arg = ypoints(func_arg, x, var)
+    y_mag = ypoints(func_mag, x, f)
+    y_arg = ypoints(func_arg, x, f)
 
-    arrx = array(x)
-    arry_mag = array(y_mag)
-    arry_arg = array(y_arg)
+    return x, y_mag, y_arg
+
+
+def plot_bode(func, start, stop, points=500, title="Bode Plot", param_list=None, param_symbol=None) -> "matplotlib.figure":
+    import matplotlib.pyplot as plt
+    from numpy import array
 
     # Create figure
-    fig, ax1 = plt.subplots()
-    ax1.set_xscale("log")
-    ax1.set_xlabel("f (Hz)")
-    ax1.set_ylabel(r'$20 \log_{10} |H(j\omega)| \;(\mathrm{dB})$', color='tab:blue')
-    ax1.plot(arrx, arry_mag, color='tab:blue', label='Magnitude')
-    ax1.tick_params(axis='y', labelcolor='tab:blue')
-    ax1.grid(which='both', color='gray', alpha=0.7)
+    fig, ax_mag = plt.subplots()
+    ax_mag.set_xscale("log")
+    ax_mag.set_xlabel("f (Hz)")
+    ax_mag.set_ylabel(r'$20 \log_{10} |H(j\omega)| \;(\mathrm{dB})$')
+    ax_mag.tick_params(axis='y')
+    ax_mag.grid(which='both', color='gray', alpha=0.7)
 
     # Create second y-axis for phase
-    ax2 = ax1.twinx()
-    ax2.set_ylabel(r'$\arg(H(j\omega)) \;(\mathrm{deg})$', color='tab:orange')
-    ax2.plot(arrx, arry_arg, color='tab:orange', label='Phase')  # convert rad -> deg
-    ax2.tick_params(axis='y', labelcolor='tab:orange')
+    ax_phase = ax_mag.twinx()
+    ax_phase.set_ylabel(r'$\arg(H(j\omega)) \;(\mathrm{deg})$')
+    ax_phase.tick_params(axis='y')
+
+    if param_list is not None:
+        i = 0
+        for param_val in param_list:
+            func_temp = func.subs(param_symbol, param_val)
+            x, y_mag, y_arg = bode(func_temp, start, stop, points)
+            arrx = array(x)
+            arry_mag = array(y_mag)
+            arry_arg = array(y_arg)
+            ax_mag.plot(arrx, arry_mag, label=f'mag_{i}')
+            ax_phase.plot(arrx, arry_arg, label=f'arg_{i}', linestyle='--')
+            i+=1
+    else:
+        x, y_mag, y_arg = bode(func, start, stop, points)
+        arrx = array(x)
+        arry_mag = array(y_mag)
+        arry_arg = array(y_arg)
+        ax_mag.plot(arrx, arry_mag, label=f'mag')
+        ax_phase.plot(arrx, arry_arg, label=f'arg', linestyle='--')
 
     # Title
+    ax_mag.legend(loc="upper left")
+    ax_phase.legend(loc="upper right")
     plt.title(title)
     fig.tight_layout()
     plt.show()
+
+    return fig
