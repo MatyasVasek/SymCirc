@@ -26,4 +26,4 @@ for i in results:
     tmp = utils.evalf(results[i])
     print(f"{i}: {tmp}")
 
-plot_bode(results["v(o)"], f, 1, 10 ** 6, 10000, f"Bode plot of v(o)")
+plot_bode(results["v(o)"], 1, 10 ** 6, 10000, f"Bode plot of v(o)")

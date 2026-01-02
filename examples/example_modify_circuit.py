@@ -19,7 +19,7 @@ print(f'New V1 ac_val: {circuit.get("V1").ac_num}')
 ac_analysis = AC(circuit, symbolic=False)
 vnode2 = ac_analysis.get_node_voltage("2")
 print("Plotting bode...")
-plot_bode(vnode2, f, 1, 10**6, 10000, f"Bode plot of v(2)")
+plot_bode(vnode2, 1, 10**6, 10000, f"Bode plot of v(2)")
 
 # Set the phase of V1 to 3*pi/4
 circuit.change("V1", "ac_phase", parse_expr("3*pi/4"))
@@ -29,7 +29,7 @@ print(f'New V1 ac_phase: {circuit.get("V1").ac_phase}')
 ac_analysis = AC(circuit, symbolic=False)
 vnode2_shift = ac_analysis.get_node_voltage("2")
 print("Plotting bode...")
-plot_bode(vnode2_shift, f, 1, 10**6, 10000, f"Bode plot of v(2) with 3*pi/4 shift")
+plot_bode(vnode2_shift, 1, 10**6, 10000, f"Bode plot of v(2) with 3*pi/4 shift")
 
 
 
