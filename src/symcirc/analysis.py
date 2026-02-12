@@ -135,7 +135,7 @@ class Analysis:
     """
     def __init__(self, circuit: Circuit, method: str = "tableau",
                  symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False):
+                 use_symengine: bool = False, term_dominance_pruning: bool = False):
 
         if use_symengine:
             os.environ["USE_SYMENGINE"] = "1"
@@ -149,6 +149,7 @@ class Analysis:
         self.precision: int = precision
         self.method: str = method
         self.sympy_ilt: bool = sympy_ilt
+        self.term_dominance_pruning = term_dominance_pruning
         self.circuit: Circuit = circuit
         self.node_voltage_identities: list = []
 
@@ -366,6 +367,10 @@ class Analysis:
         tf = (voltage2/voltage1)
         return tf
 
+    def _prune_matrix(self, eqn_matrix, symbols):
+        # TODO: implement matrix row term dominance pruning based on default numeric values
+        return eqn_matrix, symbols
+
     def _analyse(self):
         """
           Implementation of all types of supported analysis.
@@ -376,6 +381,10 @@ class Analysis:
           :return list symbols: list of all used sympy.symbol objects
         """
         eqn_matrix, symbols = self._build_system_eqn()
+
+        if self.term_dominance_pruning:
+            eqn_matrix, symbols = self._prune_matrix(eqn_matrix, symbols)
+
         t0 = time.time()
         '''solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
         for i in solved_dict:
