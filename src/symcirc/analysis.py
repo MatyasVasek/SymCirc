@@ -519,11 +519,12 @@ class Analysis:
                     matrix_col_expand += 1
 
             if c.type == "v":
+                # Modified topology to also represent current through the source
                 self.graph_append(c.node1, v_graph_nodes)
                 self.graph_append(c.node2, v_graph_nodes)
                 self.graph_append(c.node1, i_graph_nodes)
                 self.graph_append(c.node2, i_graph_nodes)
-                self._collapse(i_graph_collapses, c.node1, c.node2)
+                matrix_col_expand += 1
 
             if c.type == "i":
                 self.graph_append(c.node1, v_graph_nodes)
@@ -651,9 +652,11 @@ class Analysis:
             if c.type in ["r", "c"]:
                 self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
             if c.type == "v":
-                self._add_voltage_source_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index_row, i_graph_collapses,
-                                             v_graph_collapses)
+                self._add_voltage_source_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index_row, index_col,
+                                             i_graph_collapses, v_graph_collapses)
+                symbols_to_append.append(sympy.Symbol(f"i({c.name})"))
                 index_row += 1
+                index_col += 1
             if c.type == "i":
                 self._add_current_source_tgn(M, S, v_graph_nodes, i_graph_nodes, c, i_graph_collapses)
             if c.type == "g":
@@ -815,15 +818,23 @@ class Analysis:
         if n4v is not None:
             M[row, n4v] += -1
 
-    def _add_voltage_source_tgn(self, M, S, v_nodes, i_nodes, c, index, i_graph_collapses, v_graph_collapses):
+    def _add_voltage_source_tgn(self, M, S, v_nodes, i_nodes, c, index_row, index_col, i_graph_collapses, v_graph_collapses):
         node1 = c.node1
         node2 = c.node2
         val = self._choose_source_val(c)
 
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
-        row = len(i_nodes)+index
+        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
 
+        col = len(v_nodes) + index_col
+        row = len(i_nodes) + index_row
+
+        if n1i is not None:
+            M[n1i, col] += 1
+        if n2i is not None:
+            M[n2i, col] += -1
         if n1v is not None:
             M[row, n1v] += 1
         if n2v is not None:
