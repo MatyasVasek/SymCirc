@@ -933,26 +933,22 @@ class Analysis:
         row2 = len(i_nodes) + index_row + 1
 
         # L1 KVL row
-        M[row1, n1v] += 1
-        M[row1, n2v] += -1
+        if n1v is not None: M[row1, n1v] += 1
+        if n2v is not None: M[row1, n2v] += -1
         M[row1, col1] += s * L1  # self-inductor
         M[row1, col2] += s * coef  # mutual term
 
         # L2 KVL row
-        M[row2, n3v] += 1
-        M[row2, n4v] += -1
+        if n3v is not None: M[row2, n3v] += 1
+        if n4v is not None: M[row2, n4v] += -1
         M[row2, col2] += s * L2  # self-inductor
         M[row2, col1] += s * coef  # mutual term
 
         # Node current contributions (KCL)
-        if n1i is not None:
-            M[n1i, col1] += 1
-        if n2i is not None:
-            M[n2i, col1] += -1
-        if n3i is not None:
-            M[n3i, col2] += 1
-        if n4i is not None:
-            M[n4i, col2] += -1
+        if n1i is not None: M[n1i, col1] += -1
+        if n2i is not None: M[n2i, col1] += 1
+        if n3i is not None: M[n3i, col2] += -1
+        if n4i is not None: M[n4i, col2] += 1
 
         # Initial conditions
         if ind1.init_cond is not None:
