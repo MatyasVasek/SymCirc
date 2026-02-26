@@ -501,22 +501,17 @@ class Analysis:
         coupled_pairs = []
         coupled_inductors = []
 
-        if len(self.circuit.couplings) > 0:
-            for coupling in self.circuit.couplings:
-                coupled_inductors.append(coupling.L1)
-                coupled_inductors.append(coupling.L2)
-                coupled_pairs.append([coupling.L1, coupling.L2, coupling])
-
         for key in self.circuit.components:
             c = self.circuit.components[key]
+
+            if c.type == "k":
+                matrix_col_expand += 2
+
             if c.type in ["r", "l", "c"]:
                 self.graph_append(c.node1, v_graph_nodes)
                 self.graph_append(c.node2, v_graph_nodes)
                 self.graph_append(c.node1, i_graph_nodes)
                 self.graph_append(c.node2, i_graph_nodes)
-
-                if c.type == "l" and c.coupling is not None:
-                    matrix_col_expand += 1
 
             if c.type == "v":
                 # Modified topology to also represent current through the source
@@ -643,14 +638,19 @@ class Analysis:
         symbols_to_append = []
         for key in self.circuit.components:
             c = self.circuit.components[key]
-            if c.type == "l":
-                if c.coupling is not None:
-                    raise NotImplementedError(
-                        "Coupled inductors not implemented for this method. Use tableau method for coupled inductors.")
-                else:
-                    self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
+            #if c.type == "l":
+                #if c.coupling is not None:
+                #    raise NotImplementedError(
+                #        "Coupled inductors not implemented for this method. Use tableau method for coupled inductors.")
+                #else:
+                #    self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
             if c.type in ["r", "c"]:
                 self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
+            if c.type == "l":
+                if c.coupling is not None:
+                    pass
+                else:
+                    self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
             if c.type == "v":
                 self._add_voltage_source_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index_row, index_col,
                                              i_graph_collapses, v_graph_collapses)
@@ -679,6 +679,20 @@ class Analysis:
                 pass
             if c.type == "s":
                 raise NotImplementedError("Switch not supported in 'two_graph_node' analysis")
+
+        if len(self.circuit.couplings) > 0:
+            for coupling in self.circuit.couplings:
+                ind1 = self.circuit.components[coupling.L1]
+                ind2 = self.circuit.components[coupling.L2]
+                if self.is_symbolic:
+                    coef = coupling.sym_value
+                else:
+                    coef = coupling.value
+                self._add_K_tgn(M, S, v_graph_nodes, i_graph_nodes, [ind1, ind2, coef], index_row, index_col, i_graph_collapses, v_graph_collapses)
+                symbols_to_append.append(sympy.Symbol(f"i({ind1.name})"))
+                symbols_to_append.append(sympy.Symbol(f"i({ind2.name})"))
+                index_col += 2
+                index_row += 2
 
         equation_matrix = M.col_insert(m_size, S)
 
@@ -881,6 +895,72 @@ class Analysis:
                 M[n1i, n2v] += -y
             if n2i is not None:
                 M[n2i, n2v] += +y
+
+    def _add_K_tgn(self, M, S, v_nodes, i_nodes, coupling, index_col, index_row, i_graph_collapses, v_graph_collapses):
+        """
+        Adds a coupled inductor block to TGN matrix.
+        """
+        ind1 = coupling[0]
+        ind2 = coupling[1]
+
+        if self.is_symbolic:
+            L1 = ind1.sym_value
+            L2 = ind2.sym_value
+        else:
+            L1 = ind1.value
+            L2 = ind2.value
+
+        coef = coupling[2] * sympy.sqrt(L1 * L2)
+
+        node1 = ind1.node1
+        node2 = ind1.node2
+        node3 = ind2.node1
+        node4 = ind2.node2
+
+        n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
+        n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
+        n3v = self.index_tgn(v_nodes, node3, v_graph_collapses)
+        n4v = self.index_tgn(v_nodes, node4, v_graph_collapses)
+
+        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
+        n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
+        n4i = self.index_tgn(i_nodes, node4, i_graph_collapses)
+
+        col1 = len(v_nodes) + index_col
+        col2 = len(v_nodes) + index_col + 1
+        row1 = len(i_nodes) + index_row
+        row2 = len(i_nodes) + index_row + 1
+
+        # L1 KVL row
+        M[row1, n1v] += 1
+        M[row1, n2v] += -1
+        M[row1, col1] += s * L1  # self-inductor
+        M[row1, col2] += s * coef  # mutual term
+
+        # L2 KVL row
+        M[row2, n3v] += 1
+        M[row2, n4v] += -1
+        M[row2, col2] += s * L2  # self-inductor
+        M[row2, col1] += s * coef  # mutual term
+
+        # Node current contributions (KCL)
+        if n1i is not None:
+            M[n1i, col1] += 1
+        if n2i is not None:
+            M[n2i, col1] += -1
+        if n3i is not None:
+            M[n3i, col2] += 1
+        if n4i is not None:
+            M[n4i, col2] += -1
+
+        # Initial conditions
+        if ind1.init_cond is not None:
+            S[row1, 0] += -coef * ind1.init_cond
+        if ind2.init_cond is not None:
+            S[row2, 0] += -coef * ind2.init_cond
+
+        pprint(M)
 
     @staticmethod
     def index_tgn(nodes, node, collapses):
