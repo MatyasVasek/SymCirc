@@ -14,9 +14,9 @@ M1 3 0 2 2 PMOSmodel L=10u W=160u
 """
 # Dictionary should contain an operating point for each transistor
 # To improve model precision at the cost of performance you can add 'cbd', 'cbs'...
-op_dict = {"M1": {"gm": 7.15e-3}}
+op_dict = {"gm:M1": 7.15e-3} #, "cds:M1": 1.e-9}
 
-circuit = Circuit(netlist, operating_points=op_dict)
+circuit = Circuit(netlist, operating_point=op_dict)
 
 ac_analysis = AC(circuit, symbolic=False)
 
