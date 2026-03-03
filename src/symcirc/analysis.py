@@ -956,8 +956,6 @@ class Analysis:
         if ind2.init_cond is not None:
             S[row2, 0] += -coef * ind2.init_cond
 
-        pprint(M)
-
     @staticmethod
     def index_tgn(nodes, node, collapses):
         try:
