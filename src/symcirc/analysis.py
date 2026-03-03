@@ -1194,6 +1194,15 @@ class TF(Analysis):
         eqn_matrix, solved_dict, symbols = super()._analyse()
         return eqn_matrix, solved_dict, symbols
 
+    def component_current(self, name: str) -> sympy.Symbol:
+        ret = super().component_current(name)
+        if ret is None:
+            c = self.circuit.components[name]
+            if c.type == "i":
+                ret = c.ac_sym if self.is_symbolic else c.ac_num
+
+        return ret
+
     def _choose_source_val(self, c: Union[VoltageSource, CurrentSource]) -> sympy.Expr:
         if self.is_symbolic:
             if c.ac_num == 0:
@@ -1243,7 +1252,11 @@ class AC(Analysis):
         Old way to return a component current, will be deprecated soon
         """
         ret = super().component_current(name)
-        if ret is not None:
+        if ret is None:
+            c = self.circuit.components[name]
+            if c.type == "i":
+                ret = c.ac_sym if self.is_symbolic else c.ac_num
+        else:
             ret = ret.subs(s, 2*pi*f*j)
         return ret
 
@@ -1299,6 +1312,10 @@ class TRAN(Analysis):
         Old way to return a component current, will be deprecated soon
         """
         ret = super().component_current(name)
+        if ret is None:
+            c = self.circuit.components[name]
+            if c.type == "i":
+                ret = c.tran_sym if self.is_symbolic else c.tran_num
         if ret is not None:
             ret = laplace.iLT(ret, self.sympy_ilt)
             ret = sympy.factor_terms(ret)
