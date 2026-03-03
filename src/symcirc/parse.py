@@ -157,7 +157,7 @@ def nodes_per_element(type):
     elif type in ["k"]:
         return 0
 
-def parse_subcircuits(netlist, operating_points):
+def parse_subcircuits(netlist, operating_point):
     subckt_models = {}
     in_model = False
     subckt_model_id = ""
@@ -246,11 +246,11 @@ def parse_subcircuits(netlist, operating_points):
         else:
             parsed_netlist.append(line)
 
-    final_netlist = unpack(parsed_netlist, subckt_models, operating_points)
+    final_netlist = unpack(parsed_netlist, subckt_models, operating_point)
     return final_netlist
 
 
-def unpack(parsed_netlist, subckt_models, operating_points):
+def unpack(parsed_netlist, subckt_models, operating_point):
     """
     Identifies all subcircuits, unpacks them and returns a unpacked netlist
     Elements inside a subcircuit inherit it's name in the following format: ElementName_SubcircuitName
@@ -291,8 +291,13 @@ def unpack(parsed_netlist, subckt_models, operating_points):
                 node_dict[model.node_list[node_index]] = node
                 node_index += 1
 
-            if operating_points is not None and name in operating_points:
-                op = operating_points[name]
+            # TODO: at this stage operating point has to be in format {"gm:Q1": 0.24}
+            op = {}
+            if operating_point is not None:
+                for element in operating_point:
+                    parsed_element = element.split(":")
+                    if parsed_element[1] == name:
+                        op[parsed_element[0]] = operating_point[element]
             else:
                 op = None
 
@@ -382,7 +387,7 @@ def preparse(netist_lines):
                 preparsed_netlist_lines.append(preparsed_line)
     return preparsed_netlist_lines
 
-def parse(netlist, operating_points=None):
+def parse(netlist, operating_point=None):
     """
     Translates
     :param str netlist: netlist in a string format
@@ -413,7 +418,7 @@ def parse(netlist, operating_points=None):
     couplings = []
     SCSI_components = []
     add_short = {}
-    parsed_netlist = parse_subcircuits(parsed_netlist, operating_points)
+    parsed_netlist = parse_subcircuits(parsed_netlist, operating_point)
 
     for line in parsed_netlist:
         words = line.split()
