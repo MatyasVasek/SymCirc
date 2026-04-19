@@ -92,3 +92,46 @@ def plot_bode(func, var, start, stop, points=500, title="Bode Plot"):
     plt.show()
 
 
+def parse_geec_op_webpage(file):
+    # SCRIPT FOR PARSING WEBPAGE DUMP OF GEEC OP ANALYSIS
+    SI_PREFIXES = {
+        'femto': 1e-15,
+        'p': 1e-12,
+        'n': 1e-9,
+        'u': 1e-6,
+        'm': 1e-3,
+        '': 1.0,
+        'k': 1e3,
+        'meg': 1e6,
+        'g': 1e9,
+        't': 1e12,
+    }
+
+    # Example: read from a file or a multiline string
+    with open(file, "r") as file:
+        lines = file.readlines()
+
+    print(lines)
+    g_dict = {}
+    counter = 0
+    for line in lines:
+        print(line.strip("\n"))
+        if line.startswith("g"):
+            name = line[:-2]
+            counter = 4
+
+        else:
+            if counter == 4:
+                val = float(line[:-1])
+            elif counter == 2:
+                if line[:-1] not in SI_PREFIXES:
+                    if val == 0:
+                        pass
+                    else:
+                        g_dict[name] = val
+                else:
+                    val = val * SI_PREFIXES[line[:-1]]
+                    g_dict[name] = val
+            counter -= 1
+
+    return g_dict
