@@ -160,6 +160,44 @@ def evaluate(func, precision=6):
         pass
     return func
 
+def simplify_poly_coeffs(poly, var, prefix, memo, start_index=0):
+    """
+    Extracts coefficients, creates dummy symbols,
+    and returns the new expression and the mapping.
+    """
+    coeffs = poly.all_coeffs()  # Gets all coeffs including zeros
+    new_terms = []
+    degree = poly.degree()
+
+    for i, coeff in enumerate(coeffs):
+        if len(coeff.free_symbols) < 2:
+            symbol = coeff
+        elif coeff in memo:
+            symbol = memo[coeff]
+            #print("MEMO HIT!", coeff)
+        else:
+            symbol = sympy.Symbol(f"{prefix}{start_index + i}", real=True)
+            memo[coeff] = symbol
+
+        # Reconstruct the polynomial term with the new symbol
+        power = degree - i
+        new_terms.append(symbol * var ** power)
+    return sum(new_terms)
+
+def simplify_coeffs(expr, var, prefix, memo, start_index=0):
+    """
+    Wraps simplify_poly_coeffs() for more general use on expressions.
+    """
+    if expr == 1 or expr == 0 or len(expr.free_symbols) < 2:
+        return expr
+    num, den = sympy.fraction(sympy.cancel(expr))
+    num_poly = sympy.Poly(num, var)
+    den_poly = sympy.Poly(den, var)
+    new_num = simplify_poly_coeffs(num_poly, var, f"{prefix}_n", memo, start_index)
+    new_den = simplify_poly_coeffs(den_poly, var, f"{prefix}_d", memo, start_index)
+    new_expr = new_num / new_den
+    return new_expr
+
 def gauss_points(mean, sd, points):
     res = []
     for i in range(points):
