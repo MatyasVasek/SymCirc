@@ -166,14 +166,14 @@ def parse_subcircuits(netlist, operating_point):
 
     for line in netlist[1:]:
         words = line.split()
-
+        keyword = words[0].lower()
         if words in [[], "\n", " "]:
             pass
 
         elif words[0][0] not in NETLIST_KEYCHARS:
             raise NotImplementedError(f"Keyword/Element '{words[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
 
-        elif words[0] in [".subckt", ".SUBCKT"]:
+        elif keyword == ".subckt":
             in_model = True
             loading_nodes = True
             node_list = []
@@ -189,7 +189,7 @@ def parse_subcircuits(netlist, operating_point):
                     param_dict[key], _ = convert_units(val)
             current_model = SubcktModel(subckt_model_id, node_list, param_dict)
 
-        elif words[0] in [".model", ".MODEL"]:
+        elif keyword == ".model":
             model_id = words[1]
             model_type = words[2].lower()
             # strip optional spice model brackets
@@ -233,10 +233,10 @@ def parse_subcircuits(netlist, operating_point):
                 subckt_models[model_id] = model
 
         elif words[0][0] == ".":
-            if words[0] in [".ends", ".ENDS"]:
+            if keyword == ".ends":
                 in_model = False
                 subckt_models[subckt_model_id] = current_model
-            elif words[0] in [".end", ".END"]:
+            elif keyword == ".end":
                 break
             else:
                 raise NotImplementedError(f"Keyword/Element '{words[0]}' not recognized by netlist parser. Check netlist correctness, if your netlist is correct please submit a bug report on GitHub: 'https://github.com/MatyasVasek/SymCirc'.")
@@ -369,9 +369,23 @@ def append_dev_name(split_elem, device_name):
     split_elem[0] = f"{split_elem[0]}_{device_name}"
     return split_elem
 
-def preparse(netist_lines):
-    preparsed_netlist_lines = [netist_lines[0]]
-    for line in netist_lines[1:]:
+def append_lines_plus(netlist_lines):
+    new_netlist_lines = []
+    for line in netlist_lines:
+        if len(line) > 0:
+            if line[0] == '+':
+                new_netlist_lines[-1] += line[1:]
+            else:
+                new_netlist_lines.append(line)
+        else:
+            new_netlist_lines.append(line)
+    return new_netlist_lines
+
+def preparse(netlist):
+    netlist_lines = netlist.splitlines()
+    sanitized_netlist_lines = append_lines_plus(netlist_lines)
+    preparsed_netlist_lines = [sanitized_netlist_lines[0]]
+    for line in sanitized_netlist_lines[1:]:
         split_line = line.split()
         if split_line:
             first_char = split_line[0][0]
@@ -405,8 +419,7 @@ def parse(netlist, operating_point=None):
     R2 b 0 1k
     """
     data = {}
-    parsed_netlist = netlist.splitlines() #[x.strip() for x in netlist]
-    parsed_netlist = preparse(parsed_netlist)
+    parsed_netlist = preparse(netlist)
     components = {}
     count = 0
     c = None
@@ -567,15 +580,18 @@ def parse(netlist, operating_point=None):
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
                 sym_value = sympy.Symbol(name, real=True)
-            c = CurrentControlledSource(name, variant, node1, node2, current_sensor=v_c, value=value, sym_value=sym_value,)
+
             try:
                 add_short[v_c].append(name)
-                c.node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
-                c.node4 = f"*ctrl{v_c}{add_short[v_c][-1]}"
+                node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
+                node4 = f"*ctrl{v_c}{add_short[v_c][-1]}"
             except:
                 add_short[v_c] = [name]
-                c.node3 = None
-                c.node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
+                node3 = None
+                node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
+
+            c = CurrentControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
+
             controlled_sources.append(c)
 
         elif name[0] in ["h", "H"]:  # CVT (CCVS)
@@ -591,15 +607,16 @@ def parse(netlist, operating_point=None):
                 sym_value = value  # sympy.Symbol(value, real=True)
             else:
                 sym_value = sympy.Symbol(name, real=True)
-            c = CurrentControlledSource(name, variant, node1, node2, current_sensor=v_c, value=value, sym_value=sym_value)
             try:
                 add_short[v_c].append(name)
-                c.node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
-                c.node4 = f"*ctrl{v_c}{add_short[v_c][-1]}"
+                node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
+                node4 = f"*ctrl{v_c}{add_short[v_c][-1]}"
             except:
                 add_short[v_c] = [name]
-                c.node3 = None
-                c.node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
+                node3 = None
+                node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
+
+            c = CurrentControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
             controlled_sources.append(c)
 
         elif name[0] in ["k", "K"]:  # coupled inductors
