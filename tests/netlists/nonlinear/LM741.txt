@@ -1,0 +1,39 @@
+LM741 OAMP circuit
+Q1 node1 nodein_pos node3 NPNmodel
+Q2 node1 nodein_neg node6 NPNmodel
+Q3 node7 node8 node3 PNPmodel
+Q4 node9 node8 node6 PNPmodel
+Q5 nodesup_pos node7 node11 NPNmodel
+Q6 node7 node11 node10 NPNmodel
+Q7 node9 node11 node13 NPNmodel
+R1 node10 nodesup_neg 1k
+R2 node13 nodesup_neg 1k
+R3 node11 nodesup_neg 50k
+Q8 node1 node1 nodesup_pos PNPmodel
+Q9 node8 node1 nodesup_pos PNPmodel
+Q10 node8 node12 node16 NPNmodel
+Q11 node12 node12 nodesup_neg NPNmodel
+R4 node16 nodesup_neg 5k
+Q12 node14 node14 nodesup_pos PNPmodel
+R5 node14 node12 39k
+Q13 node15 node14 nodesup_pos PNPmodel
+Q14 nodesup_pos node15 node17 NPNmodel
+Q15 node15 node17 nodeo NPNmodel
+R6 node17 nodeo 25
+R7 nodeo node20 50
+Q16 node15 node19 node21 NPNmodel
+R8 node19 node21 7.5k
+R9 node19 node15 4.5k
+C1 node15 node9 30p
+Q17 node21 node9 node22 NPNmodel
+Q18 node9 node23 nodesup_neg NPNmodel
+Q19 node21 node22 node23 NPNmodel
+R10 node22 nodesup_neg 50k
+R11 node23 nodesup_neg 50
+Q20 nodesup_neg node21 node20 PNPmodel
+V1 0 nodesup_neg DC 15
+V2 nodesup_pos 0 DC 15
+Vd nodein_neg nodein_pos DC 0 AC 0.5 {0*Pi/180} SIN 0 1 10k 0 0
+Vs nodein_pos 0 DC 0 AC 0 {0*Pi/180} SIN 0 1 10k 0 0
+.model NPNmodel npn bf=100 is=1e-14 nr=0 VAF=100 cjc=2p cje=5p tf=.75e-9 tr=85e-9
+.model PNPmodel pnp bf=100 is=1e-14 nr=0 VAF=100 cjc=2p cje=5p tf=.75e-9 tr=85e-9

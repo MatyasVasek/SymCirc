@@ -1,0 +1,13 @@
+RC1 node1 nodec 7.5k
+RE1 nodee node3 2k
+RB1 node1 nodeb 200k
+RB2 nodeb 0 91k
+RE2 node3 0 2k
+C1 nodei nodeb 470n
+C2 nodec nodeoc 470n
+Rz nodeoc 0 10Meg
+V1 node1 0 DC 15
+Vi nodei 0 DC 0 AC 1 {0*Pi/180} SIN 0 1m 10k 0 0
+Q1 nodec nodeb nodee BC337-40
+C3 0 nodee 470u
+.Model BC337-40 npn bf=100 is=1e-14 nr=0 VAF=100 cjc=2p cje=5p tf=.75e-9 tr=85e-9

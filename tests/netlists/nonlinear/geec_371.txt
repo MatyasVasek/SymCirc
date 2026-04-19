@@ -1,0 +1,16 @@
+Diff amplifier #371 geec circuit
+RE node1 node2 6.8k
+V3 node1 0 DC 15
+V4 0 node3 DC 15
+E1 nodei2 nodes nodei1 nodes -1
+
+Vd nodei1 nodes DC 1m AC 0.5 {0*Pi/180} SIN 1m 0.5m 10k 0 0
+Vs nodes 0 DC 0 AC 0 {0*Pi/180} SIN 0 0 10k 0 0
+Q1 nodeo1 nodei1 node2 PNPmodel
+Q2 nodeo2 nodei2 node2 PNPmodel
+I1 node1 node2 DC 0 AC 0 {0*Pi/180}
+Q3 nodeo1 nodeo1 node3 NPNmodel
+Q4 nodeo2 nodeo1 node3 NPNmodel2
+.model PNPmodel pnp bf=100 nr=0 VAF=100
+.model NPNmodel npn bf=100 nr=0
+.model NPNmodel2 npn bf=100 nr=0 VAF=100

@@ -1,0 +1,73 @@
+Current conveyor
+Q2 node7 node7 node8 NPNmodel
+Q3 node9 node4 node7 NPNmodel1
+Q4 node4 node4 node6 NPNmodel1
+Q5 node13 node14 node15 PNPmodel2
+Q6 node14 node14 node15 PNPmodel
+Q7 node9 node3 node14 BC327-16
+Q8 node3 node3 node13 PNPmodel2
+R1 node2 0 100
+V1 node15 0 DC 10
+V2 0 node8 DC 10
+V3 node1 0 DC 0 AC 1 {0*Pi/180} SIN 0 1 10k 0 0
+L nodeo1 0 1m
+RL node9 nodeo1 10
+Q9 node10 node11 node8 NPNmodel
+Q10 node11 node11 node8 NPNmodel
+Q11 node17 node19 node11 NPNmodel1
+Q12 node19 node19 node10 NPNmodel
+Q13 node21 node22 node15 PNPmodel
+Q14 node22 node22 node15 PNPmodel
+Q15 node17 node16 node22 PNPmodel2
+Q16 node16 node16 node21 PNPmodel
+R2 nodezv 0 100
+L1 nodeo2 0 1m
+RL1 node17 nodeo2 10
+Q17 node16 node5 nodezv NPNmodel
+Q18 node19 node18 nodezv PNPmodel
+X1 node1 node2 node3 node4 node2 nonlinearOpamp PARAMS: A=100e3 ft=1e6 Ipwr=10u
+X2 node1 nodezv node12 linearOpamp PARAMS: A_par=100k Voff_par=1m ft_par=1Meg
+D1 node5 node12 Dmod
+D2 node12 node18 Dmod
+R3 node15 node5 10k
+R4 node18 node8 10k
+X3 node12 node5 SUstate1
+X4 node18 node12 SUstate1
+Q1 node6 node7 node8 NPNmodel1
+.model NPNmodel npn bf=100 is=1e-14 nr=0
+.model NPNmodel1 npn bf=100 is=1e-14 nr=0, vaf=120 cje=104p cjc=46.8p
+.model PNPmodel2 pnp bf=100 is=1e-14 nr=0, vaf=120 cje=104p cjc=46.8p
+.model PNPmodel pnp bf=100 is=1e-14 nr=0
+.model BC327-16 pnp bf=100 is=1e-14 nr=0, vaf=120 cje=104p cjc=46.8p
+.subckt nonlinearOpamp inplus d vc ve out PARAMS: A=10e9 Voff=1e-3 Ib=100e-9 Ioff=10e-9 Rout=100 Rd=1e6 Rcm=100e6 CMRR=30e3 ft=1e7 Cd=10e-12 Ccm=2e-12 fcmr=100 S=1e6 Ipwr=10e-6
+B1 0 t I= u(v(inplus)-v(d))*{A}*({S*1e6/2/pi/ft}-uramp({S*1e6/2/pi/ft}-v(inplus)+v(d)))+ u(-v(inplus)+v(d))*{A}*(-{S*1e6/2/pi/ft}+uramp({S*1e6/2/pi/ft}+v(inplus)-v(d)))
+Rt t 0 1
+Dc t vc1 Dsw
+De ve1 t Dsw
+.MODEL Dsw D ( IS=1n RS=1n N=1u)
+*Sc vc1 t t vc powerswitch
+*Se ve1 t ve t powerswitch
+Ec vc1 0 vc 0 1
+Ee ve1 0 ve 0 1
+*.MODEL powerswitch SW(RON=0.01p VH=0)
+Vauxc vdc 0 0
+Vauxe 0 vde 0
+Dvc vdc do Dsw
+Dve do vde Dsw
+Ip vc ve {Ipwr}
+Fc vc 0 Vauxc -1
+Fe ve 0 Vauxe 1
+Eo out do t 0 1
+*Eo out 0 t 0 1
+Ct t 0 {A/2/Pi/ft}
+.ends nonlinearOpamp
+.subckt linearOpamp inplus off out PARAMS: A_par=100k Voff_par=1m Ib_par=100n Ioff_par=10n Rout_par=100 Rd_par=1Meg Rcm_par=100Meg CMRR_par=30k ft_par=1Meg Cd_par=10p Ccm_par=2p fcmr_par=100
+Voff off d dc {Voff_par}
+Gm 0 t inplus d {A_par}
+Rtoa t 0 1
+Ao out 0 t out
+C2 t 0 {A_par/2/Pi/ft_par}
+.ends linearOpamp
+.model Dmod d IS=1e-14
+.subckt SUstate1 1 2
+.ends SUstate1

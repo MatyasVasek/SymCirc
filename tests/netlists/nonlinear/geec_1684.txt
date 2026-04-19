@@ -1,0 +1,40 @@
+Internal structure of an operational amplifier
+Rz nodeo 0 10
+D1 node3 node5 Dmod
+D2 node6 node4 Dmod
+D3 nodeo node5 modZD
+D4 node6 nodeo modZD
+RG node3 node4 1k
+M1 nodeVc node3 nodeo nodeo NMOSmodelP L=10u W=500u
+M2 nodeVe node4 nodeo nodeo PMOSmodelP L=10u W=500u
+M3 node3 node1 nodeVc2 nodeVc2 PMOSmodel1 L=10u W=160u
+M4 node4 node2 nodeVe2 nodeVe2 NMOSmodel1 L=10u W=160u
+M6 node2 node2 nodeVe2 nodeVe2 NMOSmodel2 L=10u W=160u
+IB 0 node2 DC 4.5m AC 0 {0*Pi/180}
+Vi nodei 0 DC 0.6m AC 1 {0*Pi/180} SIN 0.6m 50u 10 0 0
+V1 nodeVc2 nodeVc DC 5
+V2 nodeVc 0 DC 15
+V3 nodeVe nodeVe2 DC 5
+V4 0 nodeVe DC 15
+M7 node1 nodei node7 node7 NMOSmodel3 L=10u W=160u
+M8 node9 node8 node7 node7 NMOSmodel2 L=10u W=160u
+M9 node7 node2 nodeVe2 nodeVe2 NMOSmodel2 L=10u W=160u
+R2 node8 nodeo 20k
+R3 node8 0 1k
+X1 node8 0 SUstate2
+M5 node9 node9 nodeVc2 nodeVc2 PMOSmodel2 L=10u W=160u
+M10 node1 node9 nodeVc2 nodeVc2 PMOSmodel3 L=10u W=160u
+C1 node1 node3 0p
+.model Dmod d IS=1e-14
+.model modZD d bv=7.5
+.model NMOSmodelP NMOS VTO=2.2 KP=0.003 CGSO=2e-7 CGDO=2e-8
+.model PMOSmodelP PMOS VTO=-2.2 KP=0.003 CGSO=2e-7 CGDO=2e-8
+.model PMOSmodel1 PMOS VTO=-1.9 KP=0.0016 lambda=0.0125 CGSO=6e-9 CGDO=6e-10
+.model NMOSmodel1 NMOS VTO=1.9 KP=0.0016 lambda=0.0125 CGSO=6e-9 CGDO=6e-10
+.model NMOSmodel2 NMOS VTO=1.9 KP=0.0016 lambda=0.0125 CGSO=6e-9 CGDO=6e-10
+.model NMOSmodel3 NMOS VTO=1.9 KP=0.0016  lambda=0.0125 CGSO=6e-9 CGDO=6e-10
+.subckt SUstate2 1 2
+Vish 1 2 dc 0
+.ends SUstate2
+.model PMOSmodel2 PMOS VTO=-1.9 KP=0.0016  lambda=0.0125 CGSO=6e-9 CGDO=6e-10
+.model PMOSmodel3 PMOS VTO=-1.9 KP=0.0016 lambda=0.0125 CGSO=6e-9 CGDO=6e-10

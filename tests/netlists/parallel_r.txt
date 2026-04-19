@@ -1,0 +1,8 @@
+Example for approximation
+R1 node1 0 100k
+R2 node1 0 10k
+R3 node1 0 1k
+R4 node1 0 100
+R5 node1 0 10
+C1 node1 0 1n
+V1 node1 0 DC 1 AC 1 {0*Pi/180}

@@ -18,15 +18,20 @@ if __name__ == '__main__':
     #netlist = symcirc.utils.load_file("netlists\\ic_test_1.txt")
     #netlist = symcirc.utils.load_file("netlists\\geec_355.txt")
     #netlist = symcirc.utils.load_file("netlists\\geec_1536.txt")
-    #netlist = symcirc.utils.load_file("netlists\\coupled.txt")
-    netlist = symcirc.utils.load_file("netlists\\RC_6cascade.txt")
+    #netlist = symcirc.utils.load_file("netlists\\coupled2.txt")
+    #netlist = symcirc.utils.load_file("netlists\\geec_1800.txt")
     #netlist = symcirc.utils.load_file("netlists\\geec_1529.txt")
+    #netlist = symcirc.utils.load_file("netlists\\geec_371.txt")
+    netlist = symcirc.utils.load_file("netlists\\AC14.txt")
 
-    analysis_type = "AC"
-    symbolic = False
+    analysis_type = "TF"
+    symbolic = True
 
     method = "two_graph_node"
     #method = "tableau"
+
+    #solver = "gauss"
+    solver = "ddd"
 
     if parser_test:
         data = symcirc.parse.parse(netlist)
@@ -38,10 +43,11 @@ if __name__ == '__main__':
 
         t0 = time.time()
         #circuit = symcirc.analysis.Circuit(netlist)
-        #op_dict = {"Q1": {"gm": 74.5e-3, "gpi": 232e-6, "gmu": 1e-9, "go": 22.5e-6, "gx": 1.66}}
-        op_dict = {"M1": {"gm": 7.15e-3}}
+        #op_dict = {"gm:Q1": 74.5e-3, "gpi:Q1": 232e-6, "gmu:Q1": 1e-9, "go:Q1": 22.5e-6, "gx:Q1": 1.66}}
+        #op_dict = {"gm:M1": 7.15e-3}
+        op_dict = {"gpi:Q1": 345e-6, "gpi:Q2": 373e-6, "gpi:Q3": 386e-6, "gpi:Q4": 386e-6}
         #op_dict = None
-        analysis = symcirc.analysis.AnalyseCircuit(netlist, analysis_type, symbolic=symbolic, auto_eval=True, precision=6, method=method, sympy_ilt=True, operating_points=op_dict)
+        analysis = symcirc.analysis.AnalyseCircuit(netlist, analysis_type, symbolic=symbolic, auto_eval=True, precision=6, method=method, sympy_ilt=True, operating_point=op_dict, solver=solver)
         #analysis = circuit.analyse("dc")
         print(time.time() - t0)
 
@@ -63,12 +69,9 @@ if __name__ == '__main__':
         print(analysis.node_voltage_symbols)
         print(analysis.solved_dict)
         print(f"Node voltages: {analysis.node_voltages()}")
-        for voltage in analysis.node_voltages().values():
-
-            voltage = utils.evalf(voltage.subs(utils.f, 1000))
-            print(abs(voltage))
         all = analysis.component_values()
         print("---------------------------------------------------------")
+        #print(f'v(node5): {sympy.simplify(analysis.get_node_voltage("node5"))}')
         print("All components: {}".format(all))
         print(f"Node voltages: {analysis.node_voltages()}")
         print(analysis.get_all_results())

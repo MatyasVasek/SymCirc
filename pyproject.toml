@@ -11,3 +11,6 @@ omit = ["tests/*", "tests/**"]
 
 [tool.coverage.report]
 omit = ["tests/*", "tests/**"]
+
+[tool.pytest.ini_options]
+addopts = ["-n 4"]

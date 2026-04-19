@@ -39,10 +39,10 @@ class NumericTestErrors:
             self.not_in_ref.data.append(msg)
 
 
-def numeric_test(filename, analysis_type, precision=6, test_data_creation=False, method="tableau", runs=10):
+def numeric_test(filename, analysis_type, precision=6, test_data_creation=False, method="tableau", solver="gauss", runs=10):
     err = NumericTestErrors()
     divisor = 10**precision
-    circuit = symcirc.AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type, symbolic=False, method=method)
+    circuit = symcirc.AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type, symbolic=False, method=method, solver=solver)
     result_dict = circuit.component_values()
     reference_string = utils.load_file("reference_data/{}/{}".format(analysis_type, filename))
     symbol_dict = {"t": utils.t, "f": utils.f, "j": utils.j, "s": utils.s}
@@ -122,7 +122,7 @@ def print_test_results(filename, ref, analysis_type, err, full=False):
               .format('\033[96m', analysis_type, filename))
 
 
-def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="tableau", runs=10):
+def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="tableau", solver="gauss", runs=10):
     if analysis == "all":
         a_types = ["DC", "TF"]
     elif type(analysis) == list:
@@ -141,7 +141,7 @@ def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, 
         for filename in netlists:
             try:
                 if filename in ref:
-                    err = numeric_test(filename, analysis_type, test_data_creation=test_data_creation, precision=6, method=method, runs=10)
+                    err = numeric_test(filename, analysis_type, test_data_creation=test_data_creation, precision=6, method=method, solver=solver, runs=10)
                     print_test_results(filename, ref, analysis_type, err, full=full)
                 elif w:
                     print("{}[Warning]: Reference for {} analysis of {} not found".format('\033[93m', analysis_type, filename))
@@ -151,7 +151,7 @@ def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, 
 
 
 if __name__ == "__main__":
-    state = analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="tableau", runs=10)
+    state = analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="two_graph_node", solver="ddd", runs=10)
     if state:
         print("")
         print("Test successful!")
