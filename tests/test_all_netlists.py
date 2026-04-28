@@ -35,19 +35,44 @@ class Bcolors:
     UNDERLINE = '\033[4m'
 
 
-def analyze(filename, analysis_type, is_symbolic, analysis_method, solver):
+def analyze(filename, analysis_type, is_symbolic, analysis_method):
     """
     Run a single circuit analysis. Intended to be called via func_timeout.
     """
-    circuit = AnalyseCircuit(
+    analysis = AnalyseCircuit(
         utils.load_file(os.path.join(NETLIST_DIR, filename)),
         analysis_type=analysis_type,
         symbolic=is_symbolic,
         method=analysis_method,
         use_symengine=True,
-        solver=solver,
     )
-    circuit.get_all_results()
+    analysis.get_all_results()
+
+
+def compare(filename, analysis_type, is_symbolic, analysis_method):
+    analysis_gauss = AnalyseCircuit(
+        utils.load_file(os.path.join(NETLIST_DIR, filename)),
+        analysis_type=analysis_type,
+        symbolic=is_symbolic,
+        method=analysis_method,
+        use_symengine=True,
+        solver="gauss",
+    )
+    v_gauss = analysis_gauss.node_voltages()
+
+    analysis_ddd = AnalyseCircuit(
+        utils.load_file(os.path.join(NETLIST_DIR, filename)),
+        analysis_type=analysis_type,
+        symbolic=is_symbolic,
+        method=analysis_method,
+        use_symengine=True,
+        solver="ddd",
+    )
+    v_ddd = analysis_ddd.node_voltages()
+
+    for key in v_gauss:
+        if not sympy.sympify(v_gauss[key]).equals(sympy.sympify(v_ddd[key])):
+            raise ValueError(f"{v_gauss[key]} != {v_ddd[key]}")
 
 
 # Pytest parametrized smoke test
@@ -56,10 +81,23 @@ def analyze(filename, analysis_type, is_symbolic, analysis_method, solver):
 @pytest.mark.parametrize("analysis_method", ANALYSIS_METHODS)
 @pytest.mark.parametrize("analysis_type", ANALYSIS_TYPES)
 @pytest.mark.parametrize("netlist", NETLISTS)
-@pytest.mark.parametrize("solver", SOLVERS)
-def test_smoke(analysis_method, analysis_type, netlist, is_symbolic, solver):
+def test_smoke(analysis_method, analysis_type, netlist, is_symbolic):
     try:
-        func_timeout.func_timeout(TIMEOUT, analyze, args=(netlist, analysis_type, is_symbolic, analysis_method, solver))
+        func_timeout.func_timeout(TIMEOUT, analyze, args=(netlist, analysis_type, is_symbolic, analysis_method))
+    except NotImplementedError:
+        pytest.xfail(f"{analysis_type} not implemented for {netlist}")
+    except func_timeout.FunctionTimedOut:
+        pytest.xfail(f"{analysis_type} timeout after {TIMEOUT}s for {netlist}")
+    except Exception as e:
+        pytest.fail(f"{analysis_type} failed for {netlist}\n{type(e).__name__}: {e}")
+
+
+@pytest.mark.parametrize("is_symbolic", SYMBOLIC)
+@pytest.mark.parametrize("analysis_type", ANALYSIS_TYPES)
+@pytest.mark.parametrize("netlist", NETLISTS)
+def test_ddd_solver(analysis_type, netlist, is_symbolic):
+    try:
+        func_timeout.func_timeout(TIMEOUT, compare, args=(netlist, analysis_type, is_symbolic, "two_graph_node"))
     except NotImplementedError:
         pytest.xfail(f"{analysis_type} not implemented for {netlist}")
     except func_timeout.FunctionTimedOut:
