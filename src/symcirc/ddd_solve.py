@@ -37,6 +37,12 @@ import sympy as sp
 TERMINAL_ONE  = 1
 TERMINAL_ZERO = 0
 
+_node_id_counter = 0
+
+def _get_next_node_id():
+    global _node_id_counter
+    _node_id_counter += 1
+    return _node_id_counter
 
 @dataclass
 class DDDNode:
@@ -58,7 +64,12 @@ class DDDNode:
     one: Any = None
     zero: Any = None
 
-    _cached: Any = field(default=None, repr=False)
+    _uid: int = field(default_factory=_get_next_node_id)
+    _cached: Any = field(default=None)
+
+    @property
+    def id(self):
+        return self._uid
 
     def __repr__(self) -> str:
         s = "+" if self.sign >= 0 else "-"
@@ -179,7 +190,7 @@ def evaluate(node: Any, cache: Optional[dict] = None) -> Any:
     if not isinstance(node, DDDNode):
         return sp.sympify(node)
 
-    nid = id(node)
+    nid = node.id
     if nid in cache:
         return cache[nid]
 
@@ -187,6 +198,64 @@ def evaluate(node: Any, cache: Optional[dict] = None) -> Any:
     one_val  = evaluate(node.one, cache)
 
     result = zero_val + node.sign * node.symbol * one_val
+    cache[nid] = result
+    return result
+
+
+def evaluate_nested(node: Any, cache: Optional[dict] = None) -> Any:
+    """
+    Evaluate a DDD to its value in the nested factored form.
+    The factored form is exponentially more compact for sparse matrices.
+    Example:
+        Standard eval: a*(b+c) + d*(e+f) → ab + ac + de + df (expanded)
+        Nested eval:   a*(b+c) + d*(e+f) → a*(b+c) + d*(e+f) (factored)
+    """
+    if cache is None:
+        cache = {}
+
+    # Trivial cases
+    if node is TERMINAL_ZERO: # Node is zero
+        return sp.S.Zero
+    if node is TERMINAL_ONE: # Node is one
+        return sp.S.One
+    if not isinstance(node, DDDNode): # Node is a leaf
+        return sp.sympify(node)
+
+    # Check cache for already solved subdeterminants
+    nid = node.id
+    if nid in cache: # Cache hit
+        return cache[nid]
+
+    # Recursively evaluate children
+    zero_val = evaluate_nested(node.zero, cache)
+    one_val = evaluate_nested(node.one, cache)
+
+    # Build cofactor without expansion using Mul and Add
+    # (use of simple '*', '+' causes automatic simplifications)
+    node_is_zero = (node.symbol == TERMINAL_ZERO)
+    one_edge_is_zero = (one_val == TERMINAL_ZERO)
+    node_is_one = (node.symbol == TERMINAL_ONE)
+    one_edge_is_one = (one_val == TERMINAL_ONE)
+
+    if node_is_zero or one_edge_is_zero: # to avoid explicit mult by 0 (e.g. 0*a)
+        cofactor = TERMINAL_ZERO
+    elif node_is_one: # to avoid explicit mult by 1 (e.g. 1*a)
+        cofactor = one_val
+    elif one_edge_is_one: # to avoid explicit mult by 1 (e.g. a*1)
+        cofactor = node.symbol
+    else: # general case
+        if node.sign == 1:
+            cofactor = sp.Mul(node.symbol, one_val, evaluate=False)
+        else:
+            cofactor = sp.Mul(-1, node.symbol, one_val, evaluate=False)
+    # Combine with remainder, avoiding explicit zero add (e.g. a+0)
+    if zero_val == 0:
+        result = cofactor
+    elif cofactor == 0:
+        result = zero_val
+    else:
+        result = sp.Add(zero_val, cofactor, evaluate=False)
+
     cache[nid] = result
     return result
 
@@ -202,7 +271,7 @@ def ddd_size(root: Any) -> int:
             return
         if not isinstance(node, DDDNode):
             return
-        nid = id(node)
+        nid = node.id
         if nid in visited:
             return
         visited.add(nid)
