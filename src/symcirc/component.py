@@ -1,6 +1,8 @@
 from typing import List, Set, Dict, Union, Any
 import sympy
+
 from symcirc.utils import s
+from symcirc.graph_signalflow import Branch
 
 
 class Component:
@@ -13,20 +15,154 @@ class Component:
     :param sym_value: symbolic value
     :param value: numeric value
     """
-    def __init__(self, name:str=None, node1:str=None, node2:str=None, sym_value:Union[sympy.Symbol, sympy.Expr]=None, value:float=None):
+    def __init__(self, name:str, node1:str, node2:str,
+                 sym_value:Union[sympy.Symbol,sympy.Expr]=None, value:sympy.Rational=None, value_float:float=None):
         self.name = name
         self.node1 = node1
         self.node2 = node2
+        self.type = None
 
-        if sym_value is None:
-            self.sym_value = sympy.Symbol(name)
-        else:
-            self.sym_value = sym_value
+        self.sym_value = sym_value
+        self.value = value
+        self.value_float = value_float
 
-        if value is None:
-            self.value = 0
+    def nodes(self) -> Set[str]:
+        """
+        :return: set of component nodes
+        """
+        ret = set()
+        if self.node1 is not None:
+            ret.add(self.node1)
+        if self.node2 is not None:
+            ret.add(self.node2)
+        return ret
+
+    def short(self):
+        return Short(f"Short_{self.name}", self.node1, self.node2)
+
+
+
+class ParallelAdmittance(Component):
+    """
+        Resistor component class
+
+        :param name: component id
+        :param node1: first node id
+        :param node2: second node id
+        :param sym_value: symbolic value
+        :param value: numeric value used in semisymbolic analyes
+    """
+    def __init__(self, component):
+
+        name: str = component.name
+        node1: str = component.node1
+        node2: str = component.node2
+        sym_value = component.y(symbolic=True)
+        value = component.y(symbolic=False)
+        value_float = component.y(symbolic=False, is_float=True)
+
+        super().__init__(name, node1, node2, sym_value, value, value_float)
+
+        self.netlist_keywords = ["R", "r"] # TODO: change to Z
+        self.type = "r"
+        self.subcomponents = {component.name: component}
+
+    def add(self, component):
+        self.name += f"|{component.name}"
+        self.sym_value += component.y(symbolic=True)
+        self.value += component.y(symbolic=False)
+        self.value_float += component.y(symbolic=False, is_float=True)
+        self.subcomponents[component.name] = component
+
+    def remove(self, component):
+        self.name = ""
+        self.sym_value = 0
+        self.value = 0
+        self.value_float = 0
+        self.subcomponents.pop(component.name)
+        for component in self.subcomponents.values():
+            if self.name != "":
+                self.name += f"|{component.name}"
+            else:
+                self.name = component.name
+            self.sym_value += component.y(symbolic=True)
+            self.value += component.y(symbolic=False)
+            self.value_float += component.y(symbolic=False, is_float=True)
+
+    def z(self, symbolic=False, is_float=False):
+        if symbolic:
+            return 1 / self.sym_value
+        elif is_float:
+            return 1/ self.value_float
         else:
-            self.value = value
+            return 1 / self.value
+
+    def y(self, symbolic=False, is_float=False):
+        if symbolic:
+            return self.sym_value
+        elif is_float:
+            return self.value_float
+        else:
+            return self.value
+
+    def branches(self):
+        branches = []
+        vnode1 = f"{self.node1}v"
+        vnode2 = f"{self.node2}v"
+        inode1 = f"{self.node1}i"
+        inode2 = f"{self.node2}i"
+
+        sym_adm = self.y(symbolic=True)
+        num_adm = self.y(symbolic=False)
+        sym_imp = self.z(symbolic=True)
+        num_imp = self.z(symbolic=False)
+
+        branches.append(Branch(self.name, inode1, vnode1, sym_imp, num_imp))
+        branches.append(Branch(self.name, inode2, vnode2, sym_imp, num_imp))
+        branches.append(Branch(self.name, vnode1, inode2, sym_adm, num_adm))
+        branches.append(Branch(self.name, vnode2, inode1, sym_adm, num_adm))
+        return branches
+
+class SerialAdmittance(ParallelAdmittance):
+    def add(self, component):
+        self.name = f"({self.name})({component.name})"
+        self.sym_value = 1/(self.z(symbolic=True) + component.z(symbolic=True))
+        self.value = 1/(self.z(symbolic=False) + component.z(symbolic=False))
+        self.value_float = 1/(self.z(symbolic=False, is_float=True) + component.z(symbolic=False, is_float=True))
+        self.subcomponents[component.name] = component
+        old_n_self = self.nodes()
+        old_n_comp = component.nodes()
+        all_nodes = set()
+        all_nodes.update(old_n_self)
+        all_nodes.update(old_n_comp)
+        nodes = list(all_nodes - (old_n_comp & old_n_self))
+        self.node1 = nodes[0]
+        self.node2 = nodes[1]
+
+    def remove(self, component):
+        # TODO: check correctness
+        self.name = ""
+        self.sym_value = 0
+        self.value = 0
+        self.value_float = 0
+        self.subcomponents.pop(component.name)
+        for component in self.subcomponents.values():
+            if self.name != "":
+                self.name += f"({component.name})"
+            else:
+                self.name = component.name
+            self.sym_value = 1 / (self.z(symbolic=True) + component.z(symbolic=True))
+            self.value = 1 / (self.z(symbolic=False) + component.z(symbolic=False))
+            self.value_float = 1 / (self.z(symbolic=False, is_float=True) + component.z(symbolic=False, is_float=True))
+
+
+class Port:
+    def __init__(self, name: str, node1: str, node2: str, component: Component):
+        self.name = name
+        self.component = component
+        self.node1 = node1
+        self.node2 = node2
+        self.type = "port"
 
     def nodes(self) -> Set[str]:
         """
@@ -41,12 +177,13 @@ class Component:
 
 
 class Coupling(Component):
-    def __init__(self, name, L1, L2, sym_value, value):
-        super().__init__(name, None, None, sym_value, value)
+    def __init__(self, name, L1, L2, sym_value, value, value_float):
+        super().__init__(name, None, None, sym_value, value, value_float)
         self.L1 = L1
         self.L2 = L2
         self.sym_value = sym_value
         self.value = value
+        self.value_float = value_float
         self.netlist_keywords = ["K", "k"]
         self.type = "k"
 
@@ -60,10 +197,47 @@ class Resistor(Component):
         :param sym_value: symbolic value
         :param value: numeric value used in semisymbolic analyes
     """
-    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None, value:float=None):
-        super().__init__(name, node1, node2, sym_value, value)
+    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None,
+                 value: sympy.Rational=None, value_float: float=None):
+        if sym_value is None:
+            sym_value = sympy.Symbol(name)
+        super().__init__(name, node1, node2, sym_value, value, value_float)
         self.netlist_keywords = ["R", "r"]
         self.type = "r"
+
+    def y(self, symbolic=False, is_float=False):
+        if symbolic:
+            return 1 / self.sym_value
+        elif is_float:
+            return 1 / self.value_float
+        else:
+            return 1 / self.value
+
+    def z(self, symbolic=False, is_float=False):
+        if symbolic:
+            return self.sym_value
+        elif is_float:
+            return self.value_float
+        else:
+            return self.value
+
+    def branches(self):
+        branches = []
+        vnode1 = f"{self.node1}v"
+        vnode2 = f"{self.node2}v"
+        inode1 = f"{self.node1}i"
+        inode2 = f"{self.node2}i"
+
+        sym_adm = self.y(symbolic=True)
+        num_adm = self.y(symbolic=False)
+        sym_imp = self.z(symbolic=True)
+        num_imp = self.z(symbolic=False)
+
+        branches.append(Branch(self.name, inode1, vnode1, sym_imp, num_imp))
+        branches.append(Branch(self.name, inode2, vnode2, sym_imp, num_imp))
+        branches.append(Branch(self.name, vnode1, inode2, sym_adm, num_adm))
+        branches.append(Branch(self.name, vnode2, inode1, sym_adm, num_adm))
+        return branches
 
 
 class Capacitor(Component):
@@ -77,12 +251,48 @@ class Capacitor(Component):
         :param value: numeric value used in semisymbolic analyes
         :param init_cond: initial condition in volts
     """
-    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None, value:float=None,
-                 init_cond:Union[sympy.Symbol, sympy.Expr]=0):
-        super().__init__(name, node1, node2, sym_value, value)
+    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None,
+                value:sympy.Rational=None, value_float: float=None, init_cond:Union[sympy.Symbol, sympy.Expr]=0):
+        if sym_value is None:
+            sym_value = sympy.Symbol(name)
+        super().__init__(name, node1, node2, sym_value, value, value_float)
         self.init_cond = init_cond
         self.netlist_keywords = ["C", "c"]
         self.type = "c"
+
+    def y(self, symbolic=False, is_float=False):
+        if symbolic:
+            return s * self.sym_value
+        elif is_float:
+            return s * self.value_float
+        else:
+            return s * self.value
+
+    def z(self, symbolic=False, is_float=False):
+        if symbolic:
+            return 1/ (s * self.sym_value)
+        elif is_float:
+            return 1/ (s * self.value_float)
+        else:
+            return 1/ (s * self.value)
+
+    def branches(self):
+        branches = []
+        vnode1 = f"{self.node1}v"
+        vnode2 = f"{self.node2}v"
+        inode1 = f"{self.node1}i"
+        inode2 = f"{self.node2}i"
+
+        sym_adm = self.y(symbolic=True)
+        num_adm = self.y(symbolic=False)
+        sym_imp = self.z(symbolic=True)
+        num_imp = self.z(symbolic=False)
+
+        branches.append(Branch(self.name, inode1, vnode1, sym_imp, num_imp))
+        branches.append(Branch(self.name, inode2, vnode2, sym_imp, num_imp))
+        branches.append(Branch(self.name, vnode1, inode2, sym_adm, num_adm))
+        branches.append(Branch(self.name, vnode2, inode1, sym_adm, num_adm))
+        return branches
 
 
 class Inductor(Component):
@@ -97,13 +307,50 @@ class Inductor(Component):
         :param init_cond: initial condition in amps
         :param coupling: a coupling object defining the couple
     """
-    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None, value:float=None,
-                 init_cond:Union[sympy.Symbol, sympy.Expr]=0, coupling:Union[Coupling, None]=None):
-        super().__init__(name, node1, node2, sym_value, value)
+    def __init__(self, name:str, node1:str, node2:str, sym_value:Union[sympy.Symbol, sympy.Expr]=None,
+                 value:sympy.Rational=None, value_float: float=None, init_cond:Union[sympy.Symbol, sympy.Expr]=0,
+                 coupling:Union[Coupling, None]=None):
+        if sym_value is None:
+            sym_value = sympy.Symbol(name)
+        super().__init__(name, node1, node2, sym_value, value, value_float)
         self.init_cond = init_cond
         self.coupling = coupling
         self.netlist_keywords = ["L", "l"]
         self.type = "l"
+
+    def y(self, symbolic=False, is_float=False):
+        if symbolic:
+            return 1 / (self.sym_value * s)
+        elif is_float:
+            return 1 / (self.value_float * s)
+        else:
+            return 1 / (self.value * s)
+
+    def z(self, symbolic=False, is_float=False):
+        if symbolic:
+            return self.sym_value * s
+        elif is_float:
+            return self.value_float * s
+        else:
+            return self.value * s
+
+    def branches(self):
+        branches = []
+        vnode1 = f"{self.node1}v"
+        vnode2 = f"{self.node2}v"
+        inode1 = f"{self.node1}i"
+        inode2 = f"{self.node2}i"
+
+        sym_adm = self.y(symbolic=True)
+        num_adm = self.y(symbolic=False)
+        sym_imp = self.z(symbolic=True)
+        num_imp = self.z(symbolic=False)
+
+        branches.append(Branch(self.name, inode1, vnode1, sym_imp, num_imp))
+        branches.append(Branch(self.name, inode2, vnode2, sym_imp, num_imp))
+        branches.append(Branch(self.name, vnode1, inode2, sym_adm, num_adm))
+        branches.append(Branch(self.name, vnode2, inode1, sym_adm, num_adm))
+        return branches
 
 
 class VoltageSource(Component):
@@ -122,35 +369,35 @@ class VoltageSource(Component):
         :param tran_sym: symbolic transient value
     """
     def __init__(self, name:str, node1:str, node2:str,
-                 dc_num: float=0, dc_sym: Union[sympy.Symbol, sympy.Expr]=None,
-                 ac_num: float=0, ac_sym: Union[sympy.Symbol, sympy.Expr]=None, ac_phase: Union[sympy.Symbol, sympy.Expr]=0,
-                 tran_num: float=0, tran_sym: Union[sympy.Symbol, sympy.Expr]=None):
-        super().__init__(name, node1, node2, sym_value=dc_sym, value=dc_num)
+                 values: Dict[str, Any]):
+        self.dc_num = values["dc_num"]
+        self.dc_float = values["dc_float"]
+        self.dc_sym = values["dc_sym"]
+
+        self.ac_num = values["ac_num"]
+        self.ac_float = values["ac_float"]
+        self.ac_sym = values["ac_sym"]
+        self.ac_phase = values["ac_phase"]
+
+        self.tran_num = values["tran_num"]
+        self.tran_float = values["tran_float"]
+        self.tran_sym = values["tran_sym"]
+
+        super().__init__(name, node1, node2, sym_value=self.dc_sym, value=self.dc_num)
 
         symbol = sympy.Symbol(name)
 
-        self.dc_num = dc_num
-        if dc_sym is None:
-            self.dc_sym = symbol
-        else:
-            self.dc_sym = dc_sym
-
-        self.ac_num = ac_num
-        if ac_sym is None:
-            self.ac_sym = symbol
-        else:
-            self.ac_sym = ac_sym
-        self.ac_phase = ac_phase
-
-        self.tran_num = tran_num
-
-        if tran_sym is None:
-            self.tran_sym = symbol/s
-        else:
-            self.tran_sym = tran_sym
-
         self.netlist_keywords = ["V", "v", "U", "u"]
         self.type = "v"
+
+    def v(self, symbolic=False, is_float=False):
+        # TODO: implement differentiation between analysis types
+        if symbolic:
+            return self.ac_sym
+        if is_float:
+            return self.ac_float
+        else:
+            return self.ac_num
 
 
 class CurrentSource(Component):
@@ -169,21 +416,34 @@ class CurrentSource(Component):
         :param tran_sym: symbolic transient value
     """
     def __init__(self, name:str, node1:str, node2:str,
-                 dc_num: float=0, dc_sym: Union[sympy.Symbol, sympy.Expr]=None,
-                 ac_num: float=0, ac_sym: Union[sympy.Symbol, sympy.Expr]=None, ac_phase: float=0,
-                 tran_num: float=0, tran_sym: Union[sympy.Symbol, sympy.Expr]=None):
+                 values: Dict[str, Any]):
 
-        super().__init__(name, node1, node2, sym_value = dc_sym, value=dc_num)
-        self.dc_num = dc_num
-        self.dc_sym = dc_sym
-        self.ac_num = ac_num
-        self.ac_sym = ac_sym
-        self.ac_phase = ac_phase
-        self.tran_num = tran_num
-        self.tran_sym = tran_sym
+        self.dc_num = values["dc_num"]
+        self.dc_float = values["dc_float"]
+        self.dc_sym = values["dc_sym"]
+
+        self.ac_num = values["ac_num"]
+        self.ac_float = values["ac_float"]
+        self.ac_sym = values["ac_sym"]
+        self.ac_phase = values["ac_phase"]
+
+        self.tran_num = values["tran_num"]
+        self.tran_float = values["tran_float"]
+        self.tran_sym = values["tran_sym"]
+
+        super().__init__(name, node1, node2, sym_value=self.dc_sym, value=self.dc_num)
 
         self.netlist_keywords = ["I", "i"]
         self.type = "i"
+
+    def i(self, symbolic=False, is_float=False):
+        # TODO: implement differentiation between analysis types
+        if symbolic:
+            return self.ac_sym
+        elif is_float:
+            return self.ac_float
+        else:
+            return self.ac_num
 
 
 class IdealOperationalAmplifier(Component):
@@ -209,6 +469,13 @@ class IdealOperationalAmplifier(Component):
         """
         return {self.node1, self.node2, self.node3, self.node4}
 
+    def generate_ports(self):
+        self.port1 = Port(f"{self.name}_out", self.node1, self.node2, self)
+        self.port2 = Port(f"{self.name}_in", self.node3, self.node4, self)
+
+    def ports(self) -> List[Port]:
+        return [self.port1, self.port2]
+
 
 class CurrentControlledSource(Component):
     """
@@ -222,15 +489,23 @@ class CurrentControlledSource(Component):
         :param sym_value: symbolic value of the component
         :param value: numeric value of the component
     """
-    def __init__(self, name:str, type:str, node1:str, node2:str, current_sensor:str,
-                 sym_value:Union[sympy.Symbol, sympy.Expr], value: float=None):
-        super().__init__(name, node1, node2, sym_value, value)
-        self.current_sensor = current_sensor
+    def __init__(self, name:str, type:str, node1:str, node2:str, node3:str, node4:str,
+                 sym_value:Union[sympy.Symbol, sympy.Expr], value: sympy.Rational, value_float: float):
+        super().__init__(name, node1, node2, sym_value, value, value_float)
+        self.node3 = node3
+        self.node4 = node4
         self.type = type
         self.netlist_keywords = ["F", "f", "H", "h"]
 
     def nodes(self):
         return {self.node1, self.node2, self.node3, self.node4}
+
+    def generate_ports(self):
+        self.port1 = Port(f"{self.name}_out", self.node1, self.node2, self)
+        self.port2 = Port(f"{self.name}_ctrl", self.node3, self.node4, self)
+
+    def ports(self) -> List[Port]:
+        return [self.port1, self.port2]
 
 
 class VoltageControlledSource(Component):
@@ -247,15 +522,50 @@ class VoltageControlledSource(Component):
         :param value: numeric value of the component
     """
     def __init__(self, name:str, type:str, node1:str, node2:str, node3:str, node4:str,
-                 sym_value:Union[sympy.Symbol, sympy.Expr], value:float=None):
-        super().__init__(name, node1, node2, sym_value, value)
+                 sym_value:Union[sympy.Symbol, sympy.Expr], value:sympy.Rational, value_float: float):
+        super().__init__(name, node1, node2, sym_value, value, value_float)
         self.node3 = node3
         self.node4 = node4
         self.type = type
         self.netlist_keywords = ["G", "g", "E", "e"]
 
     def nodes(self):
-        return {self.node1, self.node2, self.node3, self.node4}
+        return [self.node1, self.node2, self.node3, self.node4]
+
+    def generate_ports(self):
+        self.port1 = Port(f"{self.name}_out", self.node1, self.node2, self)
+        self.port2 = Port(f"{self.name}_ctrl", self.node3, self.node4, self)
+
+    def ports(self) -> List[Port]:
+        return [self.port1, self.port2]
+
+    def gain(self, symbolic=False, is_float=False):
+        if symbolic:
+            return self.sym_value
+        if is_float:
+            return self.value_float
+        else:
+            return self.value
+
+    def branches(self):
+        if self.type == "g":
+            branches = []
+            vnode3 = f"{self.node3}v"
+            vnode4 = f"{self.node4}v"
+            inode1 = f"{self.node1}i"
+            inode2 = f"{self.node2}i"
+
+            sym_gain = self.gain(symbolic=True)
+            num_gain = self.gain(symbolic=False)
+            if self.node3 != self.node1:
+                branches.append(Branch(self.name, vnode3, inode1, -sym_gain, -num_gain))
+            if self.node4 != self.node2:
+                branches.append(Branch(self.name, vnode4, inode2, -sym_gain, -num_gain))
+            if self.node3 != self.node2:
+                branches.append(Branch(self.name, vnode3, inode2, sym_gain, num_gain))
+            if self.node4 != self.node1:
+                branches.append(Branch(self.name, vnode4, inode1, sym_gain, num_gain))
+            return branches
 
 
 class SubcktModel:
@@ -328,8 +638,8 @@ class NPNModelAC(SubcktModel):
         elif "vaf" in params:
             elements.append(f"ro c e")
 
-        if "gx" in params:
-            elements.append(f"rx b e 1/{param_dict['gx']}")
+        #if "gx" in params:
+        #    elements.append(f"rx b e 1/{param_dict['gx']}")
 
         # VCCS
         if "gm" in params:
@@ -337,11 +647,12 @@ class NPNModelAC(SubcktModel):
         else:
             elements.append(f"gm c e b e")
 
+
         # Parasitic caps
-        if "cjc" in params:
-            elements.append(f"cmu b c {param_dict['cjc']}")
         if "cje" in params:
-            elements.append(f"cpi b e {param_dict['cje']}")
+            elements.append(f"cmu b c {param_dict['go']}*{param_dict['tr']}+{param_dict['cjc']}")
+        if "cjc" in params:
+            elements.append(f"cpi b e {param_dict['gm']}*{param_dict['tf']}+2*{param_dict['cje']}")
 
         return elements
 
@@ -377,11 +688,12 @@ class PNPModelAC(SubcktModel):
         else:
             elements.append(f"gm c e e b")
 
+
         # Parasitic caps
-        if "cjc" in params:
-            elements.append(f"cmu b c {param_dict['cjc']}")
         if "cje" in params:
-            elements.append(f"cpi b e {param_dict['cje']}")
+            elements.append(f"cmu b c {param_dict['tr']}*{param_dict['go']}+{param_dict['cjc']}")
+        if "cjc" in params:
+            elements.append(f"cpi b e {param_dict['gm']}*{param_dict['tf']}+2*{param_dict['cje']}")
 
         return elements
 
@@ -480,15 +792,17 @@ class PFETModelAC(SubcktModel):
 
         return elements
 
+
 class PeriodicSwitch(Component):
     # periodic switch used for SC/SI analysis
-    def __init__(self, name, type, node1, node2, phase):
-        super().__init__(name, type, node1, node2)
+    def __init__(self, name, node1, node2, phase):
+        super().__init__(name, node1, node2)
         self.phase = phase
         self.netlist_keywords = ["S", "s"]
 
 
 class Short(Component):
-    pass
-
-
+    def __init__(self, name, node1, node2):
+        super().__init__(name, node1, node2)
+        self.netlist_keywords = ["W", "w"]
+        self.type = "w"
