@@ -1,3 +1,4 @@
+import traceback
 from symcirc.component import *
 from symcirc import utils
 from symcirc import laplace
@@ -29,9 +30,8 @@ def check_if_symbolic(val):
     return not val.is_number
 
 
-def convert_units(val, forced_numeric=False, local_dict=None):
+def convert_units(val: str, forced_numeric: bool=False, local_dict=None):
     ret = None
-    symbolic = True
     if local_dict is None:
         local = {}
     else:
@@ -52,69 +52,71 @@ def convert_units(val, forced_numeric=False, local_dict=None):
         symbolic = False
     else:
         symbolic = check_if_symbolic(ret)
-
-    try:
-        ret = sympy.Rational(ret)
-    except:
-        pass
     return ret, symbolic
 
+def process_value(name, val, symbolic):
+    if symbolic:
+        sym = val
+        rat = val
+        flt = val
+    else:
+        sym = sympy.Symbol(name, real=True)
+        try:
+            rat = nsimplify(val, rational=True)
+        except:
+            traceback.print_exc()
+            rat = val
+        flt = evalf(val)
+    return rat, flt, sym
 
 def dc_value(words):
-    symbolic = False
-    try:
-        if words[3] in ["dc", "DC"]:
-            dc_value, symbolic = convert_units(words[4])
-        elif len(words) == 4:
-            dc_value, symbolic = convert_units(words[3])
-        else:
-            symbolic = True
-            dc_value = sympy.Symbol(words[0], real=True)
-    except IndexError:
-        dc_value = 0
-
-    if symbolic:
-        dc_sym = dc_value
+    if len(words) < 3:
+        symbolic = True
+        dc_val = sympy.Symbol(words[0], real=True)
+    elif words[3] in ["dc", "DC"]:
+        dc_val, symbolic = convert_units(words[4])
+    elif len(words) == 4:
+        dc_val, symbolic = convert_units(words[3])
     else:
-        dc_sym = sympy.Symbol(words[0], real=True)
-    return dc_value, dc_sym
+        symbolic = True
+        dc_val = sympy.Symbol(words[0], real=True)
 
+    dc_rat, dc_flt, dc_sym = process_value(words[0], dc_val, symbolic)
+    return dc_rat, dc_flt, dc_sym
 
 def ac_value(words):
-    phase_rad = 0
-    symbolic = False
     try:
         if words[5] in ["ac", "AC"]:
-            ac_value, symbolic = convert_units(words[6])
+            ac_val, val_symbolic = convert_units(words[6])
             try:
                 if words[7] not in RESERVED:
                     phase_deg, _ = convert_units(words[7])
                     phase_rad = sympy.rad(phase_deg)
                 else:
-                    phase_rad = 0
+                    phase_rad = Integer(0)
             except IndexError:
-                phase_rad = 0
+                phase_rad = Integer(0)
         else:
-            ac_value = 0
+            val_symbolic = False
+            ac_val = Integer(0)
+            phase_rad = Integer(0)
     except IndexError:
-        ac_value = 0
+        val_symbolic = False
+        ac_val = Integer(0)
+        phase_rad = Integer(0)
 
-    if symbolic:
-        ac_sym = ac_value
-    else:
-        ac_sym = sympy.Symbol(words[0], real=True)
-    return ac_value, phase_rad, ac_sym
+    ac_rat, ac_flt, ac_sym = process_value(words[0], ac_val, val_symbolic)
+    return ac_rat, ac_flt, ac_sym, phase_rad
 
 def tran_value(words, dc):
     use_DC_val = True
     index = 1
-    offset = 0
-    amp = 1
-    freq = 1
-    delay = 0
-    damping = 1
-    omega = 2*pi*freq
-    #tran = sympy.Symbol("N/A")
+    offset = Integer(0)
+    amp = Integer(1)
+    freq = Integer(1)
+    delay = Integer(0)
+    damping = Integer(1)
+    omega = Integer(2)*pi*freq
 
     for word in words:
         if word in ["sin", "SIN"]:
@@ -123,7 +125,7 @@ def tran_value(words, dc):
         else:
             index += 1
     if use_DC_val:
-        tran = dc*(1/s)
+        tran = dc*(Integer(1)/s)
     else:
         try:
             offset, _ = convert_units(words[index])
@@ -134,17 +136,18 @@ def tran_value(words, dc):
             omega = 2*pi*freq
         except IndexError:
             pass
-        #tran = ((offset/s)+amp*sympy.exp(-s*delay)*2*pi*freq/((s+damping)**2+(2*pi*freq)**2))
         tran = amp*((damping+s)*sympy.sin(delay)+omega*sympy.cos(delay))/(damping**2+2*damping*s+omega**2+s**2)
-    return tran
+    tran_rat, tran_flt, _ = process_value(words[0], tran, False)
+    return tran_rat, tran_flt
 
-def value_enum(words):
+def value_enum(name: str, value: str):
     try:
-        value, symbolic = convert_units(words[3])
+        value, is_symbolic = convert_units(value)
     except IndexError:
-        symbolic = True
-        value = sympy.Symbol(words[0], real=True) #value = sympy.parse_expr(words[0], local_dict=sympy.abc._clash, transformations=TRANSFORMS)
-    return value, symbolic
+        is_symbolic = True
+        value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
+    rat, flt, sym = process_value(name, value, is_symbolic)
+    return rat, flt, sym, is_symbolic
 
 def nodes_per_element(type):
     type = type.lower()
@@ -450,71 +453,55 @@ def parse(netlist, operating_point=None):
         # identify variant of component and assign symbolic value
 
         if name[0] in ["i", "I"]:
-            #sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
-            dc_num, dc_sym = dc_value(words)
-            ac_num, ac_phase, ac_sym = ac_value(words)
-            tran_num = tran_value(words, dc_num)
+            dc_rat, dc_flt, dc_sym = dc_value(words)
+            ac_rat, ac_flt, ac_sym, phase_rad = ac_value(words)
+            tran_rat, tran_flt = tran_value(words, dc_rat)
             tran_sym = dc_sym / s
-            c = CurrentSource(name, node1, node2,
-                              dc_num=dc_num, dc_sym=dc_sym,
-                              ac_num=ac_num, ac_sym=ac_sym, ac_phase=ac_phase,
-                              tran_num=tran_num, tran_sym=tran_sym)
+            values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
+                      "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
+                      "tran_num": tran_rat,"tran_float": tran_flt, "tran_sym": tran_sym}
+            c = CurrentSource(name, node1, node2, values)
             independent_sources.append(c)
 
         elif name[0] in ["v", "V", "u", "U"]:
-            #sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
+            dc_rat, dc_flt, dc_sym = dc_value(words)
+            ac_rat, ac_flt, ac_sym, phase_rad = ac_value(words)
+            tran_rat, tran_flt = tran_value(words, dc_rat)
+            tran_sym = dc_sym / s
 
-            dc_num, dc_sym = dc_value(words)
-            ac_num, ac_phase, ac_sym = ac_value(words)
-            tran_num = tran_value(words, dc_num)
-            tran_sym = dc_sym/s
+            values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
+                      "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
+                      "tran_num": tran_rat,"tran_float": tran_flt, "tran_sym": tran_sym}
 
-            c = VoltageSource(name, node1, node2,
-                              dc_num=dc_num, dc_sym=dc_sym,
-                              ac_num=ac_num, ac_sym=ac_sym, ac_phase=ac_phase,
-                              tran_num=tran_num, tran_sym=tran_sym)
+            c = VoltageSource(name, node1, node2, values)
             independent_sources.append(c)
 
         elif name[0] in ["r", "R"]:
-            value, symbolic = value_enum(words)
-            if symbolic:
-                sym_value = value  # sympy.Symbol(value, real=True)
-
-            else:
-                sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
-            c = Resistor(name, node1, node2, sym_value=sym_value, value=value)
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[3])
+            c = Resistor(name, node1, node2, sym_value=val_sym, value=val_rat, value_float=val_flt)
             basic_components.append(c)
 
         elif name[0] in ["c", "C"]:
-            value, symbolic = value_enum(words)
-            if symbolic:
-                sym_value = value  # sympy.Symbol(value, real=True)
-            else:
-                sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[3])
             try:
-                init_cond, _ = convert_units(words[4][3:])
-                c = Capacitor(name, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
+                ic_rat, ic_flt, _, _ = value_enum(words[0], words[4][3:])
             except IndexError:
-                init_cond = 0
-                c = Capacitor(name, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
+                ic_rat, ic_flt = 0, 0
+
+            c = Capacitor(name, node1, node2, sym_value=val_sym, init_cond=ic_rat, value=val_rat, value_float=val_flt)
             basic_components.append(c)
 
         elif name[0] in ["l", "L"]:
-            value, symbolic = value_enum(words)
-            if symbolic:
-                sym_value = value  # sympy.Symbol(value, real=True)
-            else:
-                sym_value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)  # sympy.Symbol(name, real=True)
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[3])
             try:
-                init_cond, _ = convert_units(words[4][3:])
-                c = Inductor(name, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
+                ic_rat, ic_flt, _, _ = value_enum(words[0], words[4][3:])
             except IndexError:
-                init_cond = 0
-                c = Inductor(name, node1, node2, sym_value=sym_value, init_cond=init_cond, value=value)
+                ic_rat, ic_flt = 0, 0
+
+            c = Inductor(name, node1, node2, sym_value=val_sym, init_cond=ic_rat, value=val_rat, value_float=val_flt)
             basic_components.append(c)
 
         elif name[0] in ["a", "A"]:
-            sym_value = sympy.Symbol(name, real=True)
             node3 = words[3]
             node4 = words[4]
             if node3 not in nodes:
@@ -526,25 +513,17 @@ def parse(netlist, operating_point=None):
 
         elif name[0] in ["e", "E"]:  # VVT (VCVS)
             variant = "e"
-            sym_value = sympy.Symbol(name, real=True)
             node3 = words[3]
             node4 = words[4]
             if node3 not in nodes:
                 nodes.append(node3)
             if node4 not in nodes:
                 nodes.append(node4)
-            try:
-                value, symbolic = convert_units(words[5])
-            except IndexError:
-                symbolic = True
-                value = sympy.Symbol(name, real=True) #value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
 
-            if symbolic:
-                sym_value = value  # sympy.Symbol(value, real=True)
-            else:
-                sym_value = sympy.Symbol(name, real=True)
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[5])
 
-            c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
+            c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=val_rat,
+                                        value_float=val_flt, sym_value=val_sym)
             controlled_sources.append(c)
 
         elif name[0] in ["g", "G"]:  # VCT (VCCS)
@@ -555,32 +534,15 @@ def parse(netlist, operating_point=None):
                 nodes.append(node3)
             if node4 not in nodes:
                 nodes.append(node4)
-            try:
-                value, symbolic = convert_units(words[5])
-            except IndexError:
-                symbolic = True
-                value = sympy.Symbol(name, real=True) #sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
-            if symbolic:
-                sym_value = value  # sympy.Symbol(value, real=True)
-            else:
-                sym_value = sympy.Symbol(name, real=True)
-            c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[5])
+
+            c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=val_rat,
+                                        value_float=val_flt, sym_value=val_sym)
             controlled_sources.append(c)
 
         elif name[0] in ["f", "F"]:  # CCT (CCCS)
             variant = "f"
-            sym_value = sympy.Symbol(name, real=True)
             v_c = words[3]
-            try:
-                value, symbolic = convert_units(words[4])
-            except IndexError:
-                symbolic = True
-                value = sympy.Symbol(name, real=True) #value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
-            if symbolic:
-                sym_value = value  # sympy.Symbol(value, real=True)
-            else:
-                sym_value = sympy.Symbol(name, real=True)
-
             try:
                 add_short[v_c].append(name)
                 node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
@@ -590,23 +552,15 @@ def parse(netlist, operating_point=None):
                 node3 = None
                 node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
 
-            c = CurrentControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[4])
 
+            c = CurrentControlledSource(name, variant, node1, node2, node3, node4, value=val_rat,
+                                        value_float=val_flt, sym_value=val_sym)
             controlled_sources.append(c)
 
         elif name[0] in ["h", "H"]:  # CVT (CCVS)
             variant = "h"
-            sym_value = sympy.Symbol(name, real=True)
             v_c = words[3]
-            try:
-                value, symbolic = convert_units(words[4])
-            except IndexError:
-                symbolic = True
-                value = sympy.Symbol(name, real=True) #value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
-            if symbolic:
-                sym_value = value  # sympy.Symbol(value, real=True)
-            else:
-                sym_value = sympy.Symbol(name, real=True)
             try:
                 add_short[v_c].append(name)
                 node3 = f"*ctrl{v_c}{add_short[v_c][-2]}"
@@ -616,21 +570,22 @@ def parse(netlist, operating_point=None):
                 node3 = None
                 node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
 
-            c = CurrentControlledSource(name, variant, node1, node2, node3, node4, value=value, sym_value=sym_value)
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[4])
+
+            c = CurrentControlledSource(name, variant, node1, node2, node3, node4, value=val_rat,
+                                        value_float=val_flt, sym_value=val_sym)
             controlled_sources.append(c)
 
         elif name[0] in ["k", "K"]:  # coupled inductors
-            value, symbolic = value_enum(words)
-            sym_value = sympy.Symbol(name, real=True)
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[3])
             L1 = words[1]
             L2 = words[2]
-            c = Coupling(name, L1, L2, sym_value, value)
+            c = Coupling(name, L1, L2, val_sym, value=val_rat, value_float=val_flt)
             couplings.append(c)
 
         elif name[0] in ["s", "S"]:  # periodic switch used for SC/SI analysis
-            variant = "s"
             phase = words[3]
-            c = PeriodicSwitch(name, variant, node1, node2, phase=phase)
+            c = PeriodicSwitch(name, node1, node2, phase=phase)
             SCSI_components.append(c)
 
         components[c.name] = c
