@@ -1,123 +1,11 @@
 import os
 import copy, time
-from typing import List, Set, Dict, Union, Any
+from typing import List, Union
 
-from sympy import Symbol
-
-from symcirc import parse, laplace
-from symcirc.component import Component, CurrentSource, VoltageSource
+from symcirc import laplace
+from symcirc.circuit import Circuit
+from symcirc.component import Component, CurrentSource, VoltageSource, ANALYSIS_DEPENDENT
 from symcirc.utils import *
-
-
-class Circuit:
-    """
-    When initialized it parses the input netlist, and translates it into a list of components as defined
-    in 'symcirc.component'. This class implements methods for further circuit manipulation before analysis.
-
-    :param netlist: string in netlist format which contains the circuit description.
-        Note: If you intend to load from a file, use the utils.load_file() function.
-    :param operating_point: Use to pass numeric or symbolic operating point values
-        for linearized components, if no values are specified the default model with symbolic values is used.
-        Example: operating_point = {"Q1": {"gm": 74.5e-3, "gpi": 232e-6, "gmu": 1e-9, "go": 22.5e-6, "gx": 1.66}}
-            The Q1 bjt will use these values in the model and expand the basic model accordingly.
-    """
-    def __init__(self, netlist: str, operating_point: Union[Dict[str, Any], None]=None):
-        self.netlist = netlist
-        self.components, self.couplings = parse.parse(netlist, operating_point)
-
-    def get(self, component_name: str) -> Component:
-        return self.components[component_name]
-
-    def add(self, component: Component) -> None:
-        if component.name in self.components:
-            raise(ValueError('Component already exists'))
-        else:
-            self.components[component.name] = component
-
-    def delete(self, component_name: str) -> None:
-        if component_name in self.components:
-            del self.components[component_name]
-        else:
-            raise(ValueError("Component doesn't exists"))
-
-    def pop(self, component_name: str) -> Component:
-        if component_name in self.components:
-            return self.components.pop(component_name)
-        else:
-            raise(ValueError("Component doesn't exists"))
-
-    def change(self, component_name: str, parameter: str, new_value) -> None:
-        if component_name not in self.components:
-            raise ValueError("Component doesn't exist")
-        c = self.components[component_name]
-        if hasattr(c, parameter):
-            setattr(c, parameter, new_value)
-        else:
-            raise AttributeError(f"Component '{component_name}' has no attribute '{parameter}'")
-
-    def _scan_nodes(self) -> Set[str]:
-        node_set = set()
-
-        for c in self.components.values():
-            node_set = node_set|c.nodes()
-        return node_set
-
-    def count_components(self) -> int:
-        """
-          Returns the total number of components in the circuit
-          :return int count
-        """
-        count = 0
-        for c in self.components:
-            if self.components[c].type in ["a", "e", "g", "f", "h"]:
-                count += 2
-            elif self.components[c].type in ["k"]:
-                pass
-            else:
-                count += 1
-        return count
-
-    def get_node_dict(self) -> Dict[str, int]:
-        nodes = self._scan_nodes()
-        node_dict = {}
-        i = 0
-        grounded = False
-        for node in nodes:
-            if node != "0":
-                node_dict[node] = i
-                i += 1
-            if node == "0":
-                grounded = True
-        if not grounded:
-            print("Circuit not grounded")
-        return node_dict
-
-    def get_node_symbols(self) -> List[Symbol]:
-        voltage_symbol_list = []
-        for node in self.get_node_dict():
-            if node != "0":
-                voltage_symbol_list.append(sympy.Symbol(f"v({node})"))
-        return voltage_symbol_list
-
-    def count_nodes(self) -> int:
-        return len(self._scan_nodes()) - 1
-
-    def analyse(self, analysis_type:str = "tf", method: str = "tableau",
-                 symbolic: bool = True, auto_eval: bool = False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False):
-
-        analysis_type = analysis_type.lower()
-        if analysis_type == "dc":
-            analysis = DC(self, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
-        elif analysis_type == "ac":
-            analysis = AC(self, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
-        elif analysis_type == "tf":
-            analysis = TF(self, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
-        elif analysis_type == "tran":
-            analysis = TRAN(self, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
-        else:
-            raise ValueError(f"Nonexistent analysis type: {analysis_type}")
-        return analysis
 
 
 class Analysis:
@@ -133,23 +21,31 @@ class Analysis:
 
     :raise ValueError: If the analysis_type argument is invalid.
     """
+    SOLVERS = ['gauss', 'lu', 'ddd']
+    METHODS = ["tableau", "two_graph_node"]
     def __init__(self, circuit: Circuit, method: str = "tableau",
                  symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False, term_dominance_pruning: bool = False):
+                 use_symengine: bool = False, solver: str = "gauss"):
 
         if use_symengine:
             os.environ["USE_SYMENGINE"] = "1"
 
         method = method.lower()
-        if method not in ["tableau", "two_graph_node", "modified_node"]:
-            raise ValueError(f"Nonexistent analysis method: {method}")
+        if method not in self.METHODS:
+            raise ValueError(f"Nonexistent analysis method: {method}\n Pick from: {self.METHODS}")
+
+        if solver not in self.SOLVERS:
+            raise ValueError(f"Nonexistent solver: {solver}\nPick from: {self.SOLVERS}")
 
         self.is_symbolic: bool = symbolic
         self.auto_eval = auto_eval
         self.precision: int = precision
         self.method: str = method
         self.sympy_ilt: bool = sympy_ilt
-        self.term_dominance_pruning = term_dominance_pruning
+        self.solver = solver
+
+        self.sbg = True
+
         self.circuit: Circuit = circuit
         self.node_voltage_identities: list = []
 
@@ -157,7 +53,7 @@ class Analysis:
 
         self.node_voltage_symbols: List[sympy.Symbol] = self.circuit.get_node_symbols()
         self.node_dict = self.circuit.get_node_dict()
-        self.c_count = self.circuit.count_components()
+        self.c_count = self.circuit.count_ports()
         self.node_count = self.circuit.count_nodes()
 
         self.eqn_matrix, self.solved_dict, self.symbols = self._analyse()  # solved_dict: {sympy.symbols(<vaviable_name>): <value>}
@@ -183,9 +79,10 @@ class Analysis:
     def get_symbols(self) -> Dict[str, sympy.Symbol]:
         symbol_dict = {}
         for expr in self.solved_dict.values():
-            free_symbols = expr.free_symbols
-            for symbol in free_symbols:
-                symbol_dict[symbol.name] = symbol
+            if hasattr(expr, 'free_symbols'):
+                free_symbols = expr.free_symbols
+                for symbol in free_symbols:
+                    symbol_dict[symbol.name] = symbol
         return symbol_dict
 
     def get_node_voltage_symbol(self, node: str) -> sympy.Symbol:
@@ -273,7 +170,22 @@ class Analysis:
                                 pass
         return func
 
-    def _choose_source_val(self, c: Component) -> sympy.Expr:
+    def value_map(self, is_float=False):
+        value_map = {}
+        for comp in self.circuit.components.values():
+            if is_float:
+                if comp.type in ANALYSIS_DEPENDENT:
+                    value_map[comp.sym_value] = self._choose_source_val(comp, is_float=True)
+                elif comp.value_float is not None:
+                    value_map[comp.sym_value] = comp.value_float
+            else:
+                if comp.type in ANALYSIS_DEPENDENT:
+                    value_map[comp.sym_value] = self._choose_source_val(comp)
+                elif comp.value is not None:
+                    value_map[comp.sym_value] = comp.value
+        return value_map
+
+    def _choose_source_val(self, c: Component, is_float=False) -> sympy.Expr:
         """Has to be implemented in child class"""
         pass
 
@@ -352,8 +264,7 @@ class Analysis:
                 v1 = sympy.Symbol(f"v({node1})")
                 voltage1 = self.solved_dict[v1].simplify()
         except KeyError:
-            print("Node {} doesn't exist.".format(node1))
-            exit(101)
+            raise ValueError(f"Node {node1} doesn't exist.")
 
         try:
             if node2 in [0, "0"]:
@@ -362,14 +273,10 @@ class Analysis:
                 v2 = sympy.Symbol(f"v({node2})")
                 voltage2 = self.solved_dict[v2].simplify()
         except KeyError:
-            print("Node {} doesn't exist.".format(node2))
-            exit(101)
+            raise ValueError(f"Node {node2} doesn't exist.")
         tf = (voltage2/voltage1)
         return tf
 
-    def _prune_matrix(self, eqn_matrix, symbols):
-        # TODO: implement matrix row term dominance pruning based on default numeric values
-        return eqn_matrix, symbols
 
     def _analyse(self):
         """
@@ -380,29 +287,69 @@ class Analysis:
           :return dict solved_dict: dictionary of eqn_matrix solve results
           :return list symbols: list of all used sympy.symbol objects
         """
-        eqn_matrix, symbols = self._build_system_eqn()
 
-        if self.term_dominance_pruning:
-            eqn_matrix, symbols = self._prune_matrix(eqn_matrix, symbols)
+        # TODO: rework into optional filter
+        # Substitutes expansive expressions into working symbols that have to be later resubstituted
+        '''memo = {}
+        i = 0
+        for elem in eqn_matrix:
+            new_elem = simplify_coeffs(elem, s, f"M{i}", memo)
+            eqn_matrix[i] = new_elem
+            i+=1'''
+
+        # TODO: state machine to decide whether to use gauss, LU or DDD
 
         t0 = time.time()
-        '''solved_dict = sympy.solve_linear_system_LU(eqn_matrix, symbols)
-        for i in solved_dict:
-            solved_dict[i] = solved_dict[i].cancel()
-        print(f"LU solve time: {time.time() - t0}")
-        print(solved_dict)'''
-        #t0 = time.time()
-        solved_dict = sympy.solve_linear_system(eqn_matrix, *symbols)
-        # TODO: test whether this is a speedup or not and neccessity for readability
+        solved_dict = {}
+        if self.solver == "gauss":
+            eqn_matrix, symbols = self._build_system_eqn()
+            solved_dict = self._gauss_solve(eqn_matrix, symbols)
+        elif self.solver == "lu":
+            eqn_matrix, symbols = self._build_system_eqn()
+            solved_dict = self._lu_solve(eqn_matrix, symbols)
+        elif self.solver == "ddd":
+            # TODO: rework this hack into a more professional solution
+            tmp_symbolic = self.is_symbolic
+            self.is_symbolic = True
+            eqn_matrix, symbols = self._build_system_eqn()
+            self.is_symbolic = tmp_symbolic
+            solved_dict = self._ddd_solve(eqn_matrix, symbols)
+
+        t1 = time.time()
+        #print(f"Matrix solve time by {self.solver}: {t1-t0}")
+
+        # TODO: rework into optional filter
+        # Resubstitute
+        '''inverted_memo = {v: k for k, v in memo.items()}
+        self.inter_symbols = inverted_memo
+        t2 = time.time()
         for key in solved_dict:
-            solved_dict[key] = solved_dict[key].factor()
+            solved_dict[key] = sympy.cancel(solved_dict[key].subs(inverted_memo))
+        t3 = time.time()
+        print(f"Solution resubstitution time: {t3 - t2}")'''
+
+        # TODO: test whether this is a speedup or not and neccessity for readability
+        #for key in solved_dict:
+        #    solved_dict[key] = solved_dict[key].factor()
         #print(f"Gauss solve time: {time.time()-t0}")
         #print(solved_dict)
         # TODO: auto_eval implementation in expression retrieval; not directly here, causes issues with laplace
         #if self.auto_eval:
         #    solved_dict = {key: evalf(func, precision=self.precision) for key, func in solved_dict.items()}
-
         return eqn_matrix, solved_dict, symbols
+
+    def _gauss_solve(self, eqn_matrix, symbols):
+        return sympy.solve_linear_system(eqn_matrix, *symbols)
+
+    def _lu_solve(self, eqn_matrix, symbols):
+        return sympy.solve_linear_system_LU(eqn_matrix, symbols)
+
+    def _ddd_solve(self, eqn_matrix, symbols):
+        from symcirc.ddd_solve import solve_cramer_ddd, solve_cramer_ddd_semi
+        if self.is_symbolic:
+            return solve_cramer_ddd(eqn_matrix, symbols, nested=True)
+        else:
+            return solve_cramer_ddd_semi(eqn_matrix, symbols, self.value_map(is_float=True))
 
     def _build_system_eqn(self):
         if self.method == "tableau":
@@ -498,9 +445,6 @@ class Analysis:
         v_graph_nodes = []
         i_graph_nodes = []
         matrix_col_expand = 0
-        coupled_pairs = []
-        coupled_inductors = []
-
         for key in self.circuit.components:
             c = self.circuit.components[key]
 
@@ -597,8 +541,14 @@ class Analysis:
                 self._collapse(i_graph_collapses, c.node1, c.node2)
                 self._collapse(v_graph_collapses, c.node3, c.node4)
 
-            if c.type == "s":
-                pass
+            if c.type == "w": # short
+                self.graph_append(c.node1, v_graph_nodes)
+                self.graph_append(c.node2, v_graph_nodes)
+                self.graph_append(c.node1, i_graph_nodes)
+                self.graph_append(c.node2, i_graph_nodes)
+                self._collapse(i_graph_collapses, c.node1, c.node2)
+                self._collapse(v_graph_collapses, c.node1, c.node2)
+
 
         """Collapse nodes based on collapse dictionaries"""
         for collapse_list in i_graph_collapses:
@@ -622,6 +572,7 @@ class Analysis:
                     else:
                         v_graph_nodes[i] = min(collapse_list)
                 i += 1
+
         self.node_voltage_identities = v_graph_collapses
         v_graph_nodes = list(set(v_graph_nodes))
         i_graph_nodes = list(set(i_graph_nodes))
@@ -638,19 +589,11 @@ class Analysis:
         symbols_to_append = []
         for key in self.circuit.components:
             c = self.circuit.components[key]
-            #if c.type == "l":
-                #if c.coupling is not None:
-                #    raise NotImplementedError(
-                #        "Coupled inductors not implemented for this method. Use tableau method for coupled inductors.")
-                #else:
-                #    self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
             if c.type in ["r", "c"]:
-                self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
+                self._add_basic_tgn(M, S, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
             if c.type == "l":
-                if c.coupling is not None:
-                    pass
-                else:
-                    self._add_basic_tgn(M, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
+                if c.coupling is None:
+                    self._add_basic_tgn(M, S, v_graph_nodes, i_graph_nodes, c, i_graph_collapses, v_graph_collapses)
             if c.type == "v":
                 self._add_voltage_source_tgn(M, S, v_graph_nodes, i_graph_nodes, c, index_row, index_col,
                                              i_graph_collapses, v_graph_collapses)
@@ -672,7 +615,7 @@ class Analysis:
             if c.type == "h":
                 self._add_CVT_tgn(M, v_graph_nodes, i_graph_nodes, c, index_col, index_row, i_graph_collapses,
                                   v_graph_collapses)
-                symbols_to_append.append(sympy.Symbol(f"i({c.name})"))
+                symbols_to_append.append(sympy.Symbol(f"i({c.name}_in)"))
                 index_col += 1
                 index_row += 1
             if c.type == "a":
@@ -688,7 +631,8 @@ class Analysis:
                     coef = coupling.sym_value
                 else:
                     coef = coupling.value
-                self._add_K_tgn(M, S, v_graph_nodes, i_graph_nodes, [ind1, ind2, coef], index_row, index_col, i_graph_collapses, v_graph_collapses)
+                self._add_K_tgn(M, S, v_graph_nodes, i_graph_nodes, [ind1, ind2, coef], index_col, index_row,
+                                i_graph_collapses, v_graph_collapses)
                 symbols_to_append.append(sympy.Symbol(f"i({ind1.name})"))
                 symbols_to_append.append(sympy.Symbol(f"i({ind2.name})"))
                 index_col += 2
@@ -702,15 +646,14 @@ class Analysis:
             symbols.append(symb)
 
         # TODO: experiment with simplification inside matrix - seems like a huge performance upgrade in tgn method!
-        for i in range(m_size ** 2):
+        '''for i in range(m_size ** 2):
             expr = equation_matrix[i]
             if expr != 0:
-                equation_matrix[i] = sympy.cancel(expr)
+                equation_matrix[i] = sympy.cancel(expr)'''
 
         return equation_matrix, symbols
 
     def _collapse(self, graph_collapses, node1, node2):
-        collapsed = False
         node1_in = None
         node2_in = None
         for i in range(len(graph_collapses)):
@@ -739,8 +682,6 @@ class Analysis:
         node3 = c.node3
         node4 = c.node4
 
-        c_v = self.circuit.components[c.current_sensor]
-
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
         n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
@@ -761,25 +702,27 @@ class Analysis:
         M[row, col] += -r
 
     def _add_CCT_tgn(self, M, v_nodes, i_nodes, c, index, i_graph_collapses):
-        f_gain = None
         if self.is_symbolic:
             f_gain = c.sym_value
         else:
             f_gain = c.value
+
         node1 = c.node1
         node2 = c.node2
         node3 = c.node3
         node4 = c.node4
 
-        n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
-        n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
-        n3i = self.index_tgn(i_nodes, node3, i_graph_collapses)
-        n4i = self.index_tgn(i_nodes, node4, i_graph_collapses)
+
+        n1i = self.index_tgn(i_nodes, node3, i_graph_collapses)
+        n2i = self.index_tgn(i_nodes, node4, i_graph_collapses)
+        n3i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+        n4i = self.index_tgn(i_nodes, node2, i_graph_collapses)
         col = len(v_nodes) + index
+
         if n1i is not None:
-            M[n1i, col] += f_gain
+            M[n1i, col] += 1/f_gain
         if n2i is not None:
-            M[n2i, col] += -f_gain
+            M[n2i, col] += -1/f_gain
         if n3i is not None:
             M[n3i, col] += 1
         if n4i is not None:
@@ -868,19 +811,11 @@ class Analysis:
         if n2i is not None:
             S[n2i, 0] += val
 
-    def _add_basic_tgn(self, M, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses):
+    def _add_basic_tgn(self, M, S, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses):
         node1 = c.node1
         node2 = c.node2
-        if self.is_symbolic:
-            val = c.sym_value
-        else:
-            val = c.value
-        if c.type == "r":
-            y = 1 / val
-        if c.type == "l":
-            y = 1 / (val*s)
-        if c.type == "c":
-            y = s * val
+
+        y = c.y(self.is_symbolic)
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
         n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
@@ -910,7 +845,7 @@ class Analysis:
             L1 = ind1.value
             L2 = ind2.value
 
-        coef = coupling[2] * sympy.sqrt(L1 * L2)
+        coeff = coupling[2] * sympy.sqrt(L1 * L2)
 
         node1 = ind1.node1
         node2 = ind1.node2
@@ -935,26 +870,22 @@ class Analysis:
         # L1 KVL row
         if n1v is not None: M[row1, n1v] += 1
         if n2v is not None: M[row1, n2v] += -1
-        M[row1, col1] += s * L1  # self-inductor
-        M[row1, col2] += s * coef  # mutual term
+        M[row1, col1] += -s * L1  # self-inductor
+        M[row1, col2] += -s * coeff  # mutual term
 
         # L2 KVL row
         if n3v is not None: M[row2, n3v] += 1
         if n4v is not None: M[row2, n4v] += -1
-        M[row2, col2] += s * L2  # self-inductor
-        M[row2, col1] += s * coef  # mutual term
+        M[row2, col2] += -s * L2  # self-inductor
+        M[row2, col1] += -s * coeff  # mutual term
 
         # Node current contributions (KCL)
-        if n1i is not None: M[n1i, col1] += -1
-        if n2i is not None: M[n2i, col1] += 1
-        if n3i is not None: M[n3i, col2] += -1
-        if n4i is not None: M[n4i, col2] += 1
+        if n1i is not None: M[n1i, col1] += 1
+        if n2i is not None: M[n2i, col1] += -1
+        if n3i is not None: M[n3i, col2] += 1
+        if n4i is not None: M[n4i, col2] += -1
 
-        # Initial conditions
-        if ind1.init_cond is not None:
-            S[row1, 0] += -coef * ind1.init_cond
-        if ind2.init_cond is not None:
-            S[row2, 0] += -coef * ind2.init_cond
+        return ind1, ind2, row1, row2, coeff, L1, L2
 
     @staticmethod
     def index_tgn(nodes, node, collapses):
@@ -1000,10 +931,13 @@ class Analysis:
         N2 = c.node2
         y_b = 0
         z_b = 0
+
         if self.is_symbolic:
             val = c.sym_value
         else:
             val = c.value
+            if val is None:
+                val = c.sym_value
 
         if c.type == "r":
             y_b = 1
@@ -1120,27 +1054,21 @@ class Analysis:
         c_L2 = self.circuit.components[c.L2]
         L1_index = inductor_index[c_L1.name]
         L2_index = inductor_index[c_L2.name]
-        N1 = c_L1.node1
-        N2 = c_L1.node2
-        N3 = c_L2.node1
-        N4 = c_L2.node2
         if self.is_symbolic:
             L1 = c_L1.sym_value
             L2 = c_L2.sym_value
             coupling_coeff = c.sym_value
-            M = coupling_coeff*sympy.sqrt(L1*L2)
+            coeff = coupling_coeff * sympy.sqrt(L1 * L2)
         else:
             L1 = c_L1.value
             L2 = c_L2.value
             coupling_coeff = c.value
-            M = coupling_coeff * sympy.sqrt(L1 * L2)
+            coeff = coupling_coeff * sympy.sqrt(L1 * L2)
 
-        matrix[self.c_count + L2_index, self.c_count + L1_index] += -s*M
-        matrix[self.c_count + L1_index, self.c_count + L2_index] += -s*M
-        if c_L1.init_cond != None:
-            vi_vector[self.c_count + L2_index, 0] += -M*c_L1.init_cond
-        if c_L2.init_cond != None:
-            vi_vector[self.c_count + L1_index, 0] += -M*c_L2.init_cond
+        matrix[self.c_count + L2_index, self.c_count + L1_index] += -s * coeff
+        matrix[self.c_count + L1_index, self.c_count + L2_index] += -s * coeff
+
+        return coeff, c_L1, c_L2, L1_index, L2_index
 
     def _add_short(self, matrix, c, index):
         N1 = c.node1
@@ -1153,8 +1081,8 @@ class Analysis:
 class DC(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
                  symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False):
-        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
+                 use_symengine: bool = False, solver: str = "gauss"):
+        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine, solver)
 
     def _analyse(self):
         eqn_matrix, solved_dict, symbols = super()._analyse()
@@ -1167,8 +1095,10 @@ class DC(Analysis):
                 pass
         return eqn_matrix, solved_dict, symbols
 
-    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource]) -> sympy.Expr:
-        if self.is_symbolic:
+    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], is_float=False) -> sympy.Expr:
+        if is_float:
+            val = c.dc_float
+        elif self.is_symbolic:
             val = c.dc_sym
         else:
             val = c.dc_num
@@ -1179,7 +1109,11 @@ class DC(Analysis):
         Old way to return a component current, will be deprecated soon
         """
         ret = super().component_current(name)
-        if ret is not None:
+        if ret is None:
+            c = self.circuit.components[name]
+            if c.type == "i":
+                ret = c.dc_sym if self.is_symbolic else c.dc_num
+        else:
             ret = sympy.limit(ret, s, 0)
         return ret
 
@@ -1187,8 +1121,8 @@ class DC(Analysis):
 class TF(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
                  symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False):
-        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
+                 use_symengine: bool = False, solver: str = "gauss"):
+        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine, solver)
 
     def _analyse(self):
         eqn_matrix, solved_dict, symbols = super()._analyse()
@@ -1200,11 +1134,12 @@ class TF(Analysis):
             c = self.circuit.components[name]
             if c.type == "i":
                 ret = c.ac_sym if self.is_symbolic else c.ac_num
-
         return ret
 
-    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource]) -> sympy.Expr:
-        if self.is_symbolic:
+    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], is_float=False) -> sympy.Expr:
+        if is_float:
+            val = c.ac_float
+        elif self.is_symbolic:
             if c.ac_num == 0:
                 val = 0
             else:
@@ -1213,32 +1148,26 @@ class TF(Analysis):
             val = c.ac_num
         return val
 
+
 class AC(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
                  symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False):
-        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
+                 use_symengine: bool = False, solver: str = "gauss"):
+        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine, solver)
 
     def _analyse(self):
         eqn_matrix, solved_dict, symbols = super()._analyse()
-
-        if self.is_symbolic:
-            for sym in symbols:
-                try:
-                    solved_dict[sym] = solved_dict[sym].subs(s, 2 * pi * f * j)
-                except KeyError:
-                    pass
-        else:
-            for sym in symbols:
-                try:
-                    solved_dict[sym] = solved_dict[sym].subs(s, 2 * pi * f * j)
-                except KeyError:
-                    pass
-
+        for sym in symbols:
+            try:
+                solved_dict[sym] = solved_dict[sym].subs(s, 2 * pi * f * j)
+            except:
+                pass
         return eqn_matrix, solved_dict, symbols
 
-    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource]) -> sympy.Expr:
-        if self.is_symbolic:
+    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], is_float=False) -> sympy.Expr:
+        if is_float:
+            val = c.ac_float
+        elif self.is_symbolic:
             if c.ac_num == 0:
                 val = 0
             else:
@@ -1260,11 +1189,67 @@ class AC(Analysis):
             ret = ret.subs(s, 2*pi*f*j)
         return ret
 
+
+class ACNumeric(AC):
+    def __init__(self, circuit: Circuit, method: str = "tableau",
+                 symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
+                 use_symengine: bool = False, solver: str = "gauss"):
+
+        if use_symengine:
+            os.environ["USE_SYMENGINE"] = "1"
+
+        method = method.lower()
+        if method not in ["tableau", "two_graph_node"]:
+            raise ValueError(f"Nonexistent analysis method: {method}")
+
+        self.is_symbolic: bool = symbolic
+        self.auto_eval = auto_eval
+        self.precision: int = precision
+        self.method: str = method
+        self.sympy_ilt: bool = sympy_ilt
+
+        self.sbg = True
+
+        self.circuit: Circuit = circuit
+        self.node_voltage_identities: list = []
+
+        self.symbol_dict = {}
+
+        self.node_voltage_symbols: List[sympy.Symbol] = self.circuit.get_node_symbols()
+        self.node_dict = self.circuit.get_node_dict()
+        self.c_count = self.circuit.count_ports()
+        self.node_count = self.circuit.count_nodes()
+
+        self.eqn_matrix, self.symbols = self._build_system_eqn()
+
+
+    def run(self, freqs):
+        import numpy as np
+
+        ac_eqn_matrix = self.eqn_matrix.subs(s, 2*j*pi*f)
+        A_sym = ac_eqn_matrix[:, :-1]  # all columns except last
+        b_sym = ac_eqn_matrix[:, -1]  # last column
+
+        fA = sympy.lambdify(f, A_sym, "numpy")
+        fb = sympy.lambdify(f, b_sym, "numpy")
+
+        symbols_str = [str(sym) for sym in self.symbols]
+        results = {sym: [] for sym in symbols_str}
+
+        for freq in freqs:
+            x = np.linalg.solve(fA(freq), fb(freq)).flatten()
+
+            for sym, val in zip(symbols_str, x):
+                results[sym].append(val)
+
+        return results
+
+
 class TRAN(Analysis):
     def __init__(self, circuit: Circuit, method: str = "tableau",
                  symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False):
-        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
+                 use_symengine: bool = False, solver: str = "gauss"):
+        super().__init__(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine, solver)
 
     def get_node_voltage(self, node: str, force_s_domain=False) -> Union[sympy.Expr, None]:
         """
@@ -1290,8 +1275,62 @@ class TRAN(Analysis):
             vi_vector[self.c_count + index, 0] += val*c.init_cond
         return matrix
 
-    def _choose_source_val(self, c: Component) -> sympy.Expr:
-        if self.is_symbolic:
+    def _add_K(self, matrix, vi_vector, c, inductor_index):
+        coeff, c_L1, c_L2, L1_index, L2_index, = super()._add_K(matrix, vi_vector, c, inductor_index)
+        if c_L1.init_cond is not None:
+            vi_vector[self.c_count + L2_index, 0] += -coeff * c_L1.init_cond
+        if c_L2.init_cond is not None:
+            vi_vector[self.c_count + L1_index, 0] += -coeff * c_L2.init_cond
+
+    def _add_basic_tgn(self, M, S, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses):
+        super()._add_basic_tgn(M, S, v_nodes, i_nodes, c, i_graph_collapses, v_graph_collapses)
+
+        # Only process if there is an actual initial condition
+        if c.type in ["c", "l"] and c.init_cond is not None:
+            if self.is_symbolic:
+                val = c.sym_value
+            else:
+                val = c.value
+
+            node1 = c.node1
+            node2 = c.node2
+            n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
+            n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
+
+            if c.type == "c":
+                # Capacitor Norton current: C * V(0)
+                if n1i is not None:
+                    S[n1i, 0] += val * c.init_cond
+                if n2i is not None:
+                    S[n2i, 0] += -val * c.init_cond
+
+            elif c.type == "l":
+                if c.coupling is None: # If theres no coupling handle IC by Norton current IC model
+                    # Inductor Norton current: I(0) / s
+                    if n1i is not None:
+                        S[n1i, 0] += -(1 / s) * c.init_cond
+                    if n2i is not None:
+                        S[n2i, 0] += (1 / s) * c.init_cond
+                else: # Else let the coupling stamp handle initial conditions
+                    pass
+
+    def _add_K_tgn(self, M, S, v_nodes, i_nodes, coupling, index_col, index_row, i_graph_collapses, v_graph_collapses):
+        ind1, ind2, row1, row2, m_coeff, L1, L2 = super()._add_K_tgn(M, S, v_nodes, i_nodes, coupling, index_col, index_row, i_graph_collapses, v_graph_collapses)
+        # Initial conditions
+
+        ic1 = ind1.init_cond
+        ic2 = ind2.init_cond
+
+        if ic1 is not None:
+            S[row2, 0] += -m_coeff * ic1 - L2 * ic2
+        if ic2 is not None:
+            S[row1, 0] += -m_coeff * ic2 - L1 * ic1
+
+
+    def _choose_source_val(self, c: Component, is_float=False) -> sympy.Expr:
+        if is_float:
+            val = c.tran_float
+        elif self.is_symbolic:
             val = c.tran_sym
         else:
             val = c.tran_num
@@ -1324,18 +1363,19 @@ class TRAN(Analysis):
 
 def AnalyseCircuit(netlist: str, analysis_type: str = "DC", method: str = "tableau",
                  symbolic: bool = True, auto_eval: bool=False, precision: int = 6, sympy_ilt: bool = True,
-                 use_symengine: bool = False, operating_point: Union[Dict[str, float], None] = None) -> Analysis:
+                 use_symengine: bool = False, operating_point: Union[Dict[str, float], None] = None,
+                   solver: str = "gauss") -> Analysis:
 
     circuit = Circuit(netlist, operating_point)
     analysis_type = analysis_type.lower()
     if analysis_type == "dc":
-        analysis = DC(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
+        analysis = DC(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine, solver)
     elif analysis_type == "ac":
-        analysis = AC(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
+        analysis = AC(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine, solver)
     elif analysis_type == "tf":
-        analysis = TF(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
+        analysis = TF(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine, solver)
     elif analysis_type == "tran":
-        analysis = TRAN(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine)
+        analysis = TRAN(circuit, method, symbolic, auto_eval, precision, sympy_ilt, use_symengine, solver)
     else:
         raise ValueError(f"Nonexistent analysis type: {analysis_type}")
     return analysis
