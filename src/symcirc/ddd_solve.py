@@ -14,7 +14,7 @@ Cramer's rule subgraph reuse:
 Hashing notes:
     Minors: Each minor of A is uniquely identified by its row and column index sets.
     Bitmask keys: encode the row/column index sets as Python ints (bitmasks), one bit per index.
-    Python int arithmetic and hashing are implemented in C and much faster than constructing sorted tuples.
+    Python int arithmetic and hashing are much faster than constructing sorted tuples.
     For n <= 64 each bitmask fits in a word. For larger n Python uses arbitrary-precision ints automatically.
 
 Optimizations:
@@ -29,9 +29,10 @@ from __future__ import annotations
 from bisect import bisect_left
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Set, Union
 
 import sympy as sp
+from sympy.polys.polyerrors import PolynomialError
 
 # Terminal node constants for DDD
 TERMINAL_ONE  = 1
@@ -72,8 +73,8 @@ class DDDNode:
         return self._uid
 
     def __repr__(self) -> str:
-        s = "+" if self.sign >= 0 else "-"
-        return f"DDD[{s}a[{self.abs_row},{self.abs_col}]]"
+        string = "+" if self.sign >= 0 else "-"
+        return f"DDD[{string}a[{self.abs_row},{self.abs_col}]]"
 
 
 # Two-element tuple representing the minor key by a bitmask
@@ -239,15 +240,20 @@ def evaluate_nested(node: Any, cache: Optional[dict] = None) -> Any:
 
     if node_is_zero or one_edge_is_zero: # to avoid explicit mult by 0 (e.g. 0*a)
         cofactor = TERMINAL_ZERO
-    elif node_is_one: # to avoid explicit mult by 1 (e.g. 1*a)
-        cofactor = one_val
-    elif one_edge_is_one: # to avoid explicit mult by 1 (e.g. a*1)
-        cofactor = node.symbol
-    else: # general case
-        if node.sign == 1:
-            cofactor = sp.Mul(node.symbol, one_val, evaluate=False)
+    elif node.sign == 1:
+        if node_is_one:
+            cofactor = one_val
+        elif one_edge_is_one:
+            cofactor = node.symbol
         else:
-            cofactor = sp.Mul(-1, node.symbol, one_val, evaluate=False)
+            cofactor = sp.Mul(node.symbol, one_val, evaluate=False)
+    else:
+        if node_is_one:
+            cofactor = -one_val
+        elif one_edge_is_one:
+            cofactor = -node.symbol  # same
+        else:
+            cofactor = sp.Mul(-node.symbol, one_val, evaluate=False)
     # Combine with remainder, avoiding explicit zero add (e.g. a+0)
     if zero_val == 0:
         result = cofactor
@@ -259,6 +265,200 @@ def evaluate_nested(node: Any, cache: Optional[dict] = None) -> Any:
     cache[nid] = result
     return result
 
+_NUMERIC_TYPES = (int, float, sp.Float, sp.Integer, sp.Rational)
+
+
+def _resolve_symbol_value(symbol: Any,
+                          value_map: Dict[sp.Symbol, float],
+                          keep_symbolic: Set[sp.Symbol],
+                          resolve_cache: Dict[int, Tuple[Any, bool]]) -> Tuple[Any, bool]:
+    """
+    Substitutes known numeric values into a single matrix-entry symbol/expression,
+    returning (substituted_value, is_purely_numeric).
+    """
+    key = id(symbol)
+    cached = resolve_cache.get(key)
+    if cached is not None:
+        return cached
+
+    if isinstance(symbol, sp.Symbol):
+        if symbol in keep_symbolic:
+            val = symbol
+        elif symbol in value_map:
+            val = sp.Float(value_map[symbol])
+        else:
+            val = symbol
+    elif isinstance(symbol, _NUMERIC_TYPES):
+        val = symbol
+    else:
+        free = symbol.free_symbols if hasattr(symbol, 'free_symbols') else set()
+        if free & keep_symbolic:
+            val = symbol
+        elif free:
+            subs_dict = {symb: value_map[symb] for symb in free
+                         if symb in value_map and symb not in keep_symbolic}
+            if subs_dict:
+                val = symbol.subs(subs_dict)
+                if not val.free_symbols:
+                    val = sp.Float(float(val))
+            else:
+                val = symbol
+        else:
+            val = symbol
+
+    is_numeric = isinstance(val, _NUMERIC_TYPES) or (hasattr(val, 'is_number') and bool(val.is_number))
+    result = (val, is_numeric)
+    resolve_cache[key] = result
+    return result
+
+
+def _evaluate_semi_symbolic(node: Any,
+                            value_map: Dict[sp.Symbol, float],
+                            keep_symbolic: Set[sp.Symbol],
+                            cache: Dict[int, Tuple[Any, bool]],
+                            resolve_cache: Dict[int, Tuple[Any, bool]]) -> Tuple[Any, bool]:
+    """
+    Core evaluator. Returns (value, is_purely_numeric).
+    is_purely_numeric is tracked incrementally.
+    """
+    if node is TERMINAL_ZERO:
+        return sp.S.Zero, True
+    if node is TERMINAL_ONE:
+        return sp.S.One, True
+
+    if not isinstance(node, DDDNode):
+        if isinstance(node, sp.Symbol):
+            if node in keep_symbolic:
+                return node, False
+            elif node in value_map:
+                return sp.Float(value_map[node]), True
+            else:
+                return node, False
+        return node, True
+
+    nid = node.id
+    hit = cache.get(nid)
+    if hit is not None:
+        return hit
+
+    zero_val, zero_numeric = _evaluate_semi_symbolic(node.zero, value_map, keep_symbolic, cache, resolve_cache)
+    one_val, one_numeric = _evaluate_semi_symbolic(node.one, value_map, keep_symbolic, cache, resolve_cache)
+    symbol_val, symbol_numeric = _resolve_symbol_value(node.symbol, value_map, keep_symbolic, resolve_cache)
+
+    # Avoid constructing a Mul with an explicit zero factor.
+    if symbol_val == 0 or one_val == 0:
+        cofactor = sp.S.Zero
+        cofactor_numeric = True
+    else:
+        cofactor_numeric = symbol_numeric and one_numeric
+        # Numeric branches can be safely auto-evaluated (cheap, keeps them collapsed
+        # to a single Float); symbolic branches keep evaluate=False to preserve the
+        # compact factored form instead of expanding it.
+        cofactor = sp.Mul(node.sign, symbol_val, one_val, evaluate=cofactor_numeric)
+
+    if zero_val == 0:
+        result = cofactor
+        result_numeric = cofactor_numeric
+    elif cofactor == 0:
+        result = zero_val
+        result_numeric = zero_numeric
+    else:
+        result_numeric = cofactor_numeric and zero_numeric
+        result = sp.Add(zero_val, cofactor, evaluate=result_numeric)
+
+    if result_numeric and isinstance(result, (sp.Add, sp.Mul)):
+        result = sp.Float(float(result))
+
+    ret = (result, result_numeric)
+    cache[nid] = ret
+    return ret
+
+
+def evaluate_semi_symbolic(node: Any,
+                           value_map: Dict[sp.Symbol, float],
+                           keep_symbolic: Set[sp.Symbol] = None,
+                           cache: Dict = None,
+                           resolve_cache: Dict = None) -> Union[float, sp.Expr]:
+    """
+    Evaluate a DDD to its value, substituting `value_map` into every symbol except
+    those in `keep_symbolic`. Thin backwards-compatible wrapper around the
+    (value, is_numeric) core evaluator - see `_evaluate_semi_symbolic`.
+    """
+    if cache is None:
+        cache = {}
+    if keep_symbolic is None:
+        keep_symbolic = set()
+    if resolve_cache is None:
+        resolve_cache = {}
+    value, _ = _evaluate_semi_symbolic(node, value_map, keep_symbolic, cache, resolve_cache)
+    return value
+
+
+def evaluate_numeric_direct(node: Any, value_map: Dict[sp.Symbol, float],
+                            cache: Dict = None, expr_cache: Dict = None) -> float:
+    """
+    Evaluate DDD directly to numeric value without creating symbolic expression.
+
+    This bypasses ALL symbolic manipulation and is the fastest approach.
+
+    Args:
+        node: DDD root node
+        value_map: {symbol: numeric_value}
+        cache: Evaluation cache (uses node._uid as key)
+        expr_cache: Cache for evaluated expressions
+
+    Returns:
+        Numeric determinant value
+
+    Time complexity: O(DDD nodes) ≈ O(n²) for sparse n×n matrix
+    """
+    if cache is None:
+        cache = {}
+    if expr_cache is None:
+        expr_cache = {}
+
+    # Terminal cases
+    if node is TERMINAL_ZERO:
+        return 0.0
+    if node is TERMINAL_ONE:
+        return 1.0
+    if not isinstance(node, DDDNode):
+        # Constant
+        if isinstance(node, sp.Symbol):
+            return float(value_map.get(node, 0.0))
+        return float(node)
+    nid = node.id
+    # Check cache
+    if nid in cache:
+        return cache[nid]
+
+    # Recursively evaluate children
+    zero_val = evaluate_numeric_direct(node.zero, value_map, cache, expr_cache)
+    one_val = evaluate_numeric_direct(node.one, value_map, cache, expr_cache)
+
+    # Get numeric value of symbol
+    symbol = node.symbol
+
+    # Check expression cache first (keyed by identity: the same entry object
+    # recurs across many DDDNode instances, so this avoids re-substituting it
+    # and avoids the cost of str() it just to build a cache key)
+    symbol_key = id(symbol)
+    if symbol_key in expr_cache:
+        symbol_val = expr_cache[symbol_key]
+    else:
+        if isinstance(symbol, sp.Symbol):
+            symbol_val = value_map[symbol]
+        elif isinstance(symbol, (int, float)):
+            symbol_val = float(symbol)
+        else:
+            # SymPy expression - substitute and cache
+            symbol_val = float(symbol.subs(value_map))
+        expr_cache[symbol_key] = symbol_val
+
+    result = zero_val + node.sign * symbol_val * one_val
+
+    cache[nid] = result
+    return result
 
 def ddd_size(root: Any) -> int:
     """
@@ -427,6 +627,314 @@ class DDDBuilder:
         return leader_node
 
 
+class _SparsePoly:
+    """
+    Custom multivariate polynomial: a dict mapping an exponent tuple
+    (one exponent per gen, in a fixed shared order) to a float coefficient.
+
+    This exists to replace sympy Add/Mul/Poly during DDD evaluation. It is
+    only valid for building up polynomials - it supports
+    nothing else (no division, no non-polynomial terms) - which is
+    the structure semisymbolic circuit-matrix entries in LTI have.
+    Because coefficients are combined by plain dict
+    accumulation, a _SparsePoly is always already in fully collected
+    canonical form, so there is no need to simplify.
+    """
+    __slots__ = ("c",)
+
+    def __init__(self, c: Dict[Tuple[int, ...], float]):
+        self.c = c
+
+    def add(self, other: Union["_SparsePoly", float], ngens: int) -> "_SparsePoly":
+        if isinstance(other, _SparsePoly):
+            other_c = other.c
+        else:
+            if other == 0:
+                return self
+            other_c = {(0,) * ngens: float(other)}
+        result = dict(self.c)
+        for k, v in other_c.items():
+            nv = result.get(k, 0.0) + v
+            if nv == 0.0:
+                result.pop(k, None)
+            else:
+                result[k] = nv
+        return _SparsePoly(result)
+
+    def mul(self, other: Union["_SparsePoly", float], ngens: int) -> "_SparsePoly":
+        if isinstance(other, _SparsePoly):
+            if not self.c or not other.c:
+                return _SparsePoly({})
+            result: Dict[Tuple[int, ...], float] = {}
+            for k1, v1 in self.c.items():
+                for k2, v2 in other.c.items():
+                    k = tuple(a + b for a, b in zip(k1, k2))
+                    result[k] = result.get(k, 0.0) + v1 * v2
+            return _SparsePoly(result)
+        else:
+            if other == 0 or not self.c:
+                return _SparsePoly({})
+            fo = float(other)
+            return _SparsePoly({k: v * fo for k, v in self.c.items()})
+
+    def to_expr(self, gens: Tuple[sp.Symbol, ...]) -> sp.Expr:
+        expr = sp.Integer(0)
+        for exps, coeff in self.c.items():
+            term = sp.Float(coeff)
+            for g, e in zip(gens, exps):
+                if e:
+                    term = term * g ** e
+            expr = expr + term
+        return expr
+
+    def to_sympy_poly(self, gens: Tuple[sp.Symbol, ...]) -> sp.Poly:
+        return sp.Poly.from_dict({k: sp.Float(v) for k, v in self.c.items()}, *gens)
+
+
+def _collect_poly_gens(A: sp.Matrix, b: Sequence[Any],
+                       value_map: Dict[sp.Symbol, float],
+                       keep_symbolic: Set[sp.Symbol]) -> Tuple[sp.Symbol, ...]:
+    """
+    Determines the fixed set of generators (typically just `s`, plus any
+    independent-source symbols the "ddd" solver's construction hack leaves in
+    `b`) by looking at the small, bounded set of *distinct* matrix/vector
+    entries - not at the (much larger) set of DDD nodes built from them.
+    """
+    seen_ids: Set[int] = set()
+    gens: Set[sp.Symbol] = set()
+    for entry in list(A) + list(b):
+        if id(entry) in seen_ids:
+            continue
+        seen_ids.add(id(entry))
+        free = entry.free_symbols if hasattr(entry, 'free_symbols') else set()
+        for sym in free:
+            if sym not in value_map or sym in keep_symbolic:
+                gens.add(sym)
+    return tuple(sorted(gens, key=str))
+
+
+def _resolve_symbol_poly(symbol: Any,
+                         value_map: Dict[sp.Symbol, float],
+                         keep_symbolic: Set[sp.Symbol],
+                         gens: Tuple[sp.Symbol, ...],
+                         resolve_cache: Dict[int, Tuple[Any, bool]]) -> Tuple[Any, bool]:
+    """
+    Like `_resolve_symbol_value`, but returns a `_SparsePoly` instead of a
+    sympy Expr for the symbolic case. Raises `sp.PolynomialError` if an entry
+    turns out not to actually be polynomial in `gens` (e.g. a distributed
+    element contributing exp(-s*tau)) - callers should catch this once, at
+    the top of a solve, and fall back to the generic Expr-based evaluator.
+    """
+    key = id(symbol)
+    cached = resolve_cache.get(key)
+    if cached is not None:
+        return cached
+
+    free = symbol.free_symbols if hasattr(symbol, 'free_symbols') else set()
+    relevant = {sy for sy in free if sy not in value_map or sy in keep_symbolic}
+
+    if not relevant:
+        subs_dict = {sy: value_map[sy] for sy in free if sy in value_map}
+        val = float(symbol.subs(subs_dict)) if free else float(symbol)
+        result = (val, True)
+    else:
+        subs_dict = {sy: value_map[sy] for sy in free if sy in value_map and sy not in keep_symbolic}
+        val = symbol.subs(subs_dict) if subs_dict else symbol
+        poly = sp.Poly(val, *gens)  # raises PolynomialError if not polynomial in gens
+        result = (_SparsePoly({k: float(v) for k, v in poly.as_dict().items()}), False)
+
+    resolve_cache[key] = result
+    return result
+
+
+def _evaluate_semi_symbolic_poly(node: Any,
+                                 value_map: Dict[sp.Symbol, float],
+                                 keep_symbolic: Set[sp.Symbol],
+                                 gens: Tuple[sp.Symbol, ...],
+                                 cache: Dict[int, Tuple[Any, bool]],
+                                 resolve_cache: Dict[int, Tuple[Any, bool]]) -> Tuple[Any, bool]:
+    """
+    Same recursion/caching structure as `_evaluate_semi_symbolic`, but
+    accumulates plain Python floats / `_SparsePoly` objects instead of sympy
+    Add/Mul(evaluate=False) trees. No sympy object is created anywhere in the
+    recursive path - only plain dict/float arithmetic - and the result is
+    already in canonical collected form, so no expand/collect/cancel pass is
+    needed afterwards.
+    """
+    ngens = len(gens)
+
+    if node is TERMINAL_ZERO:
+        return 0.0, True
+    if node is TERMINAL_ONE:
+        return 1.0, True
+
+    if not isinstance(node, DDDNode):
+        if isinstance(node, sp.Symbol):
+            if node in keep_symbolic:
+                exps = tuple(1 if g == node else 0 for g in gens)
+                return _SparsePoly({exps: 1.0}), False
+            elif node in value_map:
+                return float(value_map[node]), True
+            else:
+                exps = tuple(1 if g == node else 0 for g in gens)
+                return _SparsePoly({exps: 1.0}), False
+        return float(node), True
+
+    nid = node.id
+    hit = cache.get(nid)
+    if hit is not None:
+        return hit
+
+    zero_val, zero_numeric = _evaluate_semi_symbolic_poly(node.zero, value_map, keep_symbolic, gens, cache, resolve_cache)
+    one_val, one_numeric = _evaluate_semi_symbolic_poly(node.one, value_map, keep_symbolic, gens, cache, resolve_cache)
+    symbol_val, symbol_numeric = _resolve_symbol_poly(node.symbol, value_map, keep_symbolic, gens, resolve_cache)
+
+    if (symbol_numeric and symbol_val == 0) or (one_numeric and one_val == 0):
+        cofactor, cofactor_numeric = 0.0, True
+    else:
+        signed_symbol = symbol_val * node.sign if symbol_numeric else symbol_val.mul(node.sign, ngens)
+        if symbol_numeric and one_numeric:
+            cofactor, cofactor_numeric = signed_symbol * one_val, True
+        elif symbol_numeric:
+            cofactor, cofactor_numeric = one_val.mul(signed_symbol, ngens), False
+        else:
+            cofactor, cofactor_numeric = signed_symbol.mul(one_val, ngens), False
+
+    if zero_numeric and zero_val == 0:
+        result, result_numeric = cofactor, cofactor_numeric
+    elif cofactor_numeric and cofactor == 0:
+        result, result_numeric = zero_val, zero_numeric
+    elif zero_numeric and cofactor_numeric:
+        result, result_numeric = zero_val + cofactor, True
+    elif zero_numeric:
+        result, result_numeric = cofactor.add(zero_val, ngens), False
+    elif cofactor_numeric:
+        result, result_numeric = zero_val.add(cofactor, ngens), False
+    else:
+        result, result_numeric = zero_val.add(cofactor, ngens), False
+
+    ret = (result, result_numeric)
+    cache[nid] = ret
+    return ret
+
+
+class SemiSymSolver:
+    """
+    Solver for Cramer's-rule based semi-symbolic solving of a linear system
+    (component values substituted in numerically, chosen symbols such as `s`
+    left symbolic).
+
+    Cramer's rule computes each unknown independently as det(A_k)/det(A), so
+    `solve()` accepts an optional `targets` subset of unknowns to build/evaluate -
+    asking for a single output skips all the unrelated numerator work entirely
+    instead of paying for every unknown in the system.
+
+    For LTI circuits, every matrix entry stamped by an R/L/C/linearized
+    controlled source is a low-degree polynomial of 's'.
+    `solve()` exploits that by accumulating determinants as non-sympy
+    polynomials (`_SparsePoly`, plain dict-of-floats arithmetic)
+    instead of sympy expression trees, which is both much faster than building
+    an unevaluated Add/Mul tree and already fully collected.
+    If any entry turns out not to be polynomial in the detected generators,
+    it falls back to the general symbolic evaluator.
+    """
+    def __init__(self, A: sp.Matrix, strategy: str = "min_degree"):
+        self.A = A
+        self.strategy = strategy
+        self.denominator_builder = None
+        self._shared_eval_cache: Dict[int, Tuple[Any, bool]] = {}
+        self._shared_resolve_cache: Dict[int, Tuple[Any, bool]] = {}
+
+    def solve(self, b: Sequence[Any], value_map: Dict[sp.Symbol, float], keep_symbolic: Set[sp.Symbol],
+              targets: Optional[Sequence[int]] = None, simplify: bool = False,
+              fast_poly: bool = True) -> List[Any]:
+        """
+        :param targets: optional subset of unknown indices (0-indexed, matching
+            the columns of A) to actually solve for. If None (default), solves
+            for every unknown, matching the original behavior. Entries not in
+            `targets` are left as None in the returned list.
+        :param simplify: request a canonical (fully reduced) result. When the
+            fast polynomial path is used (the default), the result is already
+            fully collected as soon as it's built, so this only adds a cheap
+            exact GCD-based reduction to strip a common factor
+            between numerator and denominator. Matters for exact pole/zero extraction.
+            If the generic fallback path is used instead, this runs sympy.cancel(),
+            which is far more expensive since it has to expand the unevaluated
+            expression tree before it can search for a common factor.
+        :param fast_poly: use the custom polynomial evaluator.
+            Good whenever every matrix/b entry is a polynomial in `s`.
+            Automatically falls back to the general symbolic evaluator otherwise,
+            so turning this off is only useful for debugging/comparison.
+        """
+        if keep_symbolic is None:
+            keep_symbolic = set()
+        n = self.A.shape[0]
+        target_indices = range(n) if targets is None else list(targets)
+        b_list = [sp.sympify(x) for x in b]
+        results: List[Any] = [None] * n
+
+        if fast_poly:
+            try:
+                gens = _collect_poly_gens(self.A, b_list, value_map, keep_symbolic)
+                poly_eval_cache: Dict[int, Tuple[Any, bool]] = {}
+                poly_resolve_cache: Dict[int, Tuple[Any, bool]] = {}
+
+                self.denominator_builder = DDDBuilder(self.A, self.strategy)
+                root_A = self.denominator_builder.build()
+                det_A, det_A_numeric = _evaluate_semi_symbolic_poly(
+                    root_A, value_map, keep_symbolic, gens, poly_eval_cache, poly_resolve_cache)
+
+                for k in target_indices:
+                    numerator_builder = DDDBuilder(self.A, b_vec=b_list, k=k, reference=self.denominator_builder)
+                    root_Ak = numerator_builder.build()
+                    det_Ak, det_Ak_numeric = _evaluate_semi_symbolic_poly(
+                        root_Ak, value_map, keep_symbolic, gens, poly_eval_cache, poly_resolve_cache)
+
+                    if simplify and not det_Ak_numeric and not det_A_numeric:
+                        # Both sides are already-collected native polys - build
+                        # sympy Poly objects directly from the coefficient dicts
+                        # (cheap: no expand needed) and cancel a genuine common
+                        # factor, if any, via GCD.
+                        num_p = det_Ak.to_sympy_poly(gens)
+                        den_p = det_A.to_sympy_poly(gens)
+                        g = sp.gcd(num_p, den_p)
+                        if not g.is_one:
+                            num_p = num_p.quo(g)
+                            den_p = den_p.quo(g)
+                        ratio = num_p.as_expr() / den_p.as_expr()
+                    else:
+                        num_expr = det_Ak if det_Ak_numeric else det_Ak.to_expr(gens)
+                        den_expr = det_A if det_A_numeric else det_A.to_expr(gens)
+                        ratio = num_expr / den_expr
+                        if simplify:
+                            ratio = sp.cancel(ratio)
+                    results[k] = ratio
+                return results
+            except (PolynomialError, TypeError, ValueError, AttributeError):
+                # Some entry isn't polynomial in the detected generators. Fall
+                # through to the general evaluator below - none of the
+                # fast-path caches/results are reused past this point.
+                results = [None] * n
+
+        # General fallback: unevaluated symbolic Add/Mul tree, safe for any
+        # entry regardless of whether it's polynomial in s.
+        self.denominator_builder = DDDBuilder(self.A, self.strategy)
+        root_A = self.denominator_builder.build()
+        det_A, _ = _evaluate_semi_symbolic(root_A, value_map, keep_symbolic,
+                                           self._shared_eval_cache, self._shared_resolve_cache)
+
+        for k in target_indices:
+            numerator_builder = DDDBuilder(self.A, b_vec=b_list, k=k, reference=self.denominator_builder)
+            root_Ak = numerator_builder.build()
+            det_Ak, _ = _evaluate_semi_symbolic(root_Ak, value_map, keep_symbolic,
+                                                self._shared_eval_cache, self._shared_resolve_cache)
+            ratio = det_Ak / det_A
+            if simplify:
+                ratio = sp.cancel(ratio)
+            results[k] = ratio
+        return results
+
+
 class DDDSolver:
     """
     Solver for standard determinant and Cramer's Rule subdeterminants (with reference cache sharing).
@@ -436,37 +944,145 @@ class DDDSolver:
         self.strategy = strategy
         self.denominator_builder = None
         self._shared_eval_cache = {}
+        self._shared_expr_cache = {}
 
-    def solve(self, b: Optional[Sequence[Any]] = None) -> Any:
+    def solve_num(self, b, value_dict: Dict[sp.Symbol, float]) -> Any:
+        self.denominator_builder = DDDBuilder(self.A, self.strategy)
+        root_A = self.denominator_builder.build()
+
+        det_A = evaluate_numeric_direct(root_A, value_dict, self._shared_eval_cache, self._shared_expr_cache)
+        # Build Numerators det(Ak)
+        b_list = [sp.sympify(x) for x in b]
+        results = []
+
+        for k in range(self.A.shape[0]):
+            numerator_builder = DDDBuilder(self.A, b_vec=b_list, k=k, reference=self.denominator_builder)
+            root_Ak = numerator_builder.build()
+            det_Ak = evaluate_numeric_direct(root_Ak, value_dict, self._shared_eval_cache, self._shared_expr_cache)
+            results.append(det_Ak / det_A)
+
+        return results
+
+    def solve(self, b: Optional[Sequence[Any]] = None, nested: bool = True,
+              targets: Optional[Sequence[int]] = None) -> Any:
+        """
+        :param targets: optional subset of row indices to solve for. Cramer's
+            rule computes each unknown independently, so restricting to the
+            ones you need skips the unrelated numerator work - for a
+            single target on an n-unknown system this is roughly an n-times
+            speedup. If None (default), solves for every unknown.
+        """
         # Build Denominator det(A)
         self.denominator_builder = DDDBuilder(self.A, self.strategy)
         root_A = self.denominator_builder.build()
-        det_A = evaluate(root_A, self._shared_eval_cache)
+        if nested: det_A = evaluate_nested(root_A, self._shared_eval_cache)
+        else: det_A = evaluate(root_A, self._shared_eval_cache)
 
-        if b is None: # Simple determinant (not Cramer's rule)
-            return det_A
+        # Build only the requested Numerators det(Ak)
+        b_list = [sp.sympify(x) for x in b]
+        n = self.A.shape[0]
+        target_indices = range(n) if targets is None else list(targets)
+        results: List[Any] = [None] * n
 
+        for k in target_indices:
+            numerator_builder = DDDBuilder(self.A, b_vec=b_list, k=k, reference=self.denominator_builder)
+            root_Ak = numerator_builder.build()
+            if nested: det_Ak = evaluate_nested(root_Ak, self._shared_eval_cache)
+            else: det_Ak = evaluate(root_Ak, self._shared_eval_cache)
+            # Plain `det_Ak / det_A` goes through Expr.__truediv__ with
+            # evaluate=True, which runs sympy's full assumption system
+            # (is_zero/is_infinite/... deduction) over these large unevaluated
+            # trees before it can even build the Mul/Pow - construcing the
+            # unevaluated ratio directly skips all of that.
+            results[k] = sp.Mul(det_Ak, sp.Pow(det_A, -1, evaluate=False), evaluate=False)
+        return results
+
+    def solve_node(self, b: Optional[Sequence[Any]] = None, nested: bool=True):
+        pass
+
+    def det(self, nested: bool=True) -> Any:
+        self.denominator_builder = DDDBuilder(self.A, self.strategy)
+        root_A = self.denominator_builder.build()
+        if nested:
+            det_A = evaluate_nested(root_A, self._shared_eval_cache)
         else:
-            # Build Numerators det(Ak)
-            b_list = [sp.sympify(x) for x in b]
-            results = []
-
-            for k in range(self.A.shape[0]):
-                num_builder = DDDBuilder(self.A, b_vec=b_list, k=k, reference=self.denominator_builder)
-                root_Ak = num_builder.build()
-                det_Ak = evaluate(root_Ak, self._shared_eval_cache)
-                results.append(det_Ak / det_A)
-
-            return results
+            det_A = evaluate(root_A, self._shared_eval_cache)
+        return det_A
 
 
-def solve_cramer_ddd(Ab: sp.Matrix, symbols: List[sp.Symbol]) -> Dict[sp.Symbol, Any]:
+def solve_cramer_ddd(Ab: sp.Matrix, symbols: List[sp.Symbol], nested: bool = True,
+                     targets: Optional[Sequence[sp.Symbol]] = None) -> Dict[sp.Symbol, Any]:
     """
     Convenience matrix equation system solver using LED-DDD and Cramer's rule.
+
+    :param targets: optional subset of `symbols` to actually solve for. See
+        `DDDSolver.solve`.
     """
     A = Ab[:, :-1]
     b = Ab[:, -1]
     solver = DDDSolver(A)
-    solution = solver.solve(b)
+
+    if targets is not None:
+        target_indices = [symbols.index(sym) for sym in targets]
+    else:
+        target_indices = None
+
+    solution = solver.solve(b, nested=nested, targets=target_indices)
+
+    if targets is not None:
+        ret = {sym: solution[idx] for sym, idx in zip(targets, target_indices)}
+    else:
+        ret = dict(zip(symbols, solution))
+    return ret
+
+def solve_cramer_ddd_semi(Ab: sp.Matrix, symbols: List[sp.Symbol], value_map: Dict[sp.Symbol, float],
+                          keep_symbolic: Optional[Set[sp.Symbol]] = None,
+                          targets: Optional[Sequence[sp.Symbol]] = None,
+                          simplify: bool = False,
+                          fast_poly: bool = True) -> Dict[sp.Symbol, Any]:
+    """
+    :param targets: optional subset of unknown indices (0-indexed, matching
+        the columns of A) to actually solve for. If None (default), solves
+        for every unknown, matching the original behavior. Entries not in
+        `targets` are left as None in the returned list.
+    :param simplify: request a canonical (fully reduced) result. When the
+        fast polynomial path is used (the default), the result is already
+        fully collected as soon as it's built, so this only adds a cheap
+        exact GCD-based reduction to strip a common factor
+        between numerator and denominator. Matters for exact pole/zero extraction.
+        If the generic fallback path is used instead, this runs sympy.cancel(),
+        which is far more expensive since it has to expand the unevaluated
+        expression tree before it can search for a common factor.
+    :param fast_poly: use the custom polynomial evaluator.
+        Good whenever every matrix/b entry is a polynomial in `s`.
+        Automatically falls back to the general symbolic evaluator otherwise,
+        so turning this off is only useful for debugging/comparison.
+    """
+    #for key in value_map:
+    #    print(f"{key}: {value_map[key]}")
+    A = Ab[:, :-1]
+    b = Ab[:, -1]
+    solver = SemiSymSolver(A)
+
+    if targets is not None:
+        target_indices = [symbols.index(sym) for sym in targets]
+    else:
+        target_indices = None
+
+    solution = solver.solve(b, value_map, keep_symbolic, targets=target_indices,
+                            simplify=simplify, fast_poly=fast_poly)
+
+    if targets is not None:
+        ret = {sym: solution[idx] for sym, idx in zip(targets, target_indices)}
+    else:
+        ret = dict(zip(symbols, solution))
+    return ret
+
+def solve_cramer_ddd_numeric(Ab: sp.Matrix, symbols: List[sp.Symbol],
+                             value_dict: Dict[sp.Symbol, float]=True) -> Dict[sp.Symbol, Any]:
+    A = Ab[:, :-1]
+    b = Ab[:, -1]
+    solver = DDDSolver(A)
+    solution = solver.solve_num(b, value_dict)
     ret = dict(zip(symbols, solution))
     return ret
