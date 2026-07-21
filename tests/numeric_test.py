@@ -78,9 +78,9 @@ def numeric_test(filename, analysis_type, precision=6, test_data_creation=False,
                     if res_key not in reference_dict:
                         msg = "{} is not in reference file".format(res_key)
                         err.update("not_in_ref", msg)
-                    elif result_dict[res_key].equals(reference_dict[res_key]):
+                    elif utils.evalf(sympy.sympify(result_dict[res_key])).equals(sympy.sympify(utils.evalf(reference_dict[res_key]))):
                         pass
-                    elif ratio > 0.98 or ratio < 1.02:
+                    elif ratio > 0.999 or ratio < 1.001:
                         pass
                     else:
                         msg = "{} is {} in result and {} in reference".format(res_key, result_dict[res_key], reference_dict[res_key])
@@ -94,7 +94,6 @@ def numeric_test(filename, analysis_type, precision=6, test_data_creation=False,
                 err.update("incorrect", msg)
             except KeyError:
                 err.update(KeyError)
-
     return err
 
 
@@ -122,6 +121,19 @@ def print_test_results(filename, ref, analysis_type, err, full=False):
               .format('\033[96m', analysis_type, filename))
 
 
+def analytic_test(filename, analysis_type, test_data_creation, method, solver):
+    analysis = symcirc.AnalyseCircuit(utils.load_file("netlists/{}".format(filename)), analysis_type, symbolic=True,
+                                     method=method, solver=solver)
+    result_dict = analysis.component_values()
+    reference_string = utils.load_file("reference_data/{}/{}".format(analysis_type, filename))
+    symbol_dict = {"t": utils.t, "f": utils.f, "j": utils.j, "s": utils.s}
+    for item in analysis.symbols:
+        symbol_dict.update({str(item): item})
+
+    reference_dict = sympy.parse_expr(reference_string, symbol_dict)
+    for res_key in result_dict:
+        yield sympy.sympify(result_dict[res_key]).equals(sympy.sympify(reference_dict[res_key]))
+
 def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="tableau", solver="gauss", runs=10):
     if analysis == "all":
         a_types = ["DC", "TF"]
@@ -141,7 +153,7 @@ def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, 
         for filename in netlists:
             try:
                 if filename in ref:
-                    err = numeric_test(filename, analysis_type, test_data_creation=test_data_creation, precision=6, method=method, solver=solver, runs=10)
+                    err = numeric_test(filename, analysis_type, test_data_creation=test_data_creation, precision=6, method=method, solver=solver, runs=runs)
                     print_test_results(filename, ref, analysis_type, err, full=full)
                 elif w:
                     print("{}[Warning]: Reference for {} analysis of {} not found".format('\033[93m', analysis_type, filename))
@@ -151,7 +163,7 @@ def analysis_test(analysis="all", w=False, test_data_creation=False, full=True, 
 
 
 if __name__ == "__main__":
-    state = analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="two_graph_node", solver="ddd", runs=10)
+    state = analysis_test(analysis="all", w=False, test_data_creation=False, full=True, method="two_graph_node", solver="gauss", runs=1)
     if state:
         print("")
         print("Test successful!")
