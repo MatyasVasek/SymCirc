@@ -5,6 +5,9 @@ from symcirc.utils import s
 from symcirc.graph_signalflow import Branch
 
 
+ANALYSIS_DEPENDENT = ["i", "v"]
+
+
 class Component:
     """
     Parent component class
@@ -140,7 +143,6 @@ class SerialAdmittance(ParallelAdmittance):
         self.node2 = nodes[1]
 
     def remove(self, component):
-        # TODO: check correctness
         self.name = ""
         self.sym_value = 0
         self.value = 0
