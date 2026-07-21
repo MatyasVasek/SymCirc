@@ -1,6 +1,8 @@
 import sys, os
 import time
 import sympy
+from sympy import simplify
+
 # project root path
 sys.path.append(os.path.dirname(__file__)+"/../src/")
 import symcirc
@@ -9,7 +11,7 @@ import test_utils
 
 
 if __name__ == '__main__':
-    plots = True
+    plots = False
     test_prints = True
     parser_test = False
     analysis_test = True
@@ -22,16 +24,15 @@ if __name__ == '__main__':
     #netlist = symcirc.utils.load_file("netlists\\geec_1800.txt")
     #netlist = symcirc.utils.load_file("netlists\\geec_1529.txt")
     #netlist = symcirc.utils.load_file("netlists\\geec_371.txt")
-    netlist = symcirc.utils.load_file("netlists\\AC14.txt")
+    netlist = symcirc.utils.load_file("netlists\\AC1.txt")
 
-    analysis_type = "TF"
-    symbolic = True
+    analysis_type = "AC"
+    symbolic = False
 
     method = "two_graph_node"
     #method = "tableau"
-
-    #solver = "gauss"
-    solver = "ddd"
+    solver = "gauss"
+    #solver = "ddd"
 
     if parser_test:
         data = symcirc.parse.parse(netlist)
@@ -62,20 +63,30 @@ if __name__ == '__main__':
         t1 = time.time()
 
         print("TEST -- print matrix: start")
+        print(analysis.eqn_matrix)
         sympy.pprint(analysis.eqn_matrix)
         print("TEST -- print matrix: end")
 
         print("run time: {}".format(t1 - t0))
-        print(analysis.node_voltage_symbols)
-        print(analysis.solved_dict)
-        print(f"Node voltages: {analysis.node_voltages()}")
+        #print(analysis.node_voltage_symbols)
+        #print(analysis.solved_dict)
+        print(f"Node voltages: {analysis.solved_dict}")
+        analysis_tgn = symcirc.analysis.AnalyseCircuit(netlist, analysis_type, symbolic=symbolic, auto_eval=True,
+                                                       precision=6, method="two_graph_node", sympy_ilt=True,
+                                                       operating_point=op_dict, solver=solver)
+        utils.pprint(analysis_tgn.eqn_matrix)
+        voltages = analysis_tgn.node_voltages()
+        print(f"Node voltages tgn: {voltages}")
+        tableau_volt = analysis.node_voltages()
+        #for volt in voltages:
+        #    print(voltages[volt] == tableau_volt[volt])
         all = analysis.component_values()
         print("---------------------------------------------------------")
         #print(f'v(node5): {sympy.simplify(analysis.get_node_voltage("node5"))}')
-        print("All components: {}".format(all))
-        print(f"Node voltages: {analysis.node_voltages()}")
-        print(analysis.get_all_results())
-        print(analysis.symbols)
+        #print("All components: {}".format(all))
+        #print(f"Node voltages: {analysis.node_voltages()}")
+        #print(analysis.get_all_results())
+        #print(analysis.symbols)
         #sympy.pprint(all)
         #utils.latex_print(all)
         #utils.latex_print(circuit.node_voltages())
