@@ -1,4 +1,5 @@
 from symcirc import *
+from symcirc.simplification import *
 
 netlist = """Simple PMOS circuit
 C1 i 2 10u
@@ -18,12 +19,17 @@ op_dict = {"gm:M1": 7.15e-3} #, "cds:M1": 1.e-9}
 
 circuit = Circuit(netlist, operating_point=op_dict)
 
-ac_analysis = AC(circuit, symbolic=False)
+signalflow_graph = build_signalflow_graph(circuit)
+signalflow_graph.visualize()
 
+ac_analysis = AC(circuit, method="two_graph_node", symbolic=False, term_dominance_pruning=True)
 results = ac_analysis.get_all_results()
 
 for i in results:
-    tmp = utils.evalf(results[i])
+    if results[i] is None:
+        tmp = None
+    else:
+        tmp = utils.evalf(results[i])
     print(f"{i}: {tmp}")
 
 plot_bode(results["v(o)"], 1, 10 ** 6, 10000, f"Bode plot of v(o)")
