@@ -13,4 +13,6 @@ omit = ["tests/*", "tests/**"]
 omit = ["tests/*", "tests/**"]
 
 [tool.pytest.ini_options]
-addopts = ["-n 4"]
+addopts = ["-n 8"]
+log_file = "pytest.log"
+log_file_level = "INFO"
