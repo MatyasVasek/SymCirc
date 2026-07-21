@@ -1,13 +1,13 @@
 import sympy
 import random
-from sympy import expand, factor, simplify, limit, diff, solve, parse_expr, factor_terms
+from sympy import expand, factor, simplify, limit, diff, solve, parse_expr, factor_terms, nsimplify
 from sympy import oo as infinity
 from sympy import log, exp, sin, cos, tan, cot
 from sympy import I as j
 from sympy import pi
 from sympy import pretty #pprint
-
 from typing import Dict
+from sympy import Integer, Rational
 
 f = sympy.symbols("f", real=True, positive=True)
 s = sympy.symbols("s", real=False)
@@ -39,14 +39,6 @@ def denom(H):
     _, D = sympy.fraction(H)
     return D
 
-'''def evalf(H, subs:Dict={}, precision:int=6):
-    subs_dict = {**subs, **global_dict}
-    num, den = sympy.fraction(H)
-    H = sympy.simplify(num / den.as_leading_term(f))
-    print(H)
-    print(sympy.N(H))
-    return factor_terms(H.evalf(subs=subs_dict, n=precision))
-'''
 def normalize(H):
     num, den = sympy.fraction(H)
     # leading coefficient
@@ -59,6 +51,8 @@ def normalize(H):
     return H
 
 def evalf(H, subs: Dict = {}, precision: int = 6, norm=True):
+    if type(H) in (float, int):
+        return H
     subs_dict = {**subs, **global_dict}
     H = H.subs(subs_dict)
     H = sympy.together(H)
@@ -174,7 +168,6 @@ def simplify_poly_coeffs(poly, var, prefix, memo, start_index=0):
             symbol = coeff
         elif coeff in memo:
             symbol = memo[coeff]
-            #print("MEMO HIT!", coeff)
         else:
             symbol = sympy.Symbol(f"{prefix}{start_index + i}", real=True)
             memo[coeff] = symbol
@@ -403,3 +396,18 @@ def plot_latex(latex_str, title=None):
         plt.title(title)
     plt.text(0.5, 0.5, f"${latex_str}$", ha='center', va='center', fontsize=9)
     plt.show()
+
+
+def fast_circuit_simplify(expr: sympy.Expr) -> sympy.Expr:
+    simplified_expr = sympy.cancel(expr)
+    s_var = s
+
+    num, den = sympy.fraction(simplified_expr)
+
+    num_collected = sympy.collect(sympy.expand(num), s_var)
+    den_collected = sympy.collect(sympy.expand(den), s_var)
+
+    # Recombine into the final simplified fraction
+    simplified_expr = num_collected / den_collected
+
+    return simplified_expr
