@@ -35,10 +35,10 @@ X3 node12 node5 SUstate1
 X4 node18 node12 SUstate1
 Q1 node6 node7 node8 NPNmodel1
 .model NPNmodel npn bf=100 is=1e-14 nr=0
-.model NPNmodel1 npn bf=100 is=1e-14 nr=0, vaf=120 cje=104p cjc=46.8p
-.model PNPmodel2 pnp bf=100 is=1e-14 nr=0, vaf=120 cje=104p cjc=46.8p
+.model NPNmodel1 npn bf=100 is=1e-14 nr=0 vaf=120 cje=104p cjc=46.8p
+.model PNPmodel2 pnp bf=100 is=1e-14 nr=0 vaf=120 cje=104p cjc=46.8p
 .model PNPmodel pnp bf=100 is=1e-14 nr=0
-.model BC327-16 pnp bf=100 is=1e-14 nr=0, vaf=120 cje=104p cjc=46.8p
+.model BC327-16 pnp bf=100 is=1e-14 nr=0 vaf=120 cje=104p cjc=46.8p
 .subckt nonlinearOpamp inplus d vc ve out PARAMS: A=10e9 Voff=1e-3 Ib=100e-9 Ioff=10e-9 Rout=100 Rd=1e6 Rcm=100e6 CMRR=30e3 ft=1e7 Cd=10e-12 Ccm=2e-12 fcmr=100 S=1e6 Ipwr=10e-6
 B1 0 t I= u(v(inplus)-v(d))*{A}*({S*1e6/2/pi/ft}-uramp({S*1e6/2/pi/ft}-v(inplus)+v(d)))+ u(-v(inplus)+v(d))*{A}*(-{S*1e6/2/pi/ft}+uramp({S*1e6/2/pi/ft}+v(inplus)-v(d)))
 Rt t 0 1

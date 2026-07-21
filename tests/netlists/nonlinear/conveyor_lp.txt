@@ -1,0 +1,27 @@
+
+I1 node4 node5 DC 2m AC 0 {0*Pi/180}
+V1 node10 0 DC 5 AC 0 {0*Pi/180}
+V2 0 node9 DC 5 AC 0 {0*Pi/180}
+Vi nodeY 0 DC 0 AC 1 {0*Pi/180}
+R1 nodeX 0 10k
+C1 nodeZ 0 10p
+M1 node3 node5 node9 node9 NMOSmodel L=10u W=160u
+M2 nodeZ node7 node9 node9 NMOSmodel L=10u W=160u
+M3 node6 node7 node9 node9 NMOSmodel L=10u W=160u
+M4 node8 node11 node9 node9 NMOSmodel L=10u W=160u
+M5 node11 node11 node9 node9 NMOSmodel L=10u W=160u
+M6 node7 node7 node9 node9 NMOSmodel L=10u W=160u
+M7 node5 node5 node9 node9 NMOSmodel L=10u W=160u
+M8 node1 node2 nodeX nodeX NMOSmodel L=10u W=160u
+M9 node2 node2 nodeY nodeY NMOSmodel L=10u W=160u
+M10 node2 node4 node10 node10 PMOSmodel L=10u W=160u
+M11 nodeZ node1 node10 node10 PMOSmodel L=10u W=160u
+M12 node11 node1 node10 node10 PMOSmodel L=10u W=160u
+M13 node8 node6 node10 node10 PMOSmodel L=10u W=160u
+M14 node6 node6 node10 node10 PMOSmodel L=10u W=160u
+M15 node1 node1 node10 node10 PMOSmodel L=10u W=160u
+M16 node4 node4 node10 node10 PMOSmodel L=10u W=160u
+M17 node7 node3 nodeX nodeX PMOSmodel L=10u W=160u
+M18 node3 node3 nodeY nodeY PMOSmodel L=10u W=160u
+.model NMOSmodel NMOS VTO=1.9 KP=0.0016 lambda=0.0125 CGSO=6e-9 CGDO=6e-10
+.model PMOSmodel PMOS VTO=-1.9 KP=0.0016 lambda=0.0125 CGSO=6e-9 CGDO=6e-10
