@@ -23,14 +23,22 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install sympy
-          pip install symcirc
           pip install pytest pytest-cov pytest-xdist func-timeout
 
-      - name: Run tests with coverage
+      - name: Run smoke-tests with coverage
         run: |
-          pytest --cov=symcirc \
+          pytest -k test_smoke --cov=symcirc \
                  --cov-report=xml \
                  --cov-report=term-missing
+
+      - name: Run tableau-vs-tgn result validation
+        run: |
+          pytest -k test_tgn_matrix
+
+      - name: Run regression test vs last pypi release
+        run: |
+          pip install symcirc
+          pytest -k test_regression_vs_pypi
 
       - name: Upload coverage to Codecov
         if: github.event_name == 'push'

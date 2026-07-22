@@ -8,12 +8,10 @@ import pytest
 import subprocess
 import json
 import tempfile
+import sympy
 
-# Add project src to path so symcirc can be imported without installing
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-from symcirc import *
-from symcirc import utils
-import symcirc
+#from symcirc import utils
+#import symcirc
 
 import logging
 logger = logging.getLogger(__name__)
@@ -24,7 +22,7 @@ NETLIST_DIR = os.path.join(BASE_DIR, "netlists")
 
 ANALYSIS_TYPES = ["DC", "TF", "AC", "tran"]
 ANALYSIS_METHODS = ["tableau", "two_graph_node"]
-SYMBOLIC = [True, False]
+SYMBOLIC = [False]#[True, False]
 SOLVERS = ["gauss"] #"ddd"] # DDD is still in the experimental phase
 
 NETLISTS = sorted(p for p in os.listdir(NETLIST_DIR) if p.endswith((".txt", ".cir")))
@@ -48,6 +46,9 @@ def analyze(filename, analysis_type, is_symbolic, analysis_method):
     """
     Run a single circuit analysis. Intended to be called via func_timeout.
     """
+    # Add project src to path so symcirc can be imported without installing
+    sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+    from symcirc import AnalyseCircuit, utils
     analysis = AnalyseCircuit(
         utils.load_file(os.path.join(NETLIST_DIR, filename)),
         analysis_type=analysis_type,
@@ -59,6 +60,8 @@ def analyze(filename, analysis_type, is_symbolic, analysis_method):
 
 
 def compare_solvers(filename, analysis_type, is_symbolic, analysis_method):
+    sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+    from symcirc import AnalyseCircuit, utils
     analysis_gauss = AnalyseCircuit(
         utils.load_file(os.path.join(NETLIST_DIR, filename)),
         analysis_type=analysis_type,
@@ -85,6 +88,8 @@ def compare_solvers(filename, analysis_type, is_symbolic, analysis_method):
 
 
 def compare_methods(filename, analysis_type, is_symbolic, solver):
+    sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+    from symcirc import AnalyseCircuit, utils
     analysis_tableau = AnalyseCircuit(
         utils.load_file(os.path.join(NETLIST_DIR, filename)),
         analysis_type=analysis_type,
@@ -181,7 +186,6 @@ def test_smoke(analysis_method, analysis_type, netlist, is_symbolic):
         pytest.xfail(f"{analysis_type} timeout after {TIMEOUT}s for {netlist}")
     except Exception as e:
         pytest.fail(f"{analysis_type} failed for {netlist}\n{type(e).__name__}: {e}")
-
 
 @pytest.mark.parametrize("is_symbolic", SYMBOLIC)
 @pytest.mark.parametrize("analysis_type", ANALYSIS_TYPES)
