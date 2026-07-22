@@ -22,7 +22,7 @@ NETLIST_DIR = os.path.join(BASE_DIR, "netlists")
 
 ANALYSIS_TYPES = ["DC", "TF", "AC", "tran"]
 ANALYSIS_METHODS = ["tableau", "two_graph_node"]
-SYMBOLIC = [False]#[True, False]
+SYMBOLIC = [True, False]
 SOLVERS = ["gauss"] #"ddd"] # DDD is still in the experimental phase
 
 NETLISTS = sorted(p for p in os.listdir(NETLIST_DIR) if p.endswith((".txt", ".cir")))
