@@ -342,14 +342,24 @@ def unpack(parsed_netlist, subckt_models, operating_point):
                             params["ID"] = sympy.Symbol(f"ID_{name}")
 
                         local = sympy.abc._clash
-                        tmp_elem = None
+                        split_items = e.split("=")
+                        if len(split_items) == 1:
+                            tmp_elem = split_items[0]
+                            param_prefix = ""
+                        elif len(split_items) == 2:
+                            tmp_elem = split_items[1]
+                            param_prefix = split_items[0]+'='
+                        else:
+                            raise SyntaxError(f"Unrecognized syntax in netlist line: {elem}, unrecognized part: {e}")
 
-                        tmp_elem = e.replace("{", "")
+                        tmp_elem = tmp_elem.replace("{", "")
                         tmp_elem = tmp_elem.replace("}", "")
                         local.update(params)
-                        tmp_elem, _ = convert_units(tmp_elem, local_dict=local)
+                        #tmp_elem, _ = convert_units(tmp_elem, local_dict=local)
+                        enum_res = value_enum("tmp", tmp_elem, local_dict=local)
+                        tmp_elem = enum_res[0]
                         string_tmp = str(tmp_elem).replace(" ", "")
-                        split_elem[index] = string_tmp
+                        split_elem[index] = param_prefix + string_tmp
 
                         index += 1
 
