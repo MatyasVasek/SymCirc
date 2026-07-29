@@ -649,11 +649,15 @@ class NPNModelAC(SubcktModel):
         else:
             elements.append(f"gm c e b e")
 
-
         # Parasitic caps
-        if "cje" in params:
+        if "cmu" in params:
+            elements.append(f"cmu b c {param_dict['cmu']}")
+        elif "cje" in params:
             elements.append(f"cmu b c {param_dict['go']}*{param_dict['tr']}+{param_dict['cjc']}")
-        if "cjc" in params:
+
+        if "cpi" in params:
+            elements.append(f"cpi b c {param_dict['cpi']}")
+        elif "cjc" in params:
             elements.append(f"cpi b e {param_dict['gm']}*{param_dict['tf']}+2*{param_dict['cje']}")
 
         return elements
@@ -692,9 +696,14 @@ class PNPModelAC(SubcktModel):
 
 
         # Parasitic caps
-        if "cje" in params:
-            elements.append(f"cmu b c {param_dict['tr']}*{param_dict['go']}+{param_dict['cjc']}")
-        if "cjc" in params:
+        if "cmu" in params:
+            elements.append(f"cmu b c {param_dict['cmu']}")
+        elif "cje" in params:
+            elements.append(f"cmu b c {param_dict['go']}*{param_dict['tr']}+{param_dict['cjc']}")
+
+        if "cpi" in params:
+            elements.append(f"cpi b c {param_dict['cpi']}")
+        elif "cjc" in params:
             elements.append(f"cpi b e {param_dict['gm']}*{param_dict['tf']}+2*{param_dict['cje']}")
 
         return elements
