@@ -1,7 +1,6 @@
-from symcirc import ParallelAdmittance, SerialAdmittance, Branch
-from symcirc.analysis import AC, ACNumeric, TF, Circuit
-from symcirc.utils import ypoints, mag, s, j, f, pi, evalf, xpoints, plot_bode, factor, latex, pprint
-from sympy import Eq, Symbol, simplify
+from symcirc.component import ParallelAdmittance, SerialAdmittance
+from symcirc.analysis import ACNumeric, Circuit
+from symcirc.utils import mag, s, j, pi, evalf, xpoints
 from symcirc.simplification import build_signalflow_graph
 import time
 
@@ -268,17 +267,8 @@ def run_optimization(circuit, node_of_interest, max_err, bw_start, bw_end, ctrl_
             sbg_comp_no += 1
 
     t = time.time()
-    ac_analysis = AC(circuit, method="two_graph_node", symbolic=False, solver=solver)
-    out = ac_analysis.get_node_voltage(node_of_interest)
-    log["t_solve"] = time.time() - t
-    results = ac_analysis.node_voltages()
-    log["t_results"] = time.time() - t
     log["comp_no_after"] = len(circuit.components)
-
     log["max_err"] = err
 
-    out_eq = Eq(Symbol(f"v({node_of_interest})"), out)
-    log["out_eq"] = out_eq
-
-    return results[f"v({node_of_interest})"], log
+    return log
 

@@ -36,11 +36,9 @@ circuit = Circuit(netlist, operating_point=op_dict)
 # Semisymbolic reference plot
 ac_analysis = AC(circuit, method="two_graph_node", symbolic=False, solver="gauss")
 out = ac_analysis.get_node_voltage(noi)
-print(out)
 
 ac_analysis_ddd = AC(circuit, method="two_graph_node", symbolic=False, solver="ddd")
 out_ddd = evalf(ac_analysis_ddd.get_node_voltage(noi), precision=20)
-print(out_ddd)
 
 res_list.append(out)
 label_list.append("Semisymbol ref gauss")
@@ -58,8 +56,11 @@ solver = 'ddd'
 max_err = 0.05 # 5%
 rel_err = True
 circ1 = Circuit(netlist, operating_point=op_dict)
-res0, log0 = run_optimization(circ1, noi, max_err, 1e2, 1e4, 10, rel_err, metric, solver=solver)
-res_list.append(res0)
+#res0, log0 = run_optimization(circ1, noi, max_err, 1e2, 1e4, 10, rel_err, metric, solver=solver)
+circ1.approximate(noi, max_err, 1e2, 1e4, 10, rel_err, metric, solver=solver)
+ac_circ1 = AC(circ1, method="two_graph_node", symbolic=False, solver="ddd")
+res1 = evalf(ac_circ1.get_node_voltage(noi), precision=20)
+res_list.append(res1)
 label_list.append("5%; 100-100k")
 
 # Optimize model with relative error in 100-10K Hz range accuracy
@@ -67,8 +68,10 @@ label_list.append("5%; 100-100k")
 max_err = 0.5 # 50%
 rel_err = True
 circ2 = Circuit(netlist, operating_point=op_dict)
-res1, log1 = run_optimization(circ2, noi, max_err, 1e2, 1e4, 10, rel_err, metric, solver=solver)
-res_list.append(res1)
+circ2.approximate(noi, max_err, 1e2, 1e4, 10, rel_err, metric, solver=solver)
+ac_circ2 = AC(circ2, method="two_graph_node", symbolic=False, solver="ddd")
+res2 = evalf(ac_circ2.get_node_voltage(noi), precision=20)
+res_list.append(res2)
 label_list.append("50%; 100-10k")
 
 # Optimize model with relative error in 100-100k Hz range accuracy
@@ -76,8 +79,10 @@ label_list.append("50%; 100-10k")
 max_err = 0.8 # 80%
 rel_err = True
 circ3 = Circuit(netlist, operating_point=op_dict)
-res2, log2 = run_optimization(circ3, noi, max_err, 1e2, 1e4, 10, rel_err, metric, solver=solver)
-res_list.append(res2)
+circ3.approximate(noi, max_err, 1e2, 1e4, 10, rel_err, metric, solver=solver)
+ac_circ3 = AC(circ3, method="two_graph_node", symbolic=False, solver="ddd")
+res3 = evalf(ac_circ3.get_node_voltage(noi), precision=20)
+res_list.append(res3)
 label_list.append("100%; 100-10k")
 
 # Optimize model for 1-100M Hz range accuracy
@@ -85,8 +90,10 @@ label_list.append("100%; 100-10k")
 max_err = 0.5 # 50%
 rel_err = True
 circ4 = Circuit(netlist, operating_point=op_dict)
-res3, log3 = run_optimization(circ4, noi, max_err, 1, 1e8, 10, rel_err, metric, solver=solver)
-res_list.append(res3)
+circ4.approximate(noi, max_err, 1, 1e8, 10, rel_err, metric, solver=solver)
+ac_circ4 = AC(circ4, method="two_graph_node", symbolic=False, solver="ddd")
+res4 = evalf(ac_circ4.get_node_voltage(noi), precision=20)
+res_list.append(res4)
 label_list.append("50%; 1-100M")
 
 # Optimize model with relative error in 1-100M Hz range accuracy
@@ -94,11 +101,10 @@ label_list.append("50%; 1-100M")
 max_err = 0.8 # 80%
 rel_err = True
 circ5 = Circuit(netlist, operating_point=op_dict)
-res4, log4 = run_optimization(circ5, noi, max_err, 1, 1e8, 10, rel_err, metric, solver=solver)
-res_list.append(res4)
+circ5.approximate(noi, max_err, 1, 1e8, 10, rel_err, metric, solver=solver)
+ac_circ5 = AC(circ5, method="two_graph_node", symbolic=False, solver="ddd")
+res5 = evalf(ac_circ5.get_node_voltage(noi), precision=20)
+res_list.append(res5)
 label_list.append("100%; 1-100M")
-
-for i in res_list:
-    print(i)
 
 plot_bode(res_list, 1, 1e8, 1000, "Bode plot of all approximations", label_list=label_list)

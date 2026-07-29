@@ -39,6 +39,13 @@ class Circuit:
         )
         return f"{self.__class__.__name__}(\n    {body}\n)"
 
+    def approximate(self, node_of_interest, max_err, bw_start, bw_end, ctrl_points=10, is_err_relative=True,
+                    metric="mag", method="greedy_prune", solver="ddd"):
+        from symcirc.sbg import run_optimization
+        log = run_optimization(self, node_of_interest, max_err, bw_start, bw_end, ctrl_points, is_err_relative=is_err_relative,
+                         metric=metric, method=method, solver=solver)
+        return log
+
     def _build_graph(self):
         self.adjacency_map = defaultdict(set)
 
