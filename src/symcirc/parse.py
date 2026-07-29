@@ -138,14 +138,18 @@ def tran_value(words, dc):
             pass
         tran = amp*((damping+s)*sympy.sin(delay)+omega*sympy.cos(delay))/(damping**2+2*damping*s+omega**2+s**2)
     tran_rat, tran_flt, _ = process_value(words[0], tran, False)
-    return tran_rat, tran_flt
 
-def value_enum(name: str, value: str):
+    tran_sym = tran_rat #sympy.Function(words[0])(s)
+    return tran_rat, tran_flt, tran_sym
+
+def value_enum(name: str, value: str, local_dict=None):
     try:
         value, is_symbolic = convert_units(value)
     except IndexError:
         is_symbolic = True
-        value = sympy.parse_expr(name, local_dict=sympy.abc._clash, transformations=TRANSFORMS)
+        if local_dict is None:
+            local_dict = {}
+        value = sympy.parse_expr(name, local_dict=sympy.abc._clash|local_dict, transformations=TRANSFORMS)
     rat, flt, sym = process_value(name, value, is_symbolic)
     return rat, flt, sym, is_symbolic
 
@@ -465,8 +469,8 @@ def parse(netlist, operating_point=None):
         if name[0] in ["i", "I"]:
             dc_rat, dc_flt, dc_sym = dc_value(words)
             ac_rat, ac_flt, ac_sym, phase_rad = ac_value(words)
-            tran_rat, tran_flt = tran_value(words, dc_rat)
-            tran_sym = dc_sym / s
+            tran_rat, tran_flt, tran_sym = tran_value(words, dc_rat)
+
             values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
                       "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
                       "tran_num": tran_rat,"tran_float": tran_flt, "tran_sym": tran_sym}
@@ -476,8 +480,7 @@ def parse(netlist, operating_point=None):
         elif name[0] in ["v", "V", "u", "U"]:
             dc_rat, dc_flt, dc_sym = dc_value(words)
             ac_rat, ac_flt, ac_sym, phase_rad = ac_value(words)
-            tran_rat, tran_flt = tran_value(words, dc_rat)
-            tran_sym = dc_sym / s
+            tran_rat, tran_flt, tran_sym = tran_value(words, dc_rat)
 
             values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
                       "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
