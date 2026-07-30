@@ -440,8 +440,6 @@ class IndependentSource(Component):
         else:
             params = self._tran_num
 
-        print(params)
-
         if params[0] == "sin":
             offset = params[1]
             amp = params[2]
@@ -454,7 +452,6 @@ class IndependentSource(Component):
                     damping ** 2 + 2 * damping * s + omega ** 2 + s ** 2)
         else:
             tran = self.dc_val(form="num") / s
-        print(tran)
         return tran
 
 class VoltageSource(IndependentSource):

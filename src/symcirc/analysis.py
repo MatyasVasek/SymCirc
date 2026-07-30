@@ -1128,7 +1128,10 @@ class DC(Analysis):
         if ret is None:
             c = self.circuit.components[name]
             if c.type == "i":
-                ret = c.dc_sym if self.is_symbolic else c.dc_num
+                if self.is_symbolic:
+                    ret = c.dc_val(form="sym")
+                else:
+                    ret = c.dc_val(form="rat")
         else:
             ret = sympy.limit(ret, s, 0)
         return ret
@@ -1149,7 +1152,10 @@ class TF(Analysis):
         if ret is None:
             c = self.circuit.components[name]
             if c.type == "i":
-                ret = c.ac_sym if self.is_symbolic else c.ac_num
+                if self.is_symbolic:
+                    ret = c.ac_val(form="sym")
+                else:
+                    ret = c.ac_val(form="rat")
         return ret
 
     def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], form="rat") -> sympy.Expr:
@@ -1182,7 +1188,10 @@ class AC(Analysis):
         if ret is None:
             c = self.circuit.components[name]
             if c.type == "i":
-                ret = c.ac_sym if self.is_symbolic else c.ac_num
+                if self.is_symbolic:
+                    ret = c.ac_val(form="sym")
+                else:
+                    ret = c.ac_val(form="rat")
         else:
             ret = ret.subs(s, 2*pi*f*j)
         return ret
@@ -1346,7 +1355,10 @@ class TRAN(Analysis):
         if ret is None:
             c = self.circuit.components[name]
             if c.type == "i":
-                ret = c.tran_sym if self.is_symbolic else c.tran_num
+                if self.is_symbolic:
+                    ret = c.tran_val(form="sym")
+                else:
+                    ret = c.tran_val(form="rat")
         if ret is not None:
             ret = laplace.iLT(ret, self.sympy_ilt)
             ret = sympy.factor_terms(ret)
