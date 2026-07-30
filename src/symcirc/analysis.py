@@ -283,6 +283,23 @@ class Analysis:
         return tf
 
 
+    def abstract_matrix(self, eqn_matrix, memo):
+        i = 0
+        for elem in eqn_matrix:
+            new_elem = simplify_coeffs(elem, s, f"M{i}", memo)
+            eqn_matrix[i] = new_elem
+            i += 1
+
+    def unabstract_results(self, solved_dict, memo):
+        # Resubstitute
+        inverted_memo = {v: k for k, v in memo.items()}
+        t2 = time.time()
+        for key in solved_dict:
+            solved_dict[key] = sympy.cancel(solved_dict[key].subs(inverted_memo))
+        t3 = time.time()
+        print(f"Solution resubstitution time: {t3 - t2}")
+
+
     def _analyse(self):
         """
           Implementation of all types of supported analysis.
@@ -292,15 +309,6 @@ class Analysis:
           :return dict solved_dict: dictionary of eqn_matrix solve results
           :return list symbols: list of all used sympy.symbol objects
         """
-
-        # TODO: rework into optional filter
-        # Substitutes expansive expressions into working symbols that have to be later resubstituted
-        '''memo = {}
-        i = 0
-        for elem in eqn_matrix:
-            new_elem = simplify_coeffs(elem, s, f"M{i}", memo)
-            eqn_matrix[i] = new_elem
-            i+=1'''
 
         # TODO: state machine to decide whether to use gauss, LU or DDD
 
@@ -314,24 +322,17 @@ class Analysis:
             solved_dict = self._lu_solve(eqn_matrix, symbols)
         elif self.solver == "ddd":
             # TODO: rework this hack into a more professional solution
+            memo = {}
             tmp_symbolic = self.is_symbolic
             self.is_symbolic = True
             eqn_matrix, symbols = self._build_system_eqn()
+            #self.abstract_matrix(eqn_matrix, memo)
             self.is_symbolic = tmp_symbolic
             solved_dict = self._ddd_solve(eqn_matrix, symbols)
+            #self.unabstract_results(solved_dict, memo)
 
         t1 = time.time()
         #print(f"Matrix solve time by {self.solver}: {t1-t0}")
-
-        # TODO: rework into optional filter
-        # Resubstitute
-        '''inverted_memo = {v: k for k, v in memo.items()}
-        self.inter_symbols = inverted_memo
-        t2 = time.time()
-        for key in solved_dict:
-            solved_dict[key] = sympy.cancel(solved_dict[key].subs(inverted_memo))
-        t3 = time.time()
-        print(f"Solution resubstitution time: {t3 - t2}")'''
 
         # TODO: test whether this is a speedup or not and neccessity for readability
         #for key in solved_dict:
