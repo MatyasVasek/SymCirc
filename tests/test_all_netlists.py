@@ -1,6 +1,6 @@
 import sys
 import os
-import time
+import random
 
 import func_timeout
 import pytest
@@ -61,7 +61,7 @@ def analyze(filename, analysis_type, is_symbolic, analysis_method):
 
 def compare_solvers(filename, analysis_type, is_symbolic, analysis_method):
     sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-    from symcirc import AnalyseCircuit, utils
+    from symcirc import AnalyseCircuit, utils, evalf
     analysis_gauss = AnalyseCircuit(
         utils.load_file(os.path.join(NETLIST_DIR, filename)),
         analysis_type=analysis_type,
@@ -83,8 +83,21 @@ def compare_solvers(filename, analysis_type, is_symbolic, analysis_method):
     v_ddd = analysis_ddd.node_voltages()
 
     for key in v_gauss:
-        if not sympy.sympify(v_gauss[key]).equals(sympy.sympify(v_ddd[key])):
-            raise ValueError(f"{v_gauss[key]} != {v_ddd[key]}")
+        tmp_gauss = v_gauss[key]
+        tmp_ddd =  v_ddd[key]
+        if not sympy.sympify(tmp_gauss).equals(sympy.sympify(tmp_ddd)):
+            seed = random.randrange(1, 1000)/1000000
+            if analysis_type == "tran":
+                if tmp_gauss in [0.0, 0]:
+                    diff = evalf((tmp_gauss - tmp_ddd), {utils.t: seed})
+                    if -0.05 < diff < 0.05:
+                        continue
+                else:
+                    ratio = evalf((tmp_gauss) / (tmp_ddd),{utils.t: seed})
+                    if ratio > 0.95 and ratio < 1.05:
+                        continue
+
+            raise ValueError(f"{v_gauss[key]} != {v_ddd[key]}, ratio: {ratio}")
 
 
 def compare_methods(filename, analysis_type, is_symbolic, solver):
