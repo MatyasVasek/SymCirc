@@ -1,7 +1,7 @@
 from typing import List, Set, Dict, Union, Any
 import sympy
 
-from symcirc.utils import s
+from symcirc.utils import s, j, pi
 from symcirc.graph_signalflow import Branch
 
 
@@ -354,98 +354,146 @@ class Inductor(Component):
         branches.append(Branch(self.name, vnode2, inode1, sym_adm, num_adm))
         return branches
 
+class IndependentSource(Component):
+    """
+            Independent source component base class
 
-class VoltageSource(Component):
+            :param name: component id
+            :param node1: first node id
+            :param node2: second node id
+            :param dc_num: numeric dc value used in semisymbolic dc analyes
+            :param dc_sym: symbolic dc value
+            :param ac_num: numeric ac value used in semisymbolic ac analysis
+            :param ac_sym: symbolic ac value
+            :param ac_phase: ac phase value
+            :param tran_num: numeric transient value used in semisymbolic transient analysis
+            :param tran_sym: symbolic transient value
+        """
+
+    def __init__(self, name: str, node1: str, node2: str,
+                 values: Dict[str, Any]):
+        self._dc_num = values["dc_num"]
+        self._dc_float = values["dc_float"]
+        self._dc_sym = values["dc_sym"]
+
+        self._ac_num = values["ac_num"]
+        self._ac_float = values["ac_float"]
+        self._ac_sym = values["ac_sym"]
+        self._ac_phase = values["ac_phase"]
+
+        self._tran_num = values["tran_num"]
+        self._tran_float = values["tran_float"]
+
+        super().__init__(name, node1, node2, sym_value=self._dc_sym, value=self._dc_num)
+
+    def val(self, form="sym", analysis_type="dc"):
+        # TODO: document options
+        analysis_type = analysis_type.lower()
+        if analysis_type == 'ac':
+            self.ac_val(form)
+        elif analysis_type == 'dc':
+            self.dc_val(form)
+        elif analysis_type == 'tf':
+            self.tf_val(form)
+        elif analysis_type == 'tran':
+            self.tran_val(form)
+
+    def ac_val(self, form="sym"):
+        has_phase = self._ac_phase != 0
+        if form == "sym":
+            if has_phase:
+                mag = self._ac_num
+            else:
+                mag = self._ac_sym
+        elif form == "float":
+            mag = self._ac_float
+        else:
+            mag = self._ac_num
+
+        if has_phase:
+            ret = mag * sympy.exp(j * self._ac_phase)
+        else:
+            ret = mag
+        return ret
+
+    def dc_val(self, form="sym"):
+        if form == "sym":
+            mag = self._dc_sym
+        elif form == "float":
+            mag = self._dc_float
+        else:
+            mag = self._dc_num
+        return mag
+
+    def tf_val(self, form="sym"):
+        if form == "sym":
+            mag = self._ac_sym
+        elif form == "float":
+            mag = self._ac_float
+        else:
+            mag = self._ac_num
+        return mag
+
+    def tran_val(self, form="sym"):
+        if form == "float":
+            params = self._tran_float
+        else:
+            params = self._tran_num
+
+        print(params)
+
+        if params[0] == "sin":
+            offset = params[1]
+            amp = params[2]
+            freq = params[3]
+            delay = params[4]
+            damping = params[5]
+            omega = 2 * pi * freq
+
+            tran = amp * ((damping + s) * sympy.sin(delay) + omega * sympy.cos(delay)) / (
+                    damping ** 2 + 2 * damping * s + omega ** 2 + s ** 2)
+        else:
+            tran = self.dc_val(form="num") / s
+        print(tran)
+        return tran
+
+class VoltageSource(IndependentSource):
     """
         Independent voltage source component class
 
         :param name: component id
         :param node1: first node id
         :param node2: second node id
-        :param dc_num: numeric dc value used in semisymbolic dc analyes
-        :param dc_sym: symbolic dc value
-        :param ac_num: numeric ac value used in semisymbolic ac analysis
-        :param ac_sym: symbolic ac value
-        :param ac_phase: ac phase value
-        :param tran_num: numeric transient value used in semisymbolic transient analysis
-        :param tran_sym: symbolic transient value
+        :param values: a list of values defining the source behaviour
     """
-    def __init__(self, name:str, node1:str, node2:str,
-                 values: Dict[str, Any]):
-        self.dc_num = values["dc_num"]
-        self.dc_float = values["dc_float"]
-        self.dc_sym = values["dc_sym"]
-
-        self.ac_num = values["ac_num"]
-        self.ac_float = values["ac_float"]
-        self.ac_sym = values["ac_sym"]
-        self.ac_phase = values["ac_phase"]
-
-        self.tran_num = values["tran_num"]
-        self.tran_float = values["tran_float"]
-        self.tran_sym = values["tran_sym"]
-
-        super().__init__(name, node1, node2, sym_value=self.dc_sym, value=self.dc_num)
-
-        symbol = sympy.Symbol(name)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.netlist_keywords = ["V", "v", "U", "u"]
         self.type = "v"
 
-    def v(self, symbolic=False, is_float=False):
-        # TODO: implement differentiation between analysis types
-        if symbolic:
-            return self.ac_sym
-        if is_float:
-            return self.ac_float
-        else:
-            return self.ac_num
+    def v(self, form="sym", analysis_type="dc"):
+        return self.val(form, analysis_type)
 
 
-class CurrentSource(Component):
+class CurrentSource(IndependentSource):
     """
         Independent current source component class
 
         :param name: component id
         :param node1: first node id
         :param node2: second node id
-        :param dc_num: numeric dc value used in semisymbolic dc analyes
-        :param dc_sym: symbolic dc value
-        :param ac_num: numeric ac value used in semisymbolic ac analysis
-        :param ac_sym: symbolic ac value
-        :param ac_phase: ac phase value
-        :param tran_num: numeric transient value used in semisymbolic transient analysis
-        :param tran_sym: symbolic transient value
+        :param values: a list of values defining the source behaviour
     """
-    def __init__(self, name:str, node1:str, node2:str,
-                 values: Dict[str, Any]):
 
-        self.dc_num = values["dc_num"]
-        self.dc_float = values["dc_float"]
-        self.dc_sym = values["dc_sym"]
-
-        self.ac_num = values["ac_num"]
-        self.ac_float = values["ac_float"]
-        self.ac_sym = values["ac_sym"]
-        self.ac_phase = values["ac_phase"]
-
-        self.tran_num = values["tran_num"]
-        self.tran_float = values["tran_float"]
-        self.tran_sym = values["tran_sym"]
-
-        super().__init__(name, node1, node2, sym_value=self.dc_sym, value=self.dc_num)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.netlist_keywords = ["I", "i"]
         self.type = "i"
 
-    def i(self, symbolic=False, is_float=False):
-        # TODO: implement differentiation between analysis types
-        if symbolic:
-            return self.ac_sym
-        elif is_float:
-            return self.ac_float
-        else:
-            return self.ac_num
+    def i(self, form="sym", analysis_type="dc"):
+        return self.val(form, analysis_type)
 
 
 class IdealOperationalAmplifier(Component):

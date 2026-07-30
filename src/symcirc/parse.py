@@ -106,41 +106,34 @@ def ac_value(words):
         phase_rad = Integer(0)
 
     ac_rat, ac_flt, ac_sym = process_value(words[0], ac_val, val_symbolic)
+
     return ac_rat, ac_flt, ac_sym, phase_rad
 
 def tran_value(words, dc):
-    use_DC_val = True
-    index = 1
-    offset = Integer(0)
-    amp = Integer(1)
-    freq = Integer(1)
-    delay = Integer(0)
-    damping = Integer(1)
-    omega = Integer(2)*pi*freq
-
-    for word in words:
-        if word in ["sin", "SIN"]:
-            use_DC_val = False
-            break
-        else:
-            index += 1
-    if use_DC_val:
-        tran = dc*(Integer(1)/s)
-    else:
+    lower_words = [i.lower() for i in words]
+    if "sin" in lower_words:
+        index = lower_words.index("sin") + 1
+        offset = Integer(0)
+        amp = Integer(1)
+        freq = Integer(1)
+        delay = Integer(0)
+        damping = Integer(1)
+        #omega = Integer(2) * pi * freq
         try:
             offset, _ = convert_units(words[index])
             amp, _ = convert_units(words[index+1])
             freq, _ = convert_units(words[index+2], forced_numeric=True)
             delay, _ = convert_units(words[index+3])
             damping, _ = convert_units(words[index+4])
-            omega = 2*pi*freq
         except IndexError:
             pass
-        tran = amp*((damping+s)*sympy.sin(delay)+omega*sympy.cos(delay))/(damping**2+2*damping*s+omega**2+s**2)
-    tran_rat, tran_flt, _ = process_value(words[0], tran, False)
+        tran_rat = ["sin", offset, amp, freq, delay, damping]
+        tran_flt = ["sin"] + [evalf(i) for i in tran_rat[1:]]
+        return tran_rat, tran_flt
+        #tran = amp*((damping+s)*sympy.sin(delay)+omega*sympy.cos(delay))/(damping**2+2*damping*s+omega**2+s**2)
 
-    tran_sym = tran_rat #sympy.Function(words[0])(s)
-    return tran_rat, tran_flt, tran_sym
+    tran_rat, tran_flt = [None], [None]
+    return tran_rat, tran_flt
 
 def value_enum(name: str, value: str, local_dict=None):
     try:
@@ -469,22 +462,22 @@ def parse(netlist, operating_point=None):
         if name[0] in ["i", "I"]:
             dc_rat, dc_flt, dc_sym = dc_value(words)
             ac_rat, ac_flt, ac_sym, phase_rad = ac_value(words)
-            tran_rat, tran_flt, tran_sym = tran_value(words, dc_rat)
+            tran_rat, tran_flt = tran_value(words, dc_rat)
 
             values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
                       "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
-                      "tran_num": tran_rat,"tran_float": tran_flt, "tran_sym": tran_sym}
+                      "tran_num": tran_rat,"tran_float": tran_flt}
             c = CurrentSource(name, node1, node2, values)
             independent_sources.append(c)
 
         elif name[0] in ["v", "V", "u", "U"]:
             dc_rat, dc_flt, dc_sym = dc_value(words)
             ac_rat, ac_flt, ac_sym, phase_rad = ac_value(words)
-            tran_rat, tran_flt, tran_sym = tran_value(words, dc_rat)
+            tran_rat, tran_flt = tran_value(words, dc_rat)
 
             values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
                       "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
-                      "tran_num": tran_rat,"tran_float": tran_flt, "tran_sym": tran_sym}
+                      "tran_num": tran_rat,"tran_float": tran_flt}
 
             c = VoltageSource(name, node1, node2, values)
             independent_sources.append(c)

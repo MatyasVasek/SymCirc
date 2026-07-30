@@ -175,20 +175,23 @@ class Analysis:
         for comp in self.circuit.components.values():
             if is_float:
                 if comp.type in ANALYSIS_DEPENDENT:
-                    symbol = self._choose_source_val(comp, is_symbolic=True)
-                    value_map[symbol] = self._choose_source_val(comp, is_float=True)
+                    symbol = self._choose_source_val(comp, form="sym")
+                    value_map[symbol] = self._choose_source_val(comp, form="float")
                 elif comp.value_float is not None:
                     value_map[comp.sym_value] = comp.value_float
             else:
                 if comp.type in ANALYSIS_DEPENDENT:
-                    symbol = self._choose_source_val(comp, is_symbolic=True)
-                    value_map[symbol] = self._choose_source_val(comp)
+                    symbol = self._choose_source_val(comp, form="sym")
+                    value_map[symbol] = self._choose_source_val(comp, form="rat")
                 elif comp.value is not None:
                     value_map[comp.sym_value] = comp.value
         return value_map
 
-    def _choose_source_val(self, c: Component, is_float=False, is_symbolic=False) -> sympy.Expr:
-        """Has to be implemented in child class"""
+    def _choose_source_val(self, c: Component, form="rat") -> sympy.Expr:
+        """
+        Has to be implemented in child class
+        :param form: can be 'rat', 'float', 'sym'
+        """
         pass
 
     def component_values(self, name: str = "all", default_python_datatypes: bool=False) -> Dict[str, sympy.Expr]:
@@ -780,7 +783,11 @@ class Analysis:
     def _add_voltage_source_tgn(self, M, S, v_nodes, i_nodes, c, index_row, index_col, i_graph_collapses, v_graph_collapses):
         node1 = c.node1
         node2 = c.node2
-        val = self._choose_source_val(c, is_symbolic=self.is_symbolic)
+        if self.is_symbolic:
+            form = "sym"
+        else:
+            form = "rat"
+        val = self._choose_source_val(c, form)
 
         n1v = self.index_tgn(v_nodes, node1, v_graph_collapses)
         n2v = self.index_tgn(v_nodes, node2, v_graph_collapses)
@@ -803,7 +810,11 @@ class Analysis:
     def _add_current_source_tgn(self, M, S, v_nodes, i_nodes, c, i_graph_collapses):
         node1 = c.node1
         node2 = c.node2
-        val = self._choose_source_val(c, is_symbolic=self.is_symbolic)
+        if self.is_symbolic:
+            form = "sym"
+        else:
+            form = "rat"
+        val = self._choose_source_val(c, form)
 
         n1i = self.index_tgn(i_nodes, node1, i_graph_collapses)
         n2i = self.index_tgn(i_nodes, node2, i_graph_collapses)
@@ -959,7 +970,11 @@ class Analysis:
     def _add_voltage_source(self, matrix, result, c, index):
         N1 = c.node1
         N2 = c.node2
-        val = self._choose_source_val(c, is_symbolic=self.is_symbolic)
+        if self.is_symbolic:
+            form = "sym"
+        else:
+            form = "rat"
+        val = self._choose_source_val(c, form)
 
         matrix[self.c_count + index, index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
@@ -969,7 +984,11 @@ class Analysis:
     def _add_current_source(self, matrix, result, c, index):
         N1 = c.node1
         N2 = c.node2
-        val = self._choose_source_val(c, is_symbolic=self.is_symbolic)
+        if self.is_symbolic:
+            form = "sym"
+        else:
+            form = "rat"
+        val = self._choose_source_val(c, form)
         matrix[self.c_count + index, self.c_count + index] = 1
         self._incidence_matrix_write(N1, N2, matrix, index)
         result[self.c_count + index, 0] = val
@@ -1097,14 +1116,8 @@ class DC(Analysis):
                 pass
         return eqn_matrix, solved_dict, symbols
 
-    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], is_float=False, is_symbolic=False) -> sympy.Expr:
-        if is_symbolic:
-            val = c.dc_sym
-        elif is_float:
-            val = c.dc_float
-        else:
-            val = c.dc_num
-        return val
+    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], form="rat") -> sympy.Expr:
+        return c.dc_val(form)
 
     def component_current(self, name: str) -> sympy.Symbol:
         """
@@ -1138,17 +1151,8 @@ class TF(Analysis):
                 ret = c.ac_sym if self.is_symbolic else c.ac_num
         return ret
 
-    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], is_float=False, is_symbolic=False) -> sympy.Expr:
-        if is_symbolic:
-            if c.ac_num == 0:
-                val = 0
-            else:
-                val = c.ac_sym
-        elif is_float:
-            val = c.ac_float
-        else:
-            val = c.ac_num
-        return val
+    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], form="rat") -> sympy.Expr:
+        return c.tf_val(form)
 
 
 class AC(Analysis):
@@ -1166,17 +1170,8 @@ class AC(Analysis):
                 pass
         return eqn_matrix, solved_dict, symbols
 
-    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], is_float=False, is_symbolic=False) -> sympy.Expr:
-        if is_symbolic:
-            if c.ac_num == 0:
-                val = 0
-            else:
-                val = c.ac_sym
-        elif is_float:
-            val = c.ac_float
-        else:
-            val = c.ac_num * sympy.exp(j*c.ac_phase)
-        return val
+    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], form="rat") -> sympy.Expr:
+        return c.ac_val(form)
 
     def component_current(self, name: str) -> sympy.Symbol:
         """
@@ -1329,14 +1324,8 @@ class TRAN(Analysis):
             S[row1, 0] += -m_coeff * ic2 - L1 * ic1
 
 
-    def _choose_source_val(self, c: Component, is_float=False, is_symbolic=False) -> sympy.Expr:
-        if is_symbolic:
-            val = c.tran_sym
-        elif is_float:
-            val = c.tran_float
-        else:
-            val = c.tran_num
-        return val
+    def _choose_source_val(self, c: Union[VoltageSource, CurrentSource], form="rat") -> sympy.Expr:
+        return c.tran_val(form)
 
     def component_voltage(self, name: str) -> sympy.Expr:
         """
