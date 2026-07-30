@@ -90,8 +90,8 @@ def ac_value(words):
             ac_val, val_symbolic = convert_units(words[6])
             try:
                 if words[7] not in RESERVED:
-                    phase_deg, _ = convert_units(words[7])
-                    phase_rad = sympy.rad(phase_deg)
+                    phase_rad, _ = convert_units(words[7])
+                    #phase_rad = sympy.rad(phase_deg)
                 else:
                     phase_rad = Integer(0)
             except IndexError:
