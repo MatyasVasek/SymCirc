@@ -127,8 +127,9 @@ def tran_value(words, dc):
             damping, _ = convert_units(words[index+4])
         except IndexError:
             pass
-        tran_rat = ["sin", offset, amp, freq, delay, damping]
-        tran_flt = ["sin"] + [evalf(i) for i in tran_rat[1:]]
+        tran_params = [offset, amp, freq, delay, damping]
+        tran_rat = ["sin"] + [nsimplify(i, rational=True) for i in tran_params]
+        tran_flt = ["sin"] + [evalf(i) for i in tran_params]
         return tran_rat, tran_flt
         #tran = amp*((damping+s)*sympy.sin(delay)+omega*sympy.cos(delay))/(damping**2+2*damping*s+omega**2+s**2)
 
