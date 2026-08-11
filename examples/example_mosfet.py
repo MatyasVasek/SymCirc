@@ -1,5 +1,5 @@
 from symcirc import *
-from symcirc.simplification import *
+from symcirc.utils_simplification import *
 
 netlist = """Simple PMOS circuit
 C1 i 2 10u

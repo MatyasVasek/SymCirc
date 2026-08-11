@@ -1,7 +1,7 @@
 from symcirc.component import ParallelAdmittance, SerialAdmittance
 from symcirc.analysis import ACNumeric, Circuit
 from symcirc.utils import mag, s, j, pi, evalf, xpoints
-from symcirc.simplification import build_signalflow_graph
+from symcirc.utils_simplification import build_signalflow_graph
 import time
 
 
