@@ -1,7 +1,7 @@
 import sympy
 import time
 from sympy import exp, sin, cos, sqrt, factorial, DiracDelta, abc
-from symcirc.utils import s, t, pi
+from symcirc.utils import s, t, pi, ilt_simplify
 
 
 def poles(F):
@@ -88,12 +88,13 @@ def separate_s(f):
 def iLT(F, sympy_ilt=True):
     if sympy_ilt:
         try:
-            return sympy.integrals.transforms.inverse_laplace_transform(F, s, t, plane=None)
+            ret = sympy.integrals.transforms.inverse_laplace_transform(F, s, t, plane=None)
         except:
-            return symcirc_iLT(F)
+            ret = symcirc_iLT(F)
     else:
-        return symcirc_iLT(F)
-
+        ret = symcirc_iLT(F)
+    ret = ilt_simplify(ret)
+    return ret
 
 def symcirc_iLT(F):
     f = 0
