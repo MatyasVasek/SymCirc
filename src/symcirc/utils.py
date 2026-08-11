@@ -292,7 +292,6 @@ def bode(func, start, stop, points=500):
 
     return x, y_mag, y_arg
 
-
 def plot_bode(func, start, stop, points=500, title="Bode Plot", param_list=None, param_symbol=None, label_list=None) -> "matplotlib.figure":
     import matplotlib.pyplot as plt
     from numpy import array
@@ -411,3 +410,26 @@ def fast_circuit_simplify(expr: sympy.Expr) -> sympy.Expr:
     simplified_expr = num_collected / den_collected
 
     return simplified_expr
+
+def normalize_exp(expr):
+    return expr.replace(
+        lambda e: e.func == sympy.exp,
+        lambda e: sympy.exp(e.args[0].cancel())
+    )
+
+def ilt_simplify(expr):
+    expr = sympy.factor_terms(expr)
+    expr = sympy.expand_power_exp(expr)
+    expr = normalize_exp(expr)
+    expr = sympy.powsimp(expr, combine="exp", deep=True)
+
+    for e in expr.atoms(sympy.exp):
+        expr = sympy.collect(expr, e)
+    return expr
+
+def general_simplify(expr):
+    #expr = sympy.factor_terms(expr)
+    #expr = expr.powsimp()
+    expr = sympy.cancel(expr)
+    #expr = sympy.simplify(expr)
+    return expr
