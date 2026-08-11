@@ -77,13 +77,37 @@ class Analysis:
         return results
 
     def get_symbols(self) -> Dict[str, sympy.Symbol]:
-        symbol_dict = {}
+        #t0 = time.time()
+        symbol_dict = {"s": s, "t": t, "f": f}
+        for comp in self.circuit.components.values():
+            if comp.type in ANALYSIS_DEPENDENT:
+                sym_val = self._choose_source_val(comp, form="sym")
+            else:
+                sym_val = comp.sym_value
+
+            if sym_val is None:
+                continue
+            elif hasattr(sym_val, "name"):
+                symbol_dict[sym_val.name] = sym_val
+            else:
+                try:
+                    for sym in sym_val.free_symbols:
+                        symbol_dict[sym.name] = sym
+                except AttributeError:
+                    pass
+        return symbol_dict
+        # Old version for reference, remove later
+        '''symbol_dict = {}
+        t1 = time.time()
         for expr in self.solved_dict.values():
-            if hasattr(expr, 'free_symbols'):
+            try:
                 free_symbols = expr.free_symbols
                 for symbol in free_symbols:
                     symbol_dict[symbol.name] = symbol
-        return symbol_dict
+            except AttributeError:
+                pass
+        print(time.time()-t1)
+        return symbol_dict'''
 
     def get_node_voltage_symbol(self, node: str) -> sympy.Symbol:
         return self.node_voltage_symbols[self.node_dict[node]]
