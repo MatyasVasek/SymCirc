@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # --- Test configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 NETLIST_DIR = os.path.join(BASE_DIR, "netlists")
+LARGE_NETLIST_DIR = os.path.join(BASE_DIR, "netlists")
 
 ANALYSIS_TYPES = ["DC", "TF", "AC", "tran"]
 ANALYSIS_METHODS = ["tableau", "two_graph_node"]
@@ -26,6 +27,7 @@ SYMBOLIC = [True, False]
 SOLVERS = ["gauss"] #"ddd"] # DDD is still in the experimental phase
 
 NETLISTS = sorted(p for p in os.listdir(NETLIST_DIR) if p.endswith((".txt", ".cir")))
+LARGE_NETLISTS = sorted(p for p in os.listdir(LARGE_NETLIST_DIR) if p.endswith((".txt", ".cir")))
 
 TIMEOUT = 100
 
@@ -97,7 +99,7 @@ def compare_solvers(filename, analysis_type, is_symbolic, analysis_method):
                     if ratio > 0.95 and ratio < 1.05:
                         continue
 
-            raise ValueError(f"{v_gauss[key]} != {v_ddd[key]}, ratio: {ratio}")
+            raise ValueError(f"{v_gauss[key]} != {v_ddd[key]}")
 
 
 def compare_methods(filename, analysis_type, is_symbolic, solver):
@@ -152,7 +154,7 @@ def compare_results(results_a, results_b):
                 raise ValueError(f"{results_a[key]} != {results_b[key]}")
 
 
-def run_analysis_w_timing(filename, analysis_type, is_symbolic, analysis_method, local=True):
+def run_analysis_w_timing(filename, analysis_type, is_symbolic, analysis_method, local=True, solver="gauss"):
     """
     Run analysis using PyPI installed version via subprocess
     """
@@ -178,8 +180,10 @@ analysis = AnalyseCircuit(
     analysis_type={repr(analysis_type)},
     symbolic={is_symbolic},
     method={repr(analysis_method)},
-    use_symengine=True,
-)
+    use_symengine=True,"""
+        if local:
+            script += f"solver={repr(solver)},"
+        script += f""")
 results = analysis.node_voltages()
 time_end = time.time() - time_start
 
