@@ -1,4 +1,4 @@
-
-V1 1 0 dc 5 ac 1 0
-C 1 0 10n
-
+# GEEC #180
+V1 node1 0 DC 0 AC {amp} {ph} SIN 0 1 16k 0 0
+R node1 node2 1k
+C node2 0 10n
