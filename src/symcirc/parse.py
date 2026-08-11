@@ -106,7 +106,7 @@ def ac_value(words):
         phase_rad = Integer(0)
 
     ac_rat, ac_flt, ac_sym = process_value(words[0], ac_val, val_symbolic)
-    if ac_rat == 0 or ac_rat == 1:  # GEEC requires this
+    if ac_rat == 0:  # GEEC requires this
         ac_sym = ac_rat
     return ac_rat, ac_flt, ac_sym, phase_rad
 
