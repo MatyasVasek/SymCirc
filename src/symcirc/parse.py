@@ -528,7 +528,12 @@ def parse(netlist, operating_point=None):
             if node4 not in nodes:
                 nodes.append(node4)
 
-            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[5])
+            try:
+                val = words[5]
+            except IndexError:
+                val = words[0]
+
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], val)
 
             c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=val_rat,
                                         value_float=val_flt, sym_value=val_sym)
@@ -542,7 +547,12 @@ def parse(netlist, operating_point=None):
                 nodes.append(node3)
             if node4 not in nodes:
                 nodes.append(node4)
-            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[5])
+            try:
+                val = words[5]
+            except IndexError:
+                val = words[0]
+
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], val)
 
             c = VoltageControlledSource(name, variant, node1, node2, node3, node4, value=val_rat,
                                         value_float=val_flt, sym_value=val_sym)
@@ -560,7 +570,12 @@ def parse(netlist, operating_point=None):
                 node3 = None
                 node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
 
-            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[4])
+            try:
+                val = words[4]
+            except IndexError:
+                val = words[0]
+
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], val)
 
             c = CurrentControlledSource(name, variant, node1, node2, node3, node4, value=val_rat,
                                         value_float=val_flt, sym_value=val_sym)
@@ -578,7 +593,12 @@ def parse(netlist, operating_point=None):
                 node3 = None
                 node4 = f"*ctrl{v_c}{add_short[v_c][0]}"
 
-            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[4])
+            try:
+                val = words[4]
+            except IndexError:
+                val = words[0]
+
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], val)
 
             c = CurrentControlledSource(name, variant, node1, node2, node3, node4, value=val_rat,
                                         value_float=val_flt, sym_value=val_sym)
