@@ -34,9 +34,9 @@ def dc_value(name, dc_sig):
     return dc_rat, dc_flt, dc_sym
 
 def ac_value(name, ac_sig):
-    if len(ac_sig) not in [1, 2]:
-        raise ValueError(f"{ac_sig} is not a correct AC signature. Use the following format: ['<mag>', '<phase>']")
     if ac_sig is not None:
+        if len(ac_sig) not in [1, 2]:
+            raise ValueError(f"{ac_sig} is not a correct AC signature. Use the following format: ['<mag>', '<phase>']")
         mag, phase = ac_sig
         ac_val, val_symbolic = convert_units(mag)
         if phase is not None:
@@ -58,9 +58,9 @@ def tran_value(name, tran_sig):
     if tran_sig is not None:
         if tran_sig[0].lower() == "sin":
             return parse_sin(tran_sig[1:])
-    else:
-        tran_rat, tran_flt = [None], [None]
-        return tran_rat, tran_flt
+
+    tran_rat, tran_flt = [None], [None]
+    return tran_rat, tran_flt
 
 
 def parse_sin(tran_sig):
