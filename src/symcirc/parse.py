@@ -31,8 +31,8 @@ def preparse_source(words):
     tran_sig = None
     lower_words = [w.lower() for w in words]
     if "sin" in lower_words:
-        index = lower_words.index("sin") + 1
-        tran_sig = words[index:index + 5]
+        index = lower_words.index("sin")
+        tran_sig = words[index:index + 6]
 
     return dc_sig, ac_sig, tran_sig
 
