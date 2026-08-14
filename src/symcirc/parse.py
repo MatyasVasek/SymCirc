@@ -1,163 +1,40 @@
-import traceback
 from symcirc.component import *
-from symcirc import utils
-from symcirc import laplace
-from symcirc.utils import *
-import sys
-from sympy.parsing.sympy_parser import standard_transformations, convert_xor
+from symcirc.parse_utils import *
 
-TRANSFORMS = (standard_transformations + (convert_xor,))
+def preparse_source(words):
+    """
+    Locates the DC, AC, and TRAN signatures within a source (V/I) netlist
+    line's word list
 
-NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
-UNITS = {"f": sympy.Rational(1, 1000000000000000), "F": sympy.Rational(1, 1000000000000000),
-         "p": sympy.Rational(1, 1000000000000), "P": sympy.Rational(1, 1000000000000),
-         "n": sympy.Rational(1, 1000000000), "N": sympy.Rational(1, 1000000000),
-         "u": sympy.Rational(1, 1000000), "U": sympy.Rational(1, 1000000),
-         "m": sympy.Rational(1, 1000), "M": sympy.Rational(1, 1000),
-         "k": sympy.Rational(1000), "K": sympy.Rational(1000),
-         "meg": sympy.Rational(1000000), "MEG": sympy.Rational(1000000), "Meg": sympy.Rational(1000000),
-         "g": sympy.Rational(1000000000), "G": sympy.Rational(1000000000),
-         "t": sympy.Rational(1000000000000), "T": sympy.Rational(1000000000000),
-         "v": sympy.Rational(1), "V": sympy.Rational(1),
-         "a": sympy.Rational(1), "A": sympy.Rational(1)}
-OPERATORS = ["+", "-", "*", "/", "."]
-RESERVED = ["sin"]
-
-NETLIST_KEYCHARS = ["R", "r", "C", "c", "L", "l", "V", "v", "U", "u", "I", "i", "A", "a", "F", "f", "H", "h", "G", "g",
-                    "E", "e", "K", "k", "S", "s", "X", "x", "Q", "q", "M", "m", "D", "d", "J", "j", ".", "*"]
-
-def check_if_symbolic(val):
-    return not val.is_number
-
-
-def convert_units(val: str, forced_numeric: bool=False, local_dict=None):
-    ret = None
-    if local_dict is None:
-        local = {}
-    else:
-        local = local_dict
-    local.update(sympy.abc._clash)
-    local.update(global_dict)
-    val = val.replace("{", "").replace("}", "")
-    if len(val) > 3:
-        if (val[-3:] in UNITS) and (val[-4].isnumeric()):
-            ret = sympy.parse_expr(val[:-3], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-3:]]
-    if len(val) > 1:
-        if ret is None:
-            if (val[-1] in UNITS) and (val[-2].isnumeric()):
-                ret = sympy.parse_expr(val[:-1], local_dict=local, transformations=TRANSFORMS) * UNITS[val[-1]]
-    if ret is None:
-        ret = sympy.parse_expr(val, local_dict=local, transformations=TRANSFORMS)
-    if forced_numeric:
-        symbolic = False
-    else:
-        symbolic = check_if_symbolic(ret)
-    return ret, symbolic
-
-def process_value(name, val, symbolic):
-    if symbolic:
-        sym = val
-        rat = val
-        flt = val
-    else:
-        sym = sympy.Symbol(name, real=True)
-        try:
-            rat = nsimplify(val, rational=True)
-        except:
-            traceback.print_exc()
-            rat = val
-        flt = evalf(val)
-    return rat, flt, sym
-
-def dc_value(words):
+    :param words: the full split netlist line
+    """
+    dc_sig = None
     if len(words) < 3:
-        symbolic = True
-        dc_val = sympy.Symbol(words[0], real=True)
-    elif words[3] in ["dc", "DC"]:
-        dc_val, symbolic = convert_units(words[4])
+        dc_sig = None
+    elif words[3].lower() == "dc":
+        dc_sig = words[4]
     elif len(words) == 4:
-        dc_val, symbolic = convert_units(words[3])
-    else:
-        symbolic = True
-        dc_val = sympy.Symbol(words[0], real=True)
+        dc_sig = words[3]
 
-    dc_rat, dc_flt, dc_sym = process_value(words[0], dc_val, symbolic)
-    return dc_rat, dc_flt, dc_sym
-
-def ac_value(words):
+    ac_sig = None
     try:
-        if words[5] in ["ac", "AC"]:
-            ac_val, val_symbolic = convert_units(words[6])
+        if words[5].lower() == "ac":
+            mag = words[6]
             try:
-                if words[7] not in RESERVED:
-                    phase_rad, _ = convert_units(words[7])
-                    #phase_rad = sympy.rad(phase_deg)
-                else:
-                    phase_rad = Integer(0)
+                phase = words[7] if words[7] not in RESERVED else None
             except IndexError:
-                phase_rad = Integer(0)
-        else:
-            val_symbolic = False
-            ac_val = Integer(0)
-            phase_rad = Integer(0)
+                phase = None
+            ac_sig = [mag, phase]
     except IndexError:
-        val_symbolic = False
-        ac_val = Integer(0)
-        phase_rad = Integer(0)
+        ac_sig = None
 
-    ac_rat, ac_flt, ac_sym = process_value(words[0], ac_val, val_symbolic)
-    if ac_rat == 0:  # GEEC requires this
-        ac_sym = ac_rat
-    return ac_rat, ac_flt, ac_sym, phase_rad
-
-def tran_value(words, dc):
-    lower_words = [i.lower() for i in words]
+    tran_sig = None
+    lower_words = [w.lower() for w in words]
     if "sin" in lower_words:
         index = lower_words.index("sin") + 1
-        offset = Integer(0)
-        amp = Integer(1)
-        freq = Integer(1)
-        delay = Integer(0)
-        damping = Integer(1)
-        #omega = Integer(2) * pi * freq
-        try:
-            offset, _ = convert_units(words[index])
-            amp, _ = convert_units(words[index+1])
-            freq, _ = convert_units(words[index+2], forced_numeric=True)
-            delay, _ = convert_units(words[index+3])
-            damping, _ = convert_units(words[index+4])
-        except IndexError:
-            pass
-        tran_params = [offset, amp, freq, delay, damping]
-        tran_rat = ["sin"] + [nsimplify(i, rational=True) for i in tran_params]
-        tran_flt = ["sin"] + [evalf(i) for i in tran_params]
-        return tran_rat, tran_flt
-        #tran = amp*((damping+s)*sympy.sin(delay)+omega*sympy.cos(delay))/(damping**2+2*damping*s+omega**2+s**2)
+        tran_sig = words[index:index + 5]
 
-    tran_rat, tran_flt = [None], [None]
-    return tran_rat, tran_flt
-
-def value_enum(name: str, value: str, local_dict=None):
-    try:
-        value, is_symbolic = convert_units(value)
-    except IndexError:
-        is_symbolic = True
-        if local_dict is None:
-            local_dict = {}
-        value = sympy.parse_expr(name, local_dict=sympy.abc._clash|local_dict, transformations=TRANSFORMS)
-    rat, flt, sym = process_value(name, value, is_symbolic)
-    return rat, flt, sym, is_symbolic
-
-def nodes_per_element(type):
-    type = type.lower()
-    if type in ["r", "l", "c", "v", "i", "f", "h", "d", "s"]:
-        return 2
-    if type in ["f", "h", "q", "j"]:
-        return 3
-    elif type in ["a", "e", "g", "m"]:
-        return 4
-    elif type in ["k"]:
-        return 0
+    return dc_sig, ac_sig, tran_sig
 
 def parse_subcircuits(netlist, operating_point):
     subckt_models = {}
@@ -462,20 +339,23 @@ def parse(netlist, operating_point=None):
         # identify variant of component and assign symbolic value
 
         if name[0] in ["i", "I"]:
-            dc_rat, dc_flt, dc_sym = dc_value(words)
-            ac_rat, ac_flt, ac_sym, phase_rad = ac_value(words)
-            tran_rat, tran_flt = tran_value(words, dc_rat)
+            dc_sig, ac_sig, tran_sig = preparse_source(words)
+            dc_rat, dc_flt, dc_sym = dc_value(name, dc_sig)
+            ac_rat, ac_flt, ac_sym, phase_rad = ac_value(name, ac_sig)
+            tran_rat, tran_flt = tran_value(name, tran_sig)
 
             values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
                       "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
                       "tran_num": tran_rat,"tran_float": tran_flt}
+
             c = CurrentSource(name, node1, node2, values)
             independent_sources.append(c)
 
         elif name[0] in ["v", "V", "u", "U"]:
-            dc_rat, dc_flt, dc_sym = dc_value(words)
-            ac_rat, ac_flt, ac_sym, phase_rad = ac_value(words)
-            tran_rat, tran_flt = tran_value(words, dc_rat)
+            dc_sig, ac_sig, tran_sig = preparse_source(words)
+            dc_rat, dc_flt, dc_sym = dc_value(name, dc_sig)
+            ac_rat, ac_flt, ac_sym, phase_rad = ac_value(name, ac_sig)
+            tran_rat, tran_flt = tran_value(name, tran_sig)
 
             values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
                       "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
@@ -485,12 +365,20 @@ def parse(netlist, operating_point=None):
             independent_sources.append(c)
 
         elif name[0] in ["r", "R"]:
-            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[3])
+            if len(words) < 4:
+                val = words[0]
+            else:
+                val = words[3]
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], val)
             c = Resistor(name, node1, node2, sym_value=val_sym, value=val_rat, value_float=val_flt)
             basic_components.append(c)
 
         elif name[0] in ["c", "C"]:
-            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[3])
+            if len(words) < 4:
+                val = words[0]
+            else:
+                val = words[3]
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], val)
             try:
                 ic_rat, ic_flt, _, _ = value_enum(words[0], words[4][3:])
             except IndexError:
@@ -500,7 +388,11 @@ def parse(netlist, operating_point=None):
             basic_components.append(c)
 
         elif name[0] in ["l", "L"]:
-            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], words[3])
+            if len(words) < 4:
+                val = words[0]
+            else:
+                val = words[3]
+            val_rat, val_flt, val_sym, is_symbolic = value_enum(words[0], val)
             try:
                 ic_rat, ic_flt, _, _ = value_enum(words[0], words[4][3:])
             except IndexError:

@@ -1,7 +1,7 @@
 from typing import List, Union, Any
 from collections import defaultdict
 
-from symcirc.component import Component, ParallelAdmittance, SerialAdmittance
+from symcirc.component import Component, ParallelAdmittance, SerialAdmittance, IndependentSource
 from symcirc import parse
 from symcirc.graph import Graph
 from symcirc.utils import *
@@ -102,7 +102,15 @@ class Circuit:
         if component_name not in self.components:
             raise ValueError("Component doesn't exist")
         c = self.components[component_name]
-        if hasattr(c, parameter):
+        if isinstance(c, IndependentSource):
+            param_lower = parameter.lower()
+            if param_lower in ["dc_value", 'dc_val', "dc"]:
+                c.set_dc_val(new_value)
+            elif param_lower in ["ac_value", 'ac_val', "ac"]:
+                c.set_ac_val(new_value)
+            elif param_lower in ["tran_value", 'tran_val', "tran"]:
+                c.set_tran_val(new_value)
+        elif hasattr(c, parameter):
             setattr(c, parameter, new_value)
             self._build_graph()
         else:

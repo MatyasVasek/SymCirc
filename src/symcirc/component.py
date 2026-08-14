@@ -3,6 +3,7 @@ import sympy
 
 from symcirc.utils import s, j, pi
 from symcirc.graph_signalflow import Branch
+from symcirc.parse_utils import dc_value, ac_value, tran_value
 
 
 ANALYSIS_DEPENDENT = ["i", "v"]
@@ -367,7 +368,6 @@ class IndependentSource(Component):
             :param ac_sym: symbolic ac value
             :param ac_phase: ac phase value
             :param tran_num: numeric transient value used in semisymbolic transient analysis
-            :param tran_sym: symbolic transient value
         """
 
     def __init__(self, name: str, node1: str, node2: str,
@@ -386,6 +386,15 @@ class IndependentSource(Component):
 
         super().__init__(name, node1, node2, sym_value=self._dc_sym, value=self._dc_num)
 
+    def set_dc_val(self, val):
+        self._dc_num, self._dc_float, self._dc_sym = dc_value(self.name, val)
+    def set_ac_val(self, val):
+        self._ac_num, self._ac_float, self._ac_sym, self._ac_phase = ac_value(self.name, val)
+    def set_tran_val(self, val):
+        print(self._tran_num)
+        self._tran_num, self._tran_float = tran_value(self.name, val)
+        print(self._tran_num)
+
     def val(self, form="sym", analysis_type="dc"):
         # TODO: document options
         analysis_type = analysis_type.lower()
@@ -397,6 +406,15 @@ class IndependentSource(Component):
             self.tf_val(form)
         elif analysis_type == 'tran':
             self.tran_val(form)
+
+    def dc_val(self, form="sym"):
+        if form == "sym":
+            mag = self._dc_sym
+        elif form == "float":
+            mag = self._dc_float
+        else:
+            mag = self._dc_num
+        return mag
 
     def ac_val(self, form="sym"):
         has_phase = self._ac_phase != 0
@@ -415,15 +433,6 @@ class IndependentSource(Component):
         else:
             ret = mag
         return ret
-
-    def dc_val(self, form="sym"):
-        if form == "sym":
-            mag = self._dc_sym
-        elif form == "float":
-            mag = self._dc_float
-        else:
-            mag = self._dc_num
-        return mag
 
     def tf_val(self, form="sym"):
         if form == "sym":
@@ -453,6 +462,7 @@ class IndependentSource(Component):
         else:
             tran = self.dc_val(form="num") / s
         return tran
+
 
 class VoltageSource(IndependentSource):
     """
