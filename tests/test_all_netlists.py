@@ -87,19 +87,24 @@ def compare_solvers(filename, analysis_type, is_symbolic, analysis_method):
     for key in v_gauss:
         tmp_gauss = v_gauss[key]
         tmp_ddd =  v_ddd[key]
+        ratio = None
         if not sympy.sympify(tmp_gauss).equals(sympy.sympify(tmp_ddd)):
-            seed = random.randrange(1, 1000)/1000000
-            if analysis_type == "tran":
-                if tmp_gauss in [0.0, 0]:
-                    diff = evalf((tmp_gauss - tmp_ddd), {utils.t: seed})
-                    if -0.05 < diff < 0.05:
-                        continue
-                else:
-                    ratio = evalf((tmp_gauss) / (tmp_ddd),{utils.t: seed})
-                    if ratio > 0.95 and ratio < 1.05:
-                        continue
+            seed = random.randrange(1, 1000000)
+            seed_t = 1/seed
+            seed_f = seed
+            seed_s = 2*utils.pi*seed*sympy.I
 
-            raise ValueError(f"{v_gauss[key]} != {v_ddd[key]}")
+            if tmp_gauss in [0.0, 0]:
+                diff = evalf(tmp_ddd, {utils.t: seed_t, utils.f: seed_f, utils.s: seed_s})
+                if -0.05 < diff < 0.05:
+                    continue
+            else:
+                ratio = abs(evalf((tmp_gauss) / (tmp_ddd),{utils.t: seed_t, utils.f: seed_f, utils.s: seed_s}))
+                print(ratio)
+                if ratio > 0.95 and ratio < 1.05:
+                    continue
+
+            raise ValueError(f"{v_gauss[key]} != {v_ddd[key]}\n{ratio}")
 
 
 def compare_methods(filename, analysis_type, is_symbolic, solver):
@@ -259,16 +264,6 @@ def test_ddd_solver(analysis_type, netlist, is_symbolic):
     except Exception as e:
         pytest.fail(f"{analysis_type} failed for {netlist}\n{type(e).__name__}: {e}")
 
-FIXED_BUGS = ["DC_tran_1.txt",
-              "DC_tran_10.txt",
-              "RL.txt",
-              "RLL.txt",
-              "coupled_ic.txt",
-              "geec_1800.txt",
-              "geec_241.txt",
-              "test.txt",
-              "wien_oamp_1790.txt"
-              ]
 @pytest.mark.parametrize("is_symbolic", SYMBOLIC)
 @pytest.mark.parametrize("analysis_method", ANALYSIS_METHODS)
 @pytest.mark.parametrize("analysis_type", ANALYSIS_TYPES)
@@ -278,9 +273,6 @@ def test_regression_vs_pypi(analysis_method, analysis_type, netlist, is_symbolic
     Test that local version produces the same results as the latest PyPI version.
     Both versions run in isolated subprocesses for fair comparison.
     """
-    if netlist in FIXED_BUGS:
-        pytest.xfail(f"Expected fail due to the current PyPi version having a bug that was fixed or"
-                     f"it not supporting this simulation.")
     try:
         # Run local version in subprocess
         local_results, local_time = func_timeout.func_timeout(
