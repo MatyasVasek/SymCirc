@@ -317,12 +317,8 @@ class Analysis:
     def unabstract_results(self, solved_dict, memo):
         # Resubstitute
         inverted_memo = {v: k for k, v in memo.items()}
-        t2 = time.time()
         for key in solved_dict:
-            solved_dict[key] = sympy.cancel(solved_dict[key].subs(inverted_memo))
-        t3 = time.time()
-        print(f"Solution resubstitution time: {t3 - t2}")
-
+            solved_dict[key] = solved_dict[key].subs(inverted_memo)
 
     def _analyse(self):
         """
@@ -336,14 +332,18 @@ class Analysis:
 
         # TODO: state machine to decide whether to use gauss, LU or DDD
 
-        t0 = time.time()
         solved_dict = {}
         if self.solver == "gauss":
+            memo = {}
             eqn_matrix, symbols = self._build_system_eqn()
+            #self.abstract_matrix(eqn_matrix, memo)
             solved_dict = self._gauss_solve(eqn_matrix, symbols)
+            #self.unabstract_results(solved_dict, memo)
         elif self.solver == "lu":
             eqn_matrix, symbols = self._build_system_eqn()
             solved_dict = self._lu_solve(eqn_matrix, symbols)
+            for key in solved_dict:
+                solved_dict[key] = general_simplify(solved_dict[key])
         elif self.solver == "ddd":
             # TODO: rework this hack into a more professional solution
             memo = {}
@@ -353,6 +353,8 @@ class Analysis:
             #self.abstract_matrix(eqn_matrix, memo)
             self.is_symbolic = tmp_symbolic
             solved_dict = self._ddd_solve(eqn_matrix, symbols)
+            for key in solved_dict:
+                solved_dict[key] = general_simplify(solved_dict[key])
             #self.unabstract_results(solved_dict, memo)
 
         t1 = time.time()
