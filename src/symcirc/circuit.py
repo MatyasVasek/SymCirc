@@ -98,21 +98,38 @@ class Circuit:
         else:
             raise(ValueError("Component doesn't exists"))
 
-    def change(self, component_name: str, parameter: str, new_value) -> None:
+    def change(self, component_name: str, parameter: str, new_value=None) -> None:
         if component_name not in self.components:
             raise ValueError("Component doesn't exist")
+        param_lower = parameter.lower()
         c = self.components[component_name]
         if isinstance(c, IndependentSource):
-            param_lower = parameter.lower()
             if param_lower in ["dc_value", 'dc_val', "dc"]:
-                c.set_dc_val(new_value)
+                old = c._dc_raw
+                if new_value is not None:
+                    c.set_dc_val(new_value)
+                return old
             elif param_lower in ["ac_value", 'ac_val', "ac"]:
-                c.set_ac_val(new_value)
+                old = c._ac_raw
+                if new_value is not None:
+                    c.set_ac_val(new_value)
+                return old
             elif param_lower in ["tran_value", 'tran_val', "tran"]:
-                c.set_tran_val(new_value)
-        elif hasattr(c, parameter):
-            setattr(c, parameter, new_value)
-            self._build_graph()
+                old = c._tran_raw
+                if new_value is not None:
+                    c.set_tran_val(new_value)
+                return old
+        elif param_lower == "value" and hasattr(c, param_lower):
+            old = c.value
+            if new_value is not None:
+                c.set_value(new_value)
+            return old
+        elif hasattr(c, param_lower):
+            old = getattr(c, param_lower)
+            if new_value is not None:
+                setattr(c, param_lower, new_value)
+                self._build_graph()
+            return old
         else:
             raise AttributeError(f"Component '{component_name}' has no attribute '{parameter}'")
 

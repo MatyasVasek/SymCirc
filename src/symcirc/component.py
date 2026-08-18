@@ -41,6 +41,12 @@ class Component:
             ret.add(self.node2)
         return ret
 
+    def set_value(self, value):
+        rat, flt, sym, is_symbolic = value_enum(self.name, value)
+        self.value = rat
+        self.value_float = flt
+        self.sym_value = sym
+
     def short(self):
         return Short(f"Short_{self.name}", self.node1, self.node2)
 
