@@ -22,29 +22,29 @@ def generate_reference(circuit, node, control_freqs, err_metric):
 
     return global_ctrl_values
 
-def greedy_grow(circuit: Circuit, control_freqs, node, fixed_comps=None, max_err=0.1, err_metric="s_plane_dist", relative_err=False):
+def greedy_grow(circuit: Circuit, control_freqs, start_node, end_node, fixed_comps=None, max_err=0.1, err_metric="s_plane_dist", relative_err=False):
     t1 = time.time()
     if fixed_comps is None:
         fixed_comps = []
-    global_ctrl_values = generate_reference(circuit, node, control_freqs, err_metric)
+    global_ctrl_values = generate_reference(circuit, end_node, control_freqs, err_metric)
     global_effect = sum(global_ctrl_values) / len(global_ctrl_values)
-    print(global_effect)
+    #print(global_effect)
 
-    t_ref_gen = time.time()
-    print(f"Reference gen time: {t_ref_gen-t1}")
+    #t_ref_gen = time.time()
+    #print(f"Reference gen time: {t_ref_gen-t1}")
     sf_graph = build_signalflow_graph(circuit, "Vi")
-    t_graph_built = time.time()
-    print(f"Graph build time: {t_graph_built - t_ref_gen}")
+    #t_graph_built = time.time()
+    #print(f"Graph build time: {t_graph_built - t_ref_gen}")
     #sf_graph.visualize()
-    t_graph_visu = time.time()
-    print(f"Graph visualisation time: {t_graph_visu - t_graph_built}")
+    #t_graph_visu = time.time()
+    #print(f"Graph visualisation time: {t_graph_visu - t_graph_built}")
 
     # TODO: make this general
     t_search_start = time.time()
-    path = sf_graph.find_most_impactful_path("nodein_negv", f"{node}v", control_freqs)
-    print(path)
-    print(f"Time: {time.time()-t_search_start}; path: {path}")
-    '''paths = sf_graph.find_all_paths("nodeiv", f"{node}v")
+    path = sf_graph.find_most_impactful_path(f"{start_node}v", f"{end_node}v", control_freqs)
+    #print(path)
+    #print(f"Time: {time.time()-t_search_start}; path: {path}")
+    '''paths = sf_graph.find_all_paths(f"{start_node}v", f"{end_node}v")
     total_gain = 0
     t_graph_paths = time.time()
     print(f"Path enumeration time: {t_graph_paths - t_graph_visu}")'''
@@ -80,13 +80,13 @@ def greedy_grow(circuit: Circuit, control_freqs, node, fixed_comps=None, max_err
             if comp.name not in circuit.components:
                 circuit.add(comp)
 
-        err = greedy_prune(circuit, control_freqs, node, fixed_comps, 0.01, err_metric=err_metric,
+        err = greedy_prune(circuit, control_freqs, end_node, fixed_comps, 0.01, err_metric=err_metric,
                            relative_err=True)
 
         ac_numeric = ACNumeric(circuit, method="two_graph_node", symbolic=False)
 
         results = ac_numeric.run(control_freqs)
-        volt = results[f"v({node})"]
+        volt = results[f"v({end_node})"]
 
         if err_metric == "mag":
             volt = [mag(x, do_evalf=False) for x in volt]
@@ -234,9 +234,11 @@ def rel_err(global_ctrl_values, volt):
     return largest_dist
 
 
-def run_optimization(circuit, node_of_interest, max_err, bw_start, bw_end, ctrl_points, is_err_relative=True, metric="mag", fixed_comps=None, method="greedy_prune", solver="gauss"):
+def run_optimization(circuit, nodes, max_err, bw_start, bw_end, ctrl_points, is_err_relative=True, metric="mag", fixed_comps=None, method="greedy_prune", solver="gauss"):
+    node_of_interest = nodes[0]
+    input_node = nodes[1]
     log = {"title": f"SBG optimization log", "circuit": circuit,
-           "node": node_of_interest, "BW": (bw_start, bw_end),
+           "input_node": input_node,"output_node": node_of_interest, "BW": (bw_start, bw_end),
            "points": ctrl_points, "metric": metric,
            "relative_err": is_err_relative, "fixed_comps": fixed_comps,
            "method": method}
@@ -252,7 +254,7 @@ def run_optimization(circuit, node_of_interest, max_err, bw_start, bw_end, ctrl_
 
     t_tmp = time.time()
     if method == "greedy_grow":
-        err = greedy_grow(circuit, control_freqs, node_of_interest, fixed_comps, max_err, err_metric=metric,
+        err = greedy_grow(circuit, control_freqs, input_node, node_of_interest, fixed_comps, max_err, err_metric=metric,
                            relative_err=is_err_relative)
     elif method == "greedy_prune":
         err = greedy_prune(circuit, control_freqs, node_of_interest, fixed_comps, max_err, err_metric=metric,

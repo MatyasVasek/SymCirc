@@ -47,8 +47,8 @@ op_dict = {"gd:D1": 94.8e-12,
            "gm:M6": 15.4e-3, "cgs:M6": 0.96e-12, "cgd:M6": 0.096e-12, "gds:M6": 54.5e-6,
            }
 
-fixed_comps = ["Vi"]
-noi = "nodeo"
+out_node = "nodeo"
+noi = [out_node, "nodei"]
 
 metric = "mag"
 #metric = "s_plane_dist"
@@ -63,7 +63,7 @@ t0 = time.time()
 
 # Semisymbolic reference plot
 ac_analysis = AC(circuit, method="two_graph_node", symbolic=False)
-out = ac_analysis.get_node_voltage(noi)
+out = ac_analysis.get_node_voltage(out_node)
 res_list.append(out)
 label_list.append("Semisymbol ref")
 
@@ -74,7 +74,7 @@ rel_err = True
 circ1 = Circuit(netlist, operating_point=op_dict)
 circ1.approximate(noi, max_err, 1e2, 1e4, 10, rel_err, metric, solver=solver)
 ac_circ1 = AC(circ1, method="two_graph_node", symbolic=False, solver=solver)
-res1 = evalf(ac_circ1.get_node_voltage(noi), precision=20)
+res1 = evalf(ac_circ1.get_node_voltage(out_node), precision=20)
 res_list.append(res1)
 label_list.append("5%; 100-10k")
 
@@ -85,7 +85,7 @@ rel_err = True
 circ2 = Circuit(netlist, operating_point=op_dict)
 circ2.approximate(noi, max_err, 1e2, 1e4, 10, rel_err, metric)
 ac_circ2 = AC(circ2, method="two_graph_node", symbolic=False, solver=solver)
-res2 = evalf(ac_circ2.get_node_voltage(noi), precision=20)
+res2 = evalf(ac_circ2.get_node_voltage(out_node), precision=20)
 res_list.append(res2)
 label_list.append("80%; 100-10k")
 
@@ -96,7 +96,7 @@ rel_err = True
 circ3 = Circuit(netlist, operating_point=op_dict)
 circ3.approximate(noi, max_err, 1e0, 1e6, 10, rel_err, metric)
 ac_circ3 = AC(circ3, method="two_graph_node", symbolic=False, solver=solver)
-res3 = evalf(ac_circ3.get_node_voltage(noi), precision=20)
+res3 = evalf(ac_circ3.get_node_voltage(out_node), precision=20)
 res_list.append(res3)
 label_list.append("5%; 1-1M")
 
@@ -107,7 +107,7 @@ rel_err = True
 circ4 = Circuit(netlist, operating_point=op_dict)
 circ4.approximate(noi, max_err, 1e0, 1e6, 10, rel_err, metric)
 ac_circ4 = AC(circ4, method="two_graph_node", symbolic=False, solver=solver)
-res4 = evalf(ac_circ4.get_node_voltage(noi), precision=20)
+res4 = evalf(ac_circ4.get_node_voltage(out_node), precision=20)
 res_list.append(res4)
 label_list.append("30%; 1-1M")
 
@@ -118,7 +118,7 @@ rel_err = True
 circ5 = Circuit(netlist, operating_point=op_dict)
 circ5.approximate(noi, max_err, 1e0, 1e6, 10, rel_err, metric)
 ac_circ5 = AC(circ5, method="two_graph_node", symbolic=False, solver=solver)
-res5 = evalf(ac_circ5.get_node_voltage(noi), precision=20)
+res5 = evalf(ac_circ5.get_node_voltage(out_node), precision=20)
 res_list.append(res5)
 label_list.append("80%; 1-1M")
 
