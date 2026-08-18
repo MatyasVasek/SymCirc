@@ -3,7 +3,7 @@ import sympy
 
 from symcirc.utils import s, j, pi
 from symcirc.graph_signalflow import Branch
-from symcirc.parse_utils import dc_value, ac_value, tran_value
+from symcirc.parse_utils import dc_value, ac_value, tran_value, value_enum
 
 
 ANALYSIS_DEPENDENT = ["i", "v"]
@@ -372,25 +372,31 @@ class IndependentSource(Component):
 
     def __init__(self, name: str, node1: str, node2: str,
                  values: Dict[str, Any]):
-        self._dc_num = values["dc_num"]
-        self._dc_float = values["dc_float"]
-        self._dc_sym = values["dc_sym"]
 
-        self._ac_num = values["ac_num"]
-        self._ac_float = values["ac_float"]
-        self._ac_sym = values["ac_sym"]
-        self._ac_phase = values["ac_phase"]
+        self.name = name
+        self._dc_raw = values["dc_raw"]
+        self._ac_raw = values["ac_raw"]
+        self._tran_raw = values["tran_raw"]
 
-        self._tran_num = values["tran_num"]
-        self._tran_float = values["tran_float"]
+        self._dc_num, self._dc_float, self._dc_sym = None, None, None
+        self._ac_num, self._ac_float, self._ac_sym, self._ac_phase = None, None, None, None
+        self._tran_num, self._tran_float = None, None
+
+        self.set_dc_val(self._dc_raw)
+        self.set_ac_val(self._ac_raw)
+        self.set_tran_val(self._tran_raw)
 
         super().__init__(name, node1, node2, sym_value=self._dc_sym, value=self._dc_num)
 
     def set_dc_val(self, val):
+        self._dc_raw = val
         self._dc_num, self._dc_float, self._dc_sym = dc_value(self.name, val)
+        self._dc_raw = val
     def set_ac_val(self, val):
+        self._ac_raw = val
         self._ac_num, self._ac_float, self._ac_sym, self._ac_phase = ac_value(self.name, val)
     def set_tran_val(self, val):
+        self._tran_raw = val
         self._tran_num, self._tran_float = tran_value(self.name, val)
 
     def val(self, form="sym", analysis_type="dc"):

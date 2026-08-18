@@ -340,26 +340,20 @@ def parse(netlist, operating_point=None):
 
         if name[0] in ["i", "I"]:
             dc_sig, ac_sig, tran_sig = preparse_source(words)
-            dc_rat, dc_flt, dc_sym = dc_value(name, dc_sig)
-            ac_rat, ac_flt, ac_sym, phase_rad = ac_value(name, ac_sig)
-            tran_rat, tran_flt = tran_value(name, tran_sig)
 
-            values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
-                      "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
-                      "tran_num": tran_rat,"tran_float": tran_flt}
+            values = {"dc_raw": dc_sig,
+                      "ac_raw": ac_sig,
+                      "tran_raw": tran_sig}
 
             c = CurrentSource(name, node1, node2, values)
             independent_sources.append(c)
 
         elif name[0] in ["v", "V", "u", "U"]:
             dc_sig, ac_sig, tran_sig = preparse_source(words)
-            dc_rat, dc_flt, dc_sym = dc_value(name, dc_sig)
-            ac_rat, ac_flt, ac_sym, phase_rad = ac_value(name, ac_sig)
-            tran_rat, tran_flt = tran_value(name, tran_sig)
 
-            values = {"dc_num": dc_rat, "dc_float": dc_flt, "dc_sym": dc_sym,
-                      "ac_num": ac_rat, "ac_float": ac_flt, "ac_sym": ac_sym, "ac_phase": phase_rad,
-                      "tran_num": tran_rat,"tran_float": tran_flt}
+            values = {"dc_raw": dc_sig,
+                      "ac_raw": ac_sig,
+                      "tran_raw": tran_sig}
 
             c = VoltageSource(name, node1, node2, values)
             independent_sources.append(c)
