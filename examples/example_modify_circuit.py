@@ -10,7 +10,7 @@ circuit = Circuit(netlist)
 
 # Any component parameter can be changed
 print(f'Old R1 semisymbolic value: {circuit.get("R1").value}')
-circuit.change("R1", "value", 10**6)
+circuit.change("R1", "value", "10**6")
 print(f'New R1 semisymbolic value: {circuit.get("R1").value}')
 print(f'New V1 ac_val: {circuit.get("V1").ac_val("num")}')
 circuit.change("V1", "ac_value", ["6", "0"])

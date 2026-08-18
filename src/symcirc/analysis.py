@@ -1291,7 +1291,6 @@ class TRAN(Analysis):
             return func
         else:
             res = laplace.iLT(func, self.sympy_ilt)
-            res = sympy.factor_terms(res)
             return res
 
     def _add_basic(self, matrix, vi_vector, c, index):
