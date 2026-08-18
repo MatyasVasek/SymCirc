@@ -391,9 +391,7 @@ class IndependentSource(Component):
     def set_ac_val(self, val):
         self._ac_num, self._ac_float, self._ac_sym, self._ac_phase = ac_value(self.name, val)
     def set_tran_val(self, val):
-        print(self._tran_num)
         self._tran_num, self._tran_float = tran_value(self.name, val)
-        print(self._tran_num)
 
     def val(self, form="sym", analysis_type="dc"):
         # TODO: document options
