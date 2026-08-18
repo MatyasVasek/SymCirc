@@ -115,7 +115,6 @@ def _row_degrees(nonzero: frozenset, rows: tuple, cols: tuple) -> Dict[int, int]
     """
     Count nonzero entries per row using the precomputed sparsity set.
     """
-    t0 = time.time()
     ret = {}
     for r in rows:
         nonzero_count = 0
@@ -285,26 +284,35 @@ def _resolve_symbol_value(symbol: Any,
         if symbol in keep_symbolic:
             val = symbol
         elif symbol in value_map:
-            val = sp.Float(value_map[symbol])
+            try:
+                val = sp.Float(value_map[symbol])
+            except TypeError:
+                val = value_map[symbol]
         else:
             val = symbol
     elif isinstance(symbol, _NUMERIC_TYPES):
         val = symbol
     else:
-        free = symbol.free_symbols if hasattr(symbol, 'free_symbols') else set()
-        if free & keep_symbolic:
+        '''try:
+            free = symbol.free_symbols
+        except AttributeError:
+            free = set()'''
+        if keep_symbolic:
             val = symbol
-        elif free:
-            subs_dict = {symb: value_map[symb] for symb in free
-                         if symb in value_map and symb not in keep_symbolic}
+        else:
+            #subs_dict = {symb: value_map[symb] for symb in free
+            #             if symb in value_map and symb not in keep_symbolic}
+            subs_dict = value_map
             if subs_dict:
                 val = symbol.subs(subs_dict)
-                if not val.free_symbols:
+                try:
                     val = sp.Float(float(val))
+                except TypeError:
+                    pass
             else:
                 val = symbol
-        else:
-            val = symbol
+        #else:
+        #    val = symbol
 
     is_numeric = isinstance(val, _NUMERIC_TYPES) or (hasattr(val, 'is_number') and bool(val.is_number))
     result = (val, is_numeric)
@@ -706,7 +714,10 @@ def _collect_poly_gens(A: sp.Matrix, b: Sequence[Any],
         if id(entry) in seen_ids:
             continue
         seen_ids.add(id(entry))
-        free = entry.free_symbols if hasattr(entry, 'free_symbols') else set()
+        try:
+            free = entry.free_symbols
+        except AttributeError:
+            free = set()
         for sym in free:
             if sym not in value_map or sym in keep_symbolic:
                 gens.add(sym)
@@ -730,7 +741,11 @@ def _resolve_symbol_poly(symbol: Any,
     if cached is not None:
         return cached
 
-    free = symbol.free_symbols if hasattr(symbol, 'free_symbols') else set()
+    try:
+        free = symbol.free_symbols
+    except AttributeError:
+        free = set()
+
     relevant = {sy for sy in free if sy not in value_map or sy in keep_symbolic}
 
     if not relevant:
